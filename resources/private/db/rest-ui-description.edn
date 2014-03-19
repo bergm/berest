@@ -241,6 +241,7 @@
   :rest.ui/groups :geo-coord}
 
 
+
  ;; user
 
  {:db/id :user/id
@@ -300,19 +301,6 @@
   :rest.ui/order-no 4
   :rest.ui/label {:lang/en "Guest"
                   :lang/de "Gast"}}
-
-
- ;;some test data
-
- {:db/id #db/id[:db.part/db]
-  :weather-station/id "AAAA"}
-
- {:db/id #db/id[:db.part/db]
-  :weather-station/id "BBBB"}
-
- {:db/id #db/id[:db.part/db]
-  :weather-station/id "cccc"
-  :weather-station/name "name of ccccc"}
 
 
  ]

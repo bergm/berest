@@ -4,8 +4,8 @@
             [clj-time.core :as ctc]
             [clj-time.format :as ctf]
             [clj-time.coerce :as ctcoe]
-            [berest-service.berest.datomic :as bd]
-            [berest-service.berest.util :as bu]
+            [berest.datomic :as bd]
+            [berest.util :as bu]
             [datomic.api :as d]
             #_[miner.ftp :as ftp]
             [clojure.tools.logging :as log]
@@ -36,11 +36,13 @@
                               :weather-data/global-radiation (parse-german-double gs)}})))
 
 (comment "instarepl debugging code"
+
   (def pdata
     #_(slurp "resources/private/climate/FY60DWLA-20130530_0815.txt")
     (slurp "resources/private/climate/FY60DWLA-20140203_0915.txt"))
   (def pdata* (parse-and-transform-prognosis-data pdata))
   (pp/pprint pdata*)
+
   )
 
 (defn parse-measured-data
@@ -64,12 +66,14 @@
                               :weather-data/global-radiation (parse-german-double gs)}})))
 
 (comment "instarepl debugging code"
+
   (def mdata
     #_(slurp "resources/private/climate/FY60DWLB-20130526_0815.txt")
     (slurp "resources/private/climate/FY60DWLB-20140203_0915.txt"))
   (def mdata* (parse-and-transform-measured-data mdata))
   (pp/pprint mdata*)
   (as-transaction-fns mdata*)
+
   )
 
 
@@ -94,6 +98,7 @@
 
 
 (comment "insert transaction function into db, without full schema reload"
+
   (d/transact (bd/datomic-connection bd/*db-id*)
             [(read-string "{:db/id #db/id[:db.part/user]
   :db/ident :weather-station/add-data
@@ -115,12 +120,12 @@
                 data)]
     ;always create a temporary db/id, will be upsert if station exists already
     [(assoc data* :db/id (datomic.api/tempid :db.part/user))])\"}}")])
+
   )
 
 
-
-
 (comment "instarepl test"
+
   (add-data (bd/current-db) {:weather-station/id "dwd/N652",
                              :weather-station/data
                              {:weather-data/prognosis-data? true,
@@ -137,6 +142,7 @@
                  #_[?se :weather-station/data ?e]
                  #_[?e :weather-data/date ?date]]
                (bd/current-db) "10162" #inst "2014-02-04T00:00:00.000-00:00")
+
   )
 
 
@@ -146,6 +152,7 @@
        "-" (ctf/unparse (ctf/formatter "yyyyMMdd") date) "_" (format "%02d%02d" h min) ".txt"))
 
 (comment "instarepl debug code"
+
   (make-prognosis-filename (ctc/date-time 2013 6 3))
 
   ;real ftp seams to be not necessary for just getting data (at least for anonymous access and co)
@@ -153,6 +160,7 @@
                        (ftp/client-get-stream client (make-prognosis-filename (ctc/date-time 2013 6 3)))))
 
   (clojure.java.io/reader t)
+
   )
 
 
@@ -176,7 +184,7 @@
           transaction-data->add-data (map #(vector :weather-station/add-data %) transaction-data)
           ]
       (try
-        (d/transact (bd/datomic-connection bd/*db-id*) transaction-data->add-data)
+        @(d/transact (bd/datomic-connection bd/*db-id*) transaction-data->add-data)
         (catch Exception e
           (log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
           (throw e)))
@@ -184,7 +192,9 @@
     (catch Exception _ false)))
 
 (comment
+
   (import-dwd-data-into-datomic :prognosis (ctc/date-time 2014 2 4))
   (import-dwd-data-into-datomic :measured (ctc/date-time 2014 2 4))
+
   )
 

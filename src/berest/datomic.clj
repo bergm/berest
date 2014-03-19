@@ -16,17 +16,17 @@
 
 (def system-db-id "system")
 
-(defn datomic-connection-string [base-uri db-id]
+(defn datomic-connection-string* [base-uri db-id]
   (str base-uri db-id))
 
 (def free-local-base-uri "datomic:free://localhost:4334/")
-(def free-local-connection-string (partial datomic-connection-string free-local-base-uri))
+(def free-local-connection-string (partial datomic-connection-string* free-local-base-uri))
 
 (def free-azure-base-uri "datomic:free://humane-spaces.cloudapp.net:4334/")
-(def free-azure-connection-string (partial datomic-connection-string free-azure-base-uri))
+(def free-azure-connection-string (partial datomic-connection-string* free-azure-base-uri))
 
 (def infinispan-local-datomic-base-uri "datomic:inf://localhost:11222/")
-(def infinispan-local-connection-string (partial datomic-connection-string infinispan-local-datomic-base-uri))
+(def infinispan-local-connection-string (partial datomic-connection-string* infinispan-local-datomic-base-uri))
 
 #_(def dynamodb-base-uri "datomic:ddb://eu-west-1/berest-datomic-store/%s?aws_access_key_id=AKIAIKDIFN2XPB7ZE3SA&aws_secret_key=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")
 #_(defn dynamodb-connection-string [db-id]
@@ -42,7 +42,7 @@
          (map (fn [[k v]] (System/setProperty k v)) ,,,)
          dorun)
     "datomic:ddb://eu-west-1/berest-datomic-store/"))
-(def dynamodb-connection-string (partial datomic-connection-string dynamodb-base-uri))
+(def dynamodb-connection-string (partial datomic-connection-string* dynamodb-base-uri))
 
 (def datomic-connection-string dynamodb-connection-string)
 
@@ -61,10 +61,13 @@
            datomic-connection
            d/db))
 
-(def datomic-schema-files {:system ["private/db/system-schema.dtm"]
-                           :berest ["private/db/berest-meta-schema.dtm"
-                                    "private/db/berest-schema.dtm"
-                                    "private/db/rest-ui-description.dtm"]})
+(def datomic-schema-files {:system ["private/db/berest-meta-schema.edn"
+                                    "private/db/system-schema.edn"
+                                    "private/db/berest-schema.edn"
+                                    "private/db/rest-ui-description.edn"]
+                           :berest ["private/db/berest-meta-schema.edn"
+                                    "private/db/berest-schema.edn"
+                                    "private/db/rest-ui-description.edn"]})
 
 (defn apply-schemas-to-db
   [datomic-connection & schema-files]
@@ -73,55 +76,79 @@
        (map (partial d/transact datomic-connection) ,,,)
        dorun))
 
-(defn create-db
-  [db-id & initial-schema-files]
-  (let [uri* (datomic-connection-string db-id)]
-    (when (d/create-database uri*)
-			(apply apply-schemas-to-db (d/connect uri*) initial-schema-files)
-			db-id)))
-
 (defn delete-db!
   [db-id]
   (->> db-id
        datomic-connection-string
        d/delete-database))
 
+(defn create-db
+  [db-id & initial-schema-files]
+  (let [uri* (datomic-connection-string db-id)
+        res {:db-id db-id
+             :db-uri uri*}]
+    (try
+      (if (d/create-database uri*)
+        (try
+          (apply apply-schemas-to-db (d/connect uri*) initial-schema-files)
+          (assoc res :success true)
+          (catch Exception e
+            (log/info "Couldn't apply schemas to db at uri: " uri* ", schema files where: "
+                      initial-schema-files ". Removing db.")
+            (delete-db! db-id)
+            (assoc res :success false
+                       :error-reason :exception-applying-schemas)))
+        (assoc res :success false
+                   :error-reason :db-alredy-existed))
+      (catch Exception e
+        (log/info "Couldn't create db at uri: " uri* ". Error was: " e)
+        (assoc res :success false
+                   :error-reason :exception-db-creation)))))
+
 (defn bootstrap-system-db
   [& [db-id]]
-  (create-db (or db-id system-db-id) (:system datomic-schema-files)))
+  (apply create-db (or db-id system-db-id) (:berest datomic-schema-files)))
 
 
 
 
-(comment "instarepl debugging code"
+
+(comment
+  "instarepl debugging code"
 
   ;system db
-  (create-db system-db-id (:system datomic-schema-files))
+  (bootstrap-system-db system-db-id)
+  (apply create-db system-db-id (:system datomic-schema-files))
   (d/create-database (datomic-connection-string "system"))
-  (apply-schemas-to-db (d/connect (datomic-connection-string "system"))
-                       ::datomic-schemas-key :system)
-  (delete-db! "system")
+  (apply apply-schemas-to-db (datomic-connection system-db-id)
+         (apply concat (vals datomic-schema-files)))
+       (delete-db! system-db-id)
 
-  (delete-db! "berest")
-  (create-db "berest")
+  (delete-db! "michael")
+  (apply create-db "michael" (:berest datomic-schema-files))
 
   (d/create-database (datomic-connection-string "berest"))
+  (apply apply-schemas-to-db (db-connection "michael") (:berest datomic-schema-files))
 
-  (apply-schemas-to-db (d/connect (datomic-connection-string "berest")))
+  (def ss (-> datomic-schema-files :system second))
+  (def ss* ((bh/rcomp cjio/resource slurp read-string) ss))
+  (d/transact (datomic-connection "system") ss*)
 
-  (def ms (first berest-datomic-schemas))
+  (def ms (-> datomic-schema-files :berest first))
   (def ms* ((bh/rcomp cjio/resource slurp read-string) ms))
-  (d/transact (datomic-connection "berest") ms*)
+  (d/transact (datomic-connection "system") ms*)
 
-  (def s (second berest-datomic-schemas))
+  (def s (-> datomic-schema-files :berest second))
   (def s* ((bh/rcomp cjio/resource slurp read-string) s))
-  (d/transact (datomic-connection "berest") s*)
+  (d/transact (datomic-connection "system") s*)
 
-  (def rui (nth berest-datomic-schemas 2))
+  (def rui (-> datomic-schema-files :berest (nth ,,, 2)))
   (def rui* ((bh/rcomp cjio/resource slurp read-string) rui))
-  (d/transact (datomic-connection "berest") rui*)
+  (d/transact (datomic-connection "system") rui*)
 
   )
+
+
 
 (defn new-entity-ids [] (repeatedly #(d/tempid :db.part/user)))
 (defn new-entity-id [] (first (new-entity-ids)))
@@ -139,18 +166,18 @@
 
 (defn create-inline-entities
   ([key value kvs]
-   (map (fn [[k v]] {key k, value v})
+   (mapv (fn [[k v]] {key k, value v})
         (apply array-map kvs)))
   ([ks-to-vss]
-   (map #(zipmap (keys ks-to-vss) %)
+   (mapv #(zipmap (keys ks-to-vss) %)
         (apply map vector (vals ks-to-vss)))))
 
-(defn get-entity-ids [entities] (map :db/id entities))
+(defn get-entity-ids [entities] (mapv :db/id entities))
 (defn get-entity-id [entity] (:db/id entity))
 
 (defn get-entities [db entity-ids]
-  (map (partial d/entity db) entity-ids)
-  #_(map (partial datomic.db/get-entity db) entity-ids))
+  (mapv (partial d/entity db) entity-ids))
+
 (defn get-entity [db entity-id]
   (first (get-entities db [entity-id])))
 
@@ -247,52 +274,77 @@
                :user/id user-id
                :user/password enc-pwd
                :user/full-name full-name
-               :user/roles kw-roles}]
+               :user/roles kw-roles}
+        creds- (dissoc creds :db/id :user/password)]
     (try
-      (d/transact db-connection [creds])
-      true
+      @(d/transact db-connection [creds])
+      creds-
       (catch Exception e
-        (println e #_log/info " Couldn't store credentials into datomic database! Data w/o pwd: [\n"
-                 (dissoc creds :user/password) "\n]")
+        (log/info "Couldn't store credentials into datomic database! Data w/o pwd: [\n"
+                  (dissoc creds :user/password) "\n]")
         nil))))
 
+(comment
 
-#_(store-credentials (db-connection system-db-id) "michael" "#zALf!" "Michael Berg" [:admin :guest :farmer :consultant])
+  (store-credentials (db-connection "system")
+                     "michael" "#zALf!" "Michael Berg" [:admin :guest :farmer :consultant])
 
- #_(->> (d/q '[:find ?e
-            :in $
-            :where
-            [?e :user/id]]
-          (current-db system-db-id))
-     ffirst
-     (d/entity (current-db system-db-id))
-     d/touch)
+  )
+
+(defn- register-user*
+  [system-con user-id password full-name roles]
+  (let [{success :success
+         :as res} (apply create-db user-id (:berest datomic-schema-files))]
+    (if success
+      (store-credentials system-con user-id password full-name roles)
+      (when-not (= :db-alredy-existed (:error-reason res))
+        (delete-db! (:db-id res))))))
+
+(defn register-user
+  [user-id password full-name & {roles :roles :or {roles [:guest]}}]
+  (register-user* (db-connection system-db-id)
+                  user-id password full-name roles))
+
+(comment
+
+  (register-user "guest" "guest")
+
+  )
 
 
-(defn credentials
-  [db user-id password]
-  (let [;db (current-db system-db-id)
-        user-entity (d/q '[:find ?e
-                           :in $ ?user-id
-                           :where
-                           [?e :user/id ?user-id]]
-                         db user-id)
-        identity (some->> user-entity ffirst (d/entity db ,,,) d/touch (into {} ,,,))]
+(defn- credentials*
+  [system-db user-id password]
+  (let [ user-entity (d/q '[:find ?e
+                            :in $ ?user-id
+                            :where
+                            [?e :user/id ?user-id]]
+                          system-db user-id)
+         identity (some->> user-entity
+                           ffirst
+                           (d/entity system-db ,,,)
+                           d/touch
+                           (into {} ,,,))]
     (when (and identity
                (pwd/check password (:user/password identity)))
       {:user-id (:user/id identity)
        :roles (->> (:user/roles identity)
                    (map #(-> % name keyword) ,,,)
                    (into #{} ,,,))
-       :full-name (:user/full-name identity)})))
+       :full-name (:user/full-name identity)}))
+  )
 
-(defn credentials*
-  [{:keys [username password]}]
-  (credentials username password))
+(defn credentials
+  ([{:keys [username password]}]
+   (credentials username password))
+  ([user-id password]
+   (credentials (current-db system-db-id) user-id password)))
 
-#_(credentials (current-db system-db-id) "michael" "#zALf!")
 
-(comment "insta repl code"
+(comment
+  "insta repl code"
+
+  (credentials (current-db "berest") "michael" "#zALf!")
+
   (d/q '[:find ?e
          :in $
          :where
@@ -309,16 +361,15 @@
        d/touch)
 
   (->> (d/q '[:find ?e
-            :in $
-            :where
-            [?e :db/ident :user/id]]
-          (current-db system-db-id))
-     ffirst
-     (d/entity (current-db system-db-id))
-     d/touch)
+              :in $
+              :where
+              [?e :db/ident :user/id]]
+            (current-db system-db-id))
+       ffirst
+       (d/entity (current-db system-db-id))
+       d/touch)
 
 
   )
-
 
 

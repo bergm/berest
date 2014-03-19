@@ -1141,10 +1141,10 @@
          :rel-dc-day rel-dc-day
          :crop crop
          :irrigation-amount (donations-at irrigation-donations abs-day)
-         :tavg (bu/round (:tavg weather) :digits 1)
-         :globrad (bu/round (:globrad weather) :digits 1)
-         :evaporation (bu/round (:evaporation weather) :digits 1)
-         :precipitation (bu/round (:precipitation weather) :digits 1)
+         :tavg (bu/round (:weather-data/average-temperature weather) :digits 1)
+         :globrad (bu/round (:weather-data/global-radiation weather) :digits 1)
+         :evaporation (bu/round (:weather-data/evaporation weather) :digits 1)
+         :precipitation (bu/round (:weather-data/precipitation weather) :digits 1)
          :irrigation-mode irrigation-mode
          :cover-degree cover-degree
          :qu-target (bu/round

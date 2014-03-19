@@ -1,10 +1,11 @@
-(ns berest.parse-crop-files
+(ns berest.crops.import
   (:require [datomic.api :as d]
-            [berest.datomic :as bd]
+            [berest.datomic :as db]
             [instaparse.core :as insta]
             [clojure.java.io :as cjio]
             [clojure.pprint :as pp]
-            [clojure.string :as cs]))
+            [clojure.string :as cs]
+            [clojure.tools.logging :as log]))
 
 (def crop-block-parser
   (insta/parser
@@ -139,16 +140,19 @@ Effektivitaet  =   1;          Tag
 
 ")
 
-#_(crop-block-parser test-text)
 
 (comment
-(def ps (insta/parses crop-block-parser test-text
-                      ;:total true
-                      ))
-(pp/pprint ps)
-(count ps)
-(pp/pprint (nth ps 0))
-)
+
+  (crop-block-parser test-text)
+
+  (def ps (insta/parses crop-block-parser test-text
+                        ;:total true
+                        ))
+  (pp/pprint ps)
+  (count ps)
+  (pp/pprint (nth ps 0))
+
+  )
 
 (defn transform-crop-block [block]
   (let [trans {:double #(Double/parseDouble %)
@@ -164,7 +168,7 @@ Effektivitaet  =   1;          Tag
                :crop-name cs/trim
 
                :header-line (fn [crop-no cult-type & [usage-or-crop-name crop-code crop-name]]
-                              [:crop {:db/id (bd/new-entity-id)
+                              [:crop {:db/id (db/new-entity-id)
                                       :crop/id (str crop-no "/" cult-type (when usage-or-crop-name "/") usage-or-crop-name)
                                       :crop/number (Integer/parseInt crop-no)
                                       :crop/cultivation-type cult-type
@@ -173,27 +177,27 @@ Effektivitaet  =   1;          Tag
                                       :crop/symbol (or crop-code crop-name)}])
 
                :dc-2-rel-day (fn [dcs days]
-                               [:dc-2-rel-day (bd/create-entities :kv/dc :kv/rel-dc-day
+                               [:dc-2-rel-day (db/create-entities :kv/dc :kv/rel-dc-day
                                                                   (interleave dcs days))])
 
                :dc-2-coverdegree (fn [dcs cds]
-                                   [:dc-2-coverdegree (bd/create-entities :kv/rel-dc-day :kv/cover-degree
+                                   [:dc-2-coverdegree (db/create-entities :kv/rel-dc-day :kv/cover-degree
                                                                           (interleave dcs cds))])
 
                :dc-2-name-pairs vector
                :dc-2-name (fn [pairs]
-                            [:dc-2-name (bd/create-entities :kv/dc :kv/name pairs)])
+                            [:dc-2-name (db/create-entities :kv/dc :kv/name pairs)])
 
                :dc-2-extraction-depth (fn [dcs cds]
-                                        [:dc-2-extraction-depth (bd/create-entities :kv/rel-dc-day :kv/extraction-depth
+                                        [:dc-2-extraction-depth (db/create-entities :kv/rel-dc-day :kv/extraction-depth
                                                                                     (interleave dcs cds))])
 
                :dc-2-transpiration (fn [dcs cds]
-                                     [:dc-2-transpiration-factor (bd/create-entities :kv/rel-dc-day :kv/transpiration-factor
+                                     [:dc-2-transpiration-factor (db/create-entities :kv/rel-dc-day :kv/transpiration-factor
                                                                                      (interleave dcs cds))])
 
                :dc-2-quotient (fn [dcs cds]
-                                [:dc-2-quotient (bd/create-entities :kv/rel-dc-day :kv/quotient-aet-pet
+                                [:dc-2-quotient (db/create-entities :kv/rel-dc-day :kv/quotient-aet-pet
                                                                     (interleave dcs cds))])
 
                :dc-2-effectivity (fn [dcs cds]
@@ -209,51 +213,74 @@ Effektivitaet  =   1;          Tag
                                 (if (= k :crop)
                                   (let [cd (into {} crop-data)]
                                     (assoc data-map
-                                      :crop/dc-to-rel-dc-days (bd/get-entity-ids (:dc-2-rel-day cd))
-                                      :crop/dc-to-developmental-state-names (bd/get-entity-ids (:dc-2-name cd))
-                                      :crop/rel-dc-day-to-cover-degrees (bd/get-entity-ids (:dc-2-coverdegree cd))
-                                      :crop/rel-dc-day-to-extraction-depths (bd/get-entity-ids (:dc-2-extraction-depth cd))
-                                      :crop/rel-dc-day-to-transpiration-factors (bd/get-entity-ids (:dc-2-transpiration cd))
-                                      :crop/rel-dc-day-to-quotient-aet-pets (bd/get-entity-ids (:dc-2-quotient cd))
+                                      :crop/dc-to-rel-dc-days (db/get-entity-ids (:dc-2-rel-day cd))
+                                      :crop/dc-to-developmental-state-names (db/get-entity-ids (:dc-2-name cd))
+                                      :crop/rel-dc-day-to-cover-degrees (db/get-entity-ids (:dc-2-coverdegree cd))
+                                      :crop/rel-dc-day-to-extraction-depths (db/get-entity-ids (:dc-2-extraction-depth cd))
+                                      :crop/rel-dc-day-to-transpiration-factors (db/get-entity-ids (:dc-2-transpiration-factor cd))
+                                      :crop/rel-dc-day-to-quotient-aet-pets (db/get-entity-ids (:dc-2-quotient cd))
                                       :crop/effectivity-quotient (:effectivity cd)))
                                   data-map))))}]
-    (insta/transform trans block)))
-
-#_(-> test-text
-    crop-block-parser
-    transform-crop-block
-    pp/pprint)
+    (->> block
+         (insta/transform trans ,,,)
+         (into [] ,,,))))
 
 
 (comment
+
+  (-> test-text
+      crop-block-parser
+      transform-crop-block
+      pp/pprint)
+
   (def crops (slurp (str "C:/Users/michael/development/GitHub/berest-service/resources/private/crops/issbruecker/BBFASTD1.TXT")))
   (def crop-blocks (cs/split crops #"\s*\*\s?-\s?\*\s?\-[^\r\n]*"))
   (pp/pprint (take 2 crop-blocks))
+
 )
 
-(defn parse-and-transform-crop-files [crop-files]
-  (for [cf crop-files
-        crop-block (-> cf
-                       cjio/resource
-                       slurp
-                       (cs/split ,,, #"\s*\*\s?-\s?\*\s?\-[^\r\n]*")
-                       (#(filter (fn [b] (-> b cs/trim empty? not)) %) ,,,))]
-    (-> crop-block
-        crop-block-parser
-        transform-crop-block)))
+(defn parse-and-transform-crop-files
+  [crop-files]
+  (->> (for [cf crop-files
+             crop-block (-> cf
+                            cjio/resource
+                            slurp
+                            (cs/split ,,, #"\s*\*\s?-\s?\*\s?\-[^\r\n]*")
+                            (#(filter (fn [b] (-> b cs/trim empty? not)) %) ,,,))]
+         (-> crop-block
+             crop-block-parser
+             transform-crop-block))
+       (into [] ,,,)
+       flatten))
 
 
-(defn import-bbfastdx-crop-files-into-datomic [datomic-connection]
+(defn import-bbfastdx-crop-files-into-datomic
+  [db-connection]
   (let [cfs (for [i (range 1 (inc 5))]
               (str "private/crops/issbruecker/BBFASTD" i ".txt"))
         transaction-data (parse-and-transform-crop-files cfs)]
-    (d/transact datomic-connection transaction-data)))
+    #_transaction-data
+    (try
+      (d/transact db-connection transaction-data)
+      (catch Exception e
+        (log/info "Couldn't transact weather data to datomic! data: [\n" transaction-data "\n]")
+        (throw e)))))
 
 
 
-#_(->> (parse-crop-files)
+(comment "import files"
+
+  (def x (import-bbfastdx-crop-files-into-datomic (db/datomic-connection "system")))
+  (first x)
+  (d/transact (db/datomic-connection "system") (first x))
+
+  (import-bbfastdx-crop-files-into-datomic (db/datomic-connection db/system-db-id))
+
+  (->> (parse-crop-files)
      #_(filter #(-> % second map?) ,,,)
-     pp/pprint)
+       pp/pprint)
+  )
+
 
 
 
