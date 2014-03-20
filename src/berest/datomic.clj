@@ -326,18 +326,18 @@
                            (into {} ,,,))]
     (when (and identity
                (pwd/check password (:user/password identity)))
-      {:user-id (:user/id identity)
-       :roles (->> (:user/roles identity)
+      {:user/id (:user/id identity)
+       :user/roles (->> (:user/roles identity)
                    (map #(-> % name keyword) ,,,)
                    (into #{} ,,,))
-       :full-name (:user/full-name identity)}))
+       :user/full-name (:user/full-name identity)}))
   )
 
 (defn credentials
   ([{:keys [username password]}]
    (credentials username password))
   ([user-id password]
-   (credentials (current-db system-db-id) user-id password)))
+   (credentials* (current-db system-db-id) user-id password)))
 
 
 (comment
