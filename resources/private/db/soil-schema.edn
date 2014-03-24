@@ -1,0 +1,66 @@
+[
+
+  ;; soil parameter
+  ;;-----------------------------------------------------------------------------------------------
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/from-depth
+          :db/valueType :db.type/long
+          :meta/unit :cm
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers starting depth"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/to-depth
+          :db/valueType :db.type/long
+          :meta/unit :cm
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers ending depth"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/upper-boundary-depth
+          :db/valueType :db.type/long
+          :meta/unit :cm
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers upper boundary depth to indicate into which layer a value belongs"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/field-capacity
+          :db/valueType :db.type/double
+          :meta/unit :volp
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers field-capacity"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/permanent-wilting-point
+          :db/valueType :db.type/double
+          :meta/unit :volp
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers permanent wilting point"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/soil-moisture
+          :db/valueType :db.type/double
+          :meta/unit :volp
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers soil-moisture"
+          :db.install/_attribute :db.part/db}
+
+  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/pFK]
+  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/pNFK]
+  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/volP]
+  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/mm]
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :soil/ka5-soil-type
+          :db/valueType :db.type/string
+          :db/cardinality :db.cardinality/one
+          :db/doc "A soil layers soil-type according to KA5 system."
+          :db.install/_attribute :db.part/db}
+
+  ]

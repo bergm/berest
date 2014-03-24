@@ -1,0 +1,46 @@
+[
+
+  ;; technology
+  ;;-----------------------------------------------------------------------------------------------
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :technology/cycle-days
+          :db/valueType :db.type/long
+          :meta/unit :day
+          :db/cardinality :db.cardinality/one
+          :db/doc "A technologys cycle parameter"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :technology/min-donation
+          :db/valueType :db.type/long
+          :meta/unit :mm
+          :db/cardinality :db.cardinality/one
+          :db/doc "Minimal donation a technology can give"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :technology/max-donation
+          :db/valueType :db.type/long
+          :meta/unit :mm
+          :db/cardinality :db.cardinality/one
+          :db/doc "Maximal donation a technology can give"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :technology/opt-donation
+          :db/valueType :db.type/long
+          :meta/unit :mm
+          :db/cardinality :db.cardinality/one
+          :db/doc "optimal donation a technology can give"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :technology/donation-step-size
+          :db/valueType :db.type/long
+          :meta/unit :mm
+          :db/cardinality :db.cardinality/one
+          :db/doc "Step size in which donations can be increased or decreased"
+          :db.install/_attribute :db.part/db}
+
+  ]

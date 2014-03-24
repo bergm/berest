@@ -1,0 +1,38 @@
+[
+
+  ;; irrigation water donations
+  ;;-----------------------------------------------------------------------------------------------
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :irrigation/abs-start-day
+          :db/valueType :db.type/long
+          :meta/unit :day
+          :db/cardinality :db.cardinality/one
+          :db/doc "Absolute start day of an donation"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :irrigation/abs-end-day
+          :db/valueType :db.type/long
+          :meta/unit :day
+          :db/cardinality :db.cardinality/one
+          :db/doc "Absolute end day of an donation"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :irrigation/amount
+          :db/valueType :db.type/double
+          :meta/unit :mm
+          :db/cardinality :db.cardinality/one
+          :db/doc "Amount of irrigation water for donation"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :irrigation/area
+          :db/valueType :db.type/double
+          :meta/unit :m2
+          :db/cardinality :db.cardinality/one
+          :db/doc "Area which has already been irrigated"
+          :db.install/_attribute :db.part/db}
+
+  ]
