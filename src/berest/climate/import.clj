@@ -17,13 +17,13 @@
   (-> file
       cjio/resource
       slurp
-      (csv/parse-csv :delimiter \;)))
+      (csv/parse-csv :delimiter \,)))
 
 (def climate-data-zalf-1992-1998
-  #(read-and-parse-as-csv "private/climate-data-muencheberg-zalf-1992-to-1998.csv"))
+  #(read-and-parse-as-csv "private/climate/climate-data-muencheberg-zalf-1992-to-1998.csv"))
 
 (def climate-data-muencheberg-1993-1998
-  #(read-and-parse-as-csv "private/climate-data-muencheberg-1993-to-1998.csv"))
+  #(read-and-parse-as-csv "private/climate/climate-data-muencheberg-1993-to-1998.csv"))
 
 (defn muencheberg-csv-data->transaction-weather-data
   [climate-data]
@@ -62,8 +62,7 @@
 
 (comment "transact data to a defined db  "
 
-  (transact-zalf-data (db/datomic-connection "berest"))
-
+  (transact-zalf-data (db/connection db/climate-db-id))
 
   (muencheberg-csv-data->transaction-weather-data (climate-data-muencheberg-1993-1998))
 
