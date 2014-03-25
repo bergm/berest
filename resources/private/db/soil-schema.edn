@@ -51,10 +51,10 @@
           :db/doc "A soil layers soil-moisture"
           :db.install/_attribute :db.part/db}
 
-  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/pFK]
-  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/pNFK]
-  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/volP]
-  [:db/add #db/id[:db.part/user] :db/ident :soil-moisture.unit/mm]
+  [:db/add #db/id[:berest.part/system] :db/ident :soil-moisture.unit/pFK]
+  [:db/add #db/id[:berest.part/system] :db/ident :soil-moisture.unit/pNFK]
+  [:db/add #db/id[:berest.part/system] :db/ident :soil-moisture.unit/volP]
+  [:db/add #db/id[:berest.part/system] :db/ident :soil-moisture.unit/mm]
 
   {:db/id #db/id[:db.part/db]
           :db/ident :soil/ka5-soil-type

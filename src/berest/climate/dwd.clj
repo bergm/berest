@@ -94,13 +94,13 @@
                 (assoc-in data [:weather-station/data :db/id] data-entity-id)
                 data)]
     ;always create a temporary db/id, will be upsert if station exists already
-    [(assoc data* :db/id (datomic.api/tempid :db.part/user))]))
+    [(assoc data* :db/id (datomic.api/tempid :berest.part/climate))]))
 
 
 (comment "insert transaction function into db, without full schema reload"
 
-  (d/transact (bd/datomic-connection bd/*db-id*)
-            [(read-string "{:db/id #db/id[:db.part/user]
+  (d/transact (db/connection)
+            [(read-string "{:db/id #db/id[:berest.part/climate]
   :db/ident :weather-station/add-data
   :db/doc \"A transaction function creating data and just allowing unique data per station and day\"
   :db/fn #db/fn {:lang \"clojure\"
@@ -119,14 +119,14 @@
                 (assoc-in data [:weather-station/data :db/id] data-entity-id)
                 data)]
     ;always create a temporary db/id, will be upsert if station exists already
-    [(assoc data* :db/id (datomic.api/tempid :db.part/user))])\"}}")])
+    [(assoc data* :db/id (datomic.api/tempid :berest.part/climate))])\"}}")])
 
   )
 
 
 (comment "instarepl test"
 
-  (add-data (bd/current-db) {:weather-station/id "dwd/N652",
+  (add-data (db/current-db) {:weather-station/id "dwd/N652",
                              :weather-station/data
                              {:weather-data/prognosis-data? true,
                               :weather-data/date #inst "2014-02-08T00:00:00.000-00:00",
@@ -141,7 +141,7 @@
                  [?se :weather-station/id ?station-id]
                  #_[?se :weather-station/data ?e]
                  #_[?e :weather-data/date ?date]]
-               (bd/current-db) "10162" #inst "2014-02-04T00:00:00.000-00:00")
+               (db/current-db) "10162" #inst "2014-02-04T00:00:00.000-00:00")
 
   )
 
@@ -184,7 +184,7 @@
           transaction-data->add-data (map #(vector :weather-station/add-data %) transaction-data)
           ]
       (try
-        @(d/transact (bd/datomic-connection bd/*db-id*) transaction-data->add-data)
+        @(d/transact (db/connection) transaction-data->add-data)
         (catch Exception e
           (log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
           (throw e)))

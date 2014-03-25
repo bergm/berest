@@ -40,7 +40,7 @@
 
 (defn transact-data
   [db-connection station-t-data weather-t-data]
-  (let [s-t-data (merge {:db/id (d/tempid :db.part/user)} station-t-data)
+  (let [s-t-data (merge {:db/id (db/new-entity-id :climate)} station-t-data)
         t-data (assoc s-t-data :weather-station/data weather-t-data)]
     (try
       #_(println "t-data: " [t-data])
@@ -62,7 +62,7 @@
 
 (comment "transact data to a defined db  "
 
-  (transact-zalf-data (db/connection db/climate-db-id))
+  (transact-zalf-data (db/connection))
 
   (muencheberg-csv-data->transaction-weather-data (climate-data-muencheberg-1993-1998))
 

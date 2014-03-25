@@ -17,12 +17,12 @@
           :db/doc "type of a phone number"
           :db.install/_attribute :db.part/db}
 
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/mobile-phone]
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/fixed-phone]
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/fax]
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/skype]
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/email]
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/instant-messaging]
-  [:db/add #db/id[:db.part/user] :db/ident :com-con.type/uri]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/mobile-phone]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/fixed-phone]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/fax]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/skype]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/email]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/instant-messaging]
+  [:db/add #db/id[:berest.part/system] :db/ident :com-con.type/uri]
 
   ]

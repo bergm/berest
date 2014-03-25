@@ -60,10 +60,10 @@
   :db/doc "Optionally further defines the type of the ui entity, e.g. an email-address."
   :db.install/_attribute :db.part/db}
 
- [:db/add #db/id[:db.part/user] :db/ident :rest.ui.type/email]
- [:db/add #db/id[:db.part/user] :db/ident :rest.ui.type/multi-line-text]
- [:db/add #db/id[:db.part/user] :db/ident :rest.ui.type/ref-list]
- [:db/add #db/id[:db.part/user] :db/ident :rest.ui.type/enum-list]
+ [:db/add #db/id[:berest.part/rest-ui] :db/ident :rest.ui.type/email]
+ [:db/add #db/id[:berest.part/rest-ui] :db/ident :rest.ui.type/multi-line-text]
+ [:db/add #db/id[:berest.part/rest-ui] :db/ident :rest.ui.type/ref-list]
+ [:db/add #db/id[:berest.part/rest-ui] :db/ident :rest.ui.type/enum-list]
 
  {:db/id #db/id[:db.part/db]
   :db/ident :rest.ui/list

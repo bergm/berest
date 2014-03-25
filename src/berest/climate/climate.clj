@@ -36,15 +36,15 @@
 
 (comment "retract some stations climate data"
 
-  (d/transact (db/datomic-connection "berest") [[:db.fn/retractEntity 17592186062454]
-                                                [:db.fn/retractEntity 17592186067570]])
+  (d/transact (db/connection) [[:db.fn/retractEntity 17592186062454]
+                               [:db.fn/retractEntity 17592186067570]])
 
   )
 
 (comment "find some stations"
 
   (def db (db/current-db "berest"))
-  (def con (db/datomic-connection "berest"))
+  (def con (db/connection "berest"))
   (def stations (queries/get-entities db :weather-station/id))
   (filter #(.startsWith (:weather-station/id %) "zalf/") stations)
 

@@ -168,7 +168,7 @@ Effektivitaet  =   1;          Tag
                :crop-name cs/trim
 
                :header-line (fn [crop-no cult-type & [usage-or-crop-name crop-code crop-name]]
-                              [:crop {:db/id (db/new-entity-id)
+                              [:crop {:db/id (db/new-entity-id (db/system-part))
                                       :crop/id (str crop-no "/" cult-type (when usage-or-crop-name "/") usage-or-crop-name)
                                       :crop/number (Integer/parseInt crop-no)
                                       :crop/cultivation-type cult-type
@@ -177,27 +177,34 @@ Effektivitaet  =   1;          Tag
                                       :crop/symbol (or crop-code crop-name)}])
 
                :dc-2-rel-day (fn [dcs days]
-                               [:dc-2-rel-day (db/create-entities :kv/dc :kv/rel-dc-day
+                               [:dc-2-rel-day (db/create-entities (db/system-part)
+                                                                  :kv/dc :kv/rel-dc-day
                                                                   (interleave dcs days))])
 
                :dc-2-coverdegree (fn [dcs cds]
-                                   [:dc-2-coverdegree (db/create-entities :kv/rel-dc-day :kv/cover-degree
+                                   [:dc-2-coverdegree (db/create-entities (db/system-part)
+                                                                          :kv/rel-dc-day :kv/cover-degree
                                                                           (interleave dcs cds))])
 
                :dc-2-name-pairs vector
                :dc-2-name (fn [pairs]
-                            [:dc-2-name (db/create-entities :kv/dc :kv/name pairs)])
+                            [:dc-2-name (db/create-entities (db/system-part)
+                                                            :kv/dc :kv/name
+                                                            pairs)])
 
                :dc-2-extraction-depth (fn [dcs cds]
-                                        [:dc-2-extraction-depth (db/create-entities :kv/rel-dc-day :kv/extraction-depth
+                                        [:dc-2-extraction-depth (db/create-entities (db/system-part)
+                                                                                    :kv/rel-dc-day :kv/extraction-depth
                                                                                     (interleave dcs cds))])
 
                :dc-2-transpiration (fn [dcs cds]
-                                     [:dc-2-transpiration-factor (db/create-entities :kv/rel-dc-day :kv/transpiration-factor
+                                     [:dc-2-transpiration-factor (db/create-entities (db/system-part)
+                                                                                     :kv/rel-dc-day :kv/transpiration-factor
                                                                                      (interleave dcs cds))])
 
                :dc-2-quotient (fn [dcs cds]
-                                [:dc-2-quotient (db/create-entities :kv/rel-dc-day :kv/quotient-aet-pet
+                                [:dc-2-quotient (db/create-entities (db/system-part)
+                                                                    :kv/rel-dc-day :kv/quotient-aet-pet
                                                                     (interleave dcs cds))])
 
                :dc-2-effectivity (fn [dcs cds]
@@ -213,12 +220,12 @@ Effektivitaet  =   1;          Tag
                                 (if (= k :crop)
                                   (let [cd (into {} crop-data)]
                                     (assoc data-map
-                                      :crop/dc-to-rel-dc-days (db/get-entity-ids (:dc-2-rel-day cd))
-                                      :crop/dc-to-developmental-state-names (db/get-entity-ids (:dc-2-name cd))
-                                      :crop/rel-dc-day-to-cover-degrees (db/get-entity-ids (:dc-2-coverdegree cd))
-                                      :crop/rel-dc-day-to-extraction-depths (db/get-entity-ids (:dc-2-extraction-depth cd))
-                                      :crop/rel-dc-day-to-transpiration-factors (db/get-entity-ids (:dc-2-transpiration-factor cd))
-                                      :crop/rel-dc-day-to-quotient-aet-pets (db/get-entity-ids (:dc-2-quotient cd))
+                                      :crop/dc-to-rel-dc-days (map :db/id (:dc-2-rel-day cd))
+                                      :crop/dc-to-developmental-state-names (map :db/id (:dc-2-name cd))
+                                      :crop/rel-dc-day-to-cover-degrees (map :db/id (:dc-2-coverdegree cd))
+                                      :crop/rel-dc-day-to-extraction-depths (map :db/id (:dc-2-extraction-depth cd))
+                                      :crop/rel-dc-day-to-transpiration-factors (map :db/id (:dc-2-transpiration-factor cd))
+                                      :crop/rel-dc-day-to-quotient-aet-pets (map :db/id (:dc-2-quotient cd))
                                       :crop/effectivity-quotient (:effectivity cd)))
                                   data-map))))}]
     (->> block
@@ -270,11 +277,11 @@ Effektivitaet  =   1;          Tag
 
 (comment "import files"
 
-  (def x (import-bbfastdx-crop-files-into-datomic (db/datomic-connection "system")))
+  (def x (import-bbfastdx-crop-files-into-datomic (db/connection)))
   (first x)
-  (d/transact (db/datomic-connection "system") (first x))
+  (d/transact (db/connection) (first x))
 
-  (import-bbfastdx-crop-files-into-datomic (db/datomic-connection db/system-db-id))
+  (import-bbfastdx-crop-files-into-datomic (db/connection))
 
   (->> (parse-crop-files)
      #_(filter #(-> % second map?) ,,,)

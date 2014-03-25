@@ -1,6 +1,8 @@
 (ns berest.datomic
   (:require clojure.set
+            [clojure.string :as str]
             [crypto.password.scrypt :as pwd]
+            [buddy.sign.generic :as sign]
             [clojure.string :as cstr]
             [clojure.pprint :as pp]
             [clj-time.core :as ctc]
@@ -9,12 +11,24 @@
             [clojure.tools.logging :as log]
             [datomic.api :as d :refer [q db]]
             [berest.util :as bu]
-            [berest.helper :as bh :refer [|->]]
+            [berest.helper :as bh :refer [rcomp |->]]
             [clojurewerkz.propertied.properties :as properties]))
 
-#_(def ^:dynamic *db-id* "berest")
+(def ^:dynamic *db-id* "berest")
 
-(def system-db-id "system")
+(def partition-namespace #(str *db-id* ".part"))
+
+(defn part
+  "create a partition name using the *db-id* if arg is no namespaced keyword,
+  else assume arg was already a correct partition name"
+  [part-name]
+  (if (and (keyword? part-name) (namespace part-name))
+    part-name
+    (keyword (partition-namespace) (name part-name))))
+
+(def system-part #(part "system"))
+(def climate-part #(part "climate"))
+
 
 (defn datomic-connection-string* [base-uri db-id]
   (str base-uri db-id))
@@ -35,7 +49,7 @@
 (def dynamodb-base-uri
   (do
     ;; set aws credentials
-    (->> "private/db/aws-credentials.properties"
+    (->> "private/aws/aws-credentials.properties"
          cjio/resource
          properties/load-from
          properties/properties->map
@@ -46,35 +60,51 @@
 
 (def datomic-connection-string dynamodb-connection-string)
 
-(defn datomic-connection [db-id]
-  (->> db-id
+(defn connection [& [db-id]]
+  (->> (or db-id *db-id*)
        datomic-connection-string
        d/connect))
 
-(defn db-connection [db-id]
-  (->> db-id
-       datomic-connection-string
-       d/connect))
-
-(defn current-db [db-id]
-  (some->> db-id
-           datomic-connection
+(defn current-db [& [db-id]]
+  (some->> (or db-id *db-id*)
+           connection
            d/db))
 
-(def datomic-schema-files {:system ["private/db/berest-meta-schema.edn"
-                                    "private/db/system-schema.edn"
-                                    "private/db/berest-schema.edn"
-                                    "private/db/rest-ui-description.edn"]
-                           :berest ["private/db/berest-meta-schema.edn"
-                                    "private/db/berest-schema.edn"
-                                    "private/db/rest-ui-description.edn"]})
+(def datomic-schema-files ["private/db/standard-partitions-schema.edn"
+                           "private/db/meta-schema.edn"
+
+                           "private/db/user-schema.edn"
+
+                           "private/db/key-value-pair-schema.edn"
+                           "private/db/farm-schema.edn"
+                           "private/db/person-schema.edn"
+                           "private/db/address-schema.edn"
+                           "private/db/communication-schema.edn"
+                           "private/db/geo-coord-schema.edn"
+                           "private/db/crop-schema.edn"
+                           "private/db/crop-instance-schema.edn"
+                           "private/db/plot-schema.edn"
+                           "private/db/dc-assertion-schema.edn"
+                           "private/db/irrigation-donation-schema.edn"
+                           "private/db/technology-schema.edn"
+                           "private/db/soil-schema.edn"
+                           "private/db/climate-schema.edn"
+
+                           "private/db/rest-ui-description.edn"])
 
 (defn apply-schemas-to-db
-  [datomic-connection & schema-files]
-  (->> schema-files
-       (map (|-> cjio/resource slurp read-string) ,,,)
-       (map (partial d/transact datomic-connection) ,,,)
-       dorun))
+  "returns true if successful and no errors happend during transactions"
+  [db-connection & schema-files]
+  (let [errors (atom false)]
+    (doseq [[schema-file tx-data] (map vector
+                                       schema-files
+                                       (map (rcomp cjio/resource slurp read-string) schema-files))]
+      (try
+        @(d/transact db-connection tx-data)
+        (catch Exception e
+          (println "Exception trying to transact data from schema-file: " schema-file "! Exception: " e)
+          (reset! errors true))))
+    (not @errors)))
 
 (defn delete-db!
   [db-id]
@@ -90,8 +120,7 @@
     (try
       (if (d/create-database uri*)
         (try
-          (apply apply-schemas-to-db (d/connect uri*) initial-schema-files)
-          (assoc res :success true)
+          (assoc res :success (apply apply-schemas-to-db (d/connect uri*) initial-schema-files))
           (catch Exception e
             (log/info "Couldn't apply schemas to db at uri: " uri* ", schema files where: "
                       initial-schema-files ". Removing db.")
@@ -105,63 +134,53 @@
         (assoc res :success false
                    :error-reason :exception-db-creation)))))
 
-(defn bootstrap-system-db
-  [& [db-id]]
-  (apply create-db (or db-id system-db-id) (:berest datomic-schema-files)))
-
-
 
 
 
 (comment
   "instarepl debugging code"
 
-  ;system db
-  (bootstrap-system-db system-db-id)
-  (apply create-db system-db-id (:system datomic-schema-files))
-  (d/create-database (datomic-connection-string "system"))
-  (apply apply-schemas-to-db (datomic-connection system-db-id)
+
+
+  (apply create-db *db-id* datomic-schema-files)
+  (d/create-database (datomic-connection-string *db-id*))
+  (apply apply-schemas-to-db (connection *db-id*)
          (apply concat (vals datomic-schema-files)))
-       (delete-db! system-db-id)
+  (delete-db! *db-id*)
 
-  (delete-db! "michael")
-  (apply create-db "michael" (:berest datomic-schema-files))
-
-  (d/create-database (datomic-connection-string "berest"))
-  (apply apply-schemas-to-db (db-connection "michael") (:berest datomic-schema-files))
 
   (def ss (-> datomic-schema-files :system second))
   (def ss* ((bh/rcomp cjio/resource slurp read-string) ss))
-  (d/transact (datomic-connection "system") ss*)
+  (d/transact (connection "system") ss*)
 
   (def ms (-> datomic-schema-files :berest first))
   (def ms* ((bh/rcomp cjio/resource slurp read-string) ms))
-  (d/transact (datomic-connection "system") ms*)
+  (d/transact (connection "system") ms*)
 
   (def s (-> datomic-schema-files :berest second))
   (def s* ((bh/rcomp cjio/resource slurp read-string) s))
-  (d/transact (datomic-connection "system") s*)
+  (d/transact (connection "system") s*)
 
   (def rui (-> datomic-schema-files :berest (nth ,,, 2)))
   (def rui* ((bh/rcomp cjio/resource slurp read-string) rui))
-  (d/transact (datomic-connection "system") rui*)
+  (d/transact (connection "system") rui*)
 
   )
 
 
 
-(defn new-entity-ids [] (repeatedly #(d/tempid :db.part/user)))
-(defn new-entity-id [] (first (new-entity-ids)))
-(defn temp-entity-id [value] (d/tempid :db.part/user value))
+(defn new-entity-ids [in-partition] (repeatedly #(d/tempid (part in-partition))))
+(defn new-entity-id [in-partition] (first (new-entity-ids in-partition)))
+(defn temp-entity-id [in-partition value] (d/tempid (part in-partition) value))
 
 (defn create-entities
-  ([key value kvs]
+  ([in-partition key value kvs]
     (map (fn [id [k v]] {:db/id id
                          key k
                          value v})
-         (new-entity-ids) (apply array-map kvs)))
-  ([ks-to-vss]
-    (map #(assoc (zipmap (keys ks-to-vss) %) :db/id (new-entity-id))
+         (new-entity-ids in-partition) (apply array-map kvs)))
+  ([in-partition ks-to-vss]
+    (map #(assoc (zipmap (keys ks-to-vss) %) :db/id (new-entity-id in-partition))
          (apply map vector (vals ks-to-vss)))))
 
 (defn create-inline-entities
@@ -210,8 +229,8 @@
   "Create a dc assertion for given year 'in-year' to define that at abs-dc-day
   the dc-state was 'dc'. Optionally a at-abs-day can be given when the
   dc state had been told the system, else abs-dc-day will be assumed."
-  [in-year abs-dc-day dc & [at-abs-day]]
-  {:db/id (new-entity-id)
+  [in-partition in-year abs-dc-day dc & [at-abs-day]]
+  {:db/id (new-entity-id in-partition)
    :assertion/at-abs-day (or at-abs-day abs-dc-day)
    :assertion/assert-dc dc
    :assertion/abs-assert-dc-day abs-dc-day})
@@ -220,41 +239,41 @@
   "Create a dc assertion for given year 'in-year' to define that at '[day month]'
   the dc-state was 'dc'. Optionally a '[at-day at-month]' can be given when the
   dc state had been told the system, else '[day month]' will be assumed"
-  [in-year [day month] dc & [[at-day at-month :as at]]]
+  [in-partition in-year [day month] dc & [[at-day at-month :as at]]]
   (let [abs-dc-day (bu/date-to-doy day month in-year)
         at-abs-day (if (not-any? nil? (or at [nil]))
-                       (bu/date-to-doy at-day at-month in-year)
-                       abs-dc-day)]
-       (create-dc-assertion* in-year abs-dc-day dc at-abs-day)))
+                     (bu/date-to-doy at-day at-month in-year)
+                     abs-dc-day)]
+    (create-dc-assertion* in-partition in-year abs-dc-day dc at-abs-day)))
 
 (defn create-dc-assertions
   "create multiple assertions at one"
-  [in-year assertions]
-  (map #(apply create-dc-assertion in-year %) assertions))
+  [in-partition in-year assertions]
+  (map #(apply create-dc-assertion in-partition in-year %) assertions))
 
 
 (defn create-irrigation-donation*
 	"Create datomic map for an irrigation donation given an start-abs-day and optionally
   an end-abs-day (else this will be the same as start-abs-day) and the irrigation-donation in [mm]"
-	[start-abs-day donation-mm & [end-abs-day]]
-  {:db/id (new-entity-id)
+  [in-partition start-abs-day donation-mm & [end-abs-day]]
+  {:db/id (new-entity-id in-partition)
    :irrigation/abs-start-day start-abs-day
    :irrigation/abs-end-day (or end-abs-day start-abs-day)
    :irrigation/amount donation-mm})
 
 (defn create-irrigation-donation
   "create datomic map for an irrigation donation"
-  [in-year [start-day start-month] donation-mm & [[end-day end-month :as end-date]]]
+  [in-partition in-year [start-day start-month] donation-mm & [[end-day end-month :as end-date]]]
   (let [start-abs-day (bu/date-to-doy start-day start-month in-year)
         end-abs-day (if (not-any? nil? (or end-date [nil]))
                        (bu/date-to-doy end-day end-month in-year)
                        start-abs-day)]
-       (create-irrigation-donation* start-abs-day donation-mm end-abs-day)))
+       (create-irrigation-donation* in-partition start-abs-day donation-mm end-abs-day)))
 
 (defn create-irrigation-donations
   "Create multiple irrigation donation datomic maps at once"
-  [in-year donations]
-  (map #(apply create-irrigation-donation in-year %) donations))
+  [in-partition in-year donations]
+  (map #(apply create-irrigation-donation in-partition in-year %) donations))
 
 
 
@@ -270,7 +289,7 @@
   [db-connection user-id password full-name roles]
   (let [enc-pwd (pwd/encrypt password)
         kw-roles (map #(->> % name (keyword "user.role" ,,,)) roles)
-        creds {:db/id (d/tempid :db.part/user)
+        creds {:db/id (new-entity-id :system)
                :user/id user-id
                :user/password enc-pwd
                :user/full-name full-name
@@ -286,58 +305,87 @@
 
 (comment
 
-  (store-credentials (db-connection "system")
+  (store-credentials (connection)
                      "michael" "#zALf!" "Michael Berg" [:admin :guest :farmer :consultant])
+
+  (store-credentials (connection) "guest" "guest" "Guest Guest" [:guest])
+  (store-credentials (connection) "zalf" "fLAz" "Zalf Zalf" [:consultant])
 
   )
 
-(defn- register-user*
-  [system-con user-id password full-name roles]
-  (let [{success :success
-         :as res} (apply create-db user-id (:berest datomic-schema-files))]
-    (if success
-      (store-credentials system-con user-id password full-name roles)
-      (when-not (= :db-alredy-existed (:error-reason res))
-        (delete-db! (:db-id res))))))
+
+
+(defn create-partition
+  "partition-name should be either a string or keyword"
+  [db-connection partition-name]
+  (let [tx-data {:db/id #db/id [:db.part/db]
+                        :db/ident (part partition-name)
+                        :db.install/_partition :db.part/db}]
+    (try
+      @(d/transact db-connection [tx-data])
+      partition-name
+      (catch Exception e
+        (log/info "Couldn't create a new partition: " partition-name " tx-data: [\n" tx-data "\n]")
+        nil))))
+
 
 (defn register-user
-  [user-id password full-name & {roles :roles :or {roles [:guest]}}]
-  (register-user* (db-connection system-db-id)
-                  user-id password full-name roles))
+  "registering means, that additionally to just storing the credentials
+   a new partition will be created for the user's data"
+  ([user-id password full-name]
+   (register-user (connection) user-id password full-name [:guest]))
+  ([user-id password full-name roles]
+   (register-user (connection) user-id password full-name roles))
+  ([db-connection user-id password full-name roles]
+   (when-let [creds (store-credentials db-connection user-id password full-name roles)]
+     (if (create-partition db-connection user-id)
+       creds
+       (try
+         @(d/transact (db-connection) [[:db.fn/retractEntity [:user/id (:user/id creds)]]])
+         nil
+         (catch Exception e
+           (log/info "Couldn't retract newly created user entity with credentials: \n" creds
+                     "\nafter failing to install partition: " user-id ".")
+           nil))))))
 
 (comment
 
-  (register-user "guest" "guest")
+  (register-user "michael" "#zALf!" "Michael Berg" [:admin :guest :farmer :consultant])
+  (register-user "guest" "guest" "Guest Guest")
+  (register-user "zalf" "fLAz" "Zalf Zalf" [:consultant])
 
   )
 
+(defn- get-user-entity
+  "get the entity stored for the given user"
+  [db user-id]
+  (some->> (d/q '[:find ?e
+                  :in $ ?user-id
+                  :where
+                  [?e :user/id ?user-id]]
+                db user-id)
+           ffirst
+           (d/entity db ,,,)))
 
-(defn- credentials*
-  [system-db user-id password]
-  (let [ user-entity (d/q '[:find ?e
-                            :in $ ?user-id
-                            :where
-                            [?e :user/id ?user-id]]
-                          system-db user-id)
-         identity (some->> user-entity
-                           ffirst
-                           (d/entity system-db ,,,)
-                           d/touch
-                           (into {} ,,,))]
-    (when (and identity
-               (pwd/check password (:user/password identity)))
-      {:user/id (:user/id identity)
-       :user/roles (->> (:user/roles identity)
-                   (map #(-> % name keyword) ,,,)
-                   (into #{} ,,,))
-       :user/full-name (:user/full-name identity)}))
-  )
+(defn- prepare-user-identity
+  [user-entity]
+  {:user/id        (:user/id user-entity)
+   :user/roles     (->> (:user/roles user-entity)
+                        (map #(-> % name keyword) ,,,)
+                        (into #{} ,,,))
+   :user/full-name (:user/full-name user-entity)})
+
+(defn credentials*
+  [db user-id password]
+  (if-let [user-entity (get-user-entity db user-id)]
+    (when (pwd/check password (:user/password user-entity))
+      (prepare-user-identity user-entity))))
 
 (defn credentials
   ([{:keys [username password]}]
    (credentials username password))
   ([user-id password]
-   (credentials* (current-db system-db-id) user-id password)))
+   (credentials* (current-db) user-id password)))
 
 
 (comment
@@ -355,21 +403,46 @@
               :in $
               :where
               [?e :user/id ?user-id]]
-            (current-db system-db-id) "michael")
+            (current-db) "michael")
        ffirst
-       (d/entity (current-db system-db-id) ,,,)
+       (d/entity (current-db) ,,,)
        d/touch)
 
   (->> (d/q '[:find ?e
               :in $
               :where
               [?e :db/ident :user/id]]
-            (current-db system-db-id))
+            (current-db))
        ffirst
-       (d/entity (current-db system-db-id))
+       (d/entity (current-db))
        d/touch)
 
 
   )
+
+(defn create-session-token
+  ([user-id]
+   (create-session-token (current-db) user-id))
+  ([db user-id]
+   (if-let [enc-pwd (some->> (get-user-entity db user-id) :user/password)]
+     (sign/sign user-id enc-pwd))))
+
+(defn check-session-token
+  "check if the given token is valid given the user-id and an optional timeout time
+  max-age in seconds, returns (like credentials) the user-identity if valid"
+  ([token]
+   (check-session-token (first (str/split token #":")) token nil))
+  ([user-id token]
+   (check-session-token user-id token nil))
+  ([user-id token max-age]
+   (check-session-token (current-db) user-id token max-age))
+  ([db user-id token max-age]
+   (let [user-entity (get-user-entity db user-id)
+         enc-pwd (:user/password user-entity)]
+     (when (and enc-pwd
+                (sign/unsign token enc-pwd {:max-age (or max-age nil)}))
+       (prepare-user-identity user-entity)))))
+
+
 
 
