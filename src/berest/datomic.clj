@@ -11,7 +11,7 @@
             [clojure.tools.logging :as log]
             [datomic.api :as d :refer [q db]]
             [berest.util :as bu]
-            [berest.helper :as bh :refer [rcomp |->]]
+            [berest.helper :as bh :refer [>>> rcomp |->]]
             [clojurewerkz.propertied.properties :as properties]))
 
 (def ^:dynamic *db-id* "berest")
@@ -213,16 +213,22 @@
     (map (juxt key value) ,,,)
     (into (sorted-map) ,,,)))
 
-(defn query-for-db-id [db relation value]
-  (->> (q '[:find ?db-id
-            :in $ ?r ?v
-            :where
-            [?db-id ?r ?v]]
-         db relation value)
-    (map first)))
+(defn query-entities
+  ([db attr]
+   (map (>>> first (partial d/entity db))
+        (d/q '[:find ?e
+               :in $ ?id-attr
+               :where
+               [?e ?id-attr]]
+             db attr)))
+  ([db attr value]
+  (map (>>> first (partial d/entity db))
+       (d/q '[:find ?e
+              :in $ ?attr ?value
+              :where
+              [?e ?attr ?value]]
+            db attr value))))
 
-(defn unique-query-for-db-id [db relation value]
-  (first (query-for-db-id db relation value)))
 
 
 (defn create-dc-assertion*

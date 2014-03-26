@@ -36,12 +36,18 @@
   [:db/add #db/id[:berest.part/system] :db/ident :user.role/farmer]
   [:db/add #db/id[:berest.part/system] :db/ident :user.role/guest]
 
-
   {:db/id #db/id[:db.part/db]
           :db/ident :user/available-weather-stations
           :db/valueType :db.type/ref
           :db/cardinality :db.cardinality/many
           :db/doc "The weather-stations from the system database available to the user"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :user/farms
+          :db/valueType :db.type/ref
+          :db/cardinality :db.cardinality/many
+          :db/doc "The farms a user has created/knows about"
           :db.install/_attribute :db.part/db}
 
   ]

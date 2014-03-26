@@ -12,6 +12,9 @@
 (def |-> "symbol/shortcut for rcomp (reverse compose) function"
   rcomp)
 
+(def >>> rcomp)
+(def <<< comp)
+
 (def |<- "symbol/shortcut for comp (compose) function"
   comp)
 

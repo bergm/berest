@@ -27,7 +27,7 @@
           [station [rr-s vp-t gs tm]] (map vector
                                            (rest stations)
                                            (partition 4 (rest line*)))]
-      {:weather-station/id (str "dwd/" station)
+      {:weather-station/id (str "dwd_" station)
        :weather-station/data {:weather-data/prognosis-data? true
                               :weather-data/date date*
                               :weather-data/precipitation (parse-german-double rr-s)
@@ -58,7 +58,7 @@
           [station [rr-s vp-t gs tm]] (map vector
                                            (rest stations)
                                            (partition 4 (rest line*)))]
-      {:weather-station/id (str "dwd/" station)
+      {:weather-station/id (str "dwd_" station)
        :weather-station/data {:weather-data/date date*
                               :weather-data/precipitation (parse-german-double rr-s)
                               :weather-data/evaporation (parse-german-double vp-t)
@@ -75,7 +75,6 @@
   (as-transaction-fns mdata*)
 
   )
-
 
 (defn add-data
   "A transaction function creating data and just allowing unique data per station and day"
@@ -126,7 +125,7 @@
 
 (comment "instarepl test"
 
-  (add-data (db/current-db) {:weather-station/id "dwd/N652",
+  (add-data (db/current-db) {:weather-station/id "dwd_N652",
                              :weather-station/data
                              {:weather-data/prognosis-data? true,
                               :weather-data/date #inst "2014-02-08T00:00:00.000-00:00",
@@ -141,7 +140,7 @@
                  [?se :weather-station/id ?station-id]
                  #_[?se :weather-station/data ?e]
                  #_[?e :weather-data/date ?date]]
-               (db/current-db) "10162" #inst "2014-02-04T00:00:00.000-00:00")
+               (db/current-db) "dwd:10162" #inst "2014-02-04T00:00:00.000-00:00")
 
   )
 

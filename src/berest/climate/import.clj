@@ -51,9 +51,9 @@
 
 (defn transact-zalf-data
   [db-connection]
-  (let [station-to-data {{:weather-station/id "zalf/zalf"
+  (let [station-to-data {{:weather-station/id "zalf_lokal"
                           :weather-station/name "ZALF Wetterstation"} (climate-data-zalf-1992-1998)
-                         {:weather-station/id "zalf/muencheberg"
+                         {:weather-station/id "zalf_muencheberg"
                           :weather-station/name "DWD Station Müncheberg"} (climate-data-muencheberg-1993-1998)}]
     (->> (vals station-to-data)
          (map muencheberg-csv-data->transaction-weather-data ,,,)

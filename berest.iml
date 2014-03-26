@@ -31,7 +31,6 @@
     <orderEntry type="library" name="Leiningen: org.clojure/tools.logging:0.2.6" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.namespace:0.2.4" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/tools.nrepl:0.2.3" level="project" />
-    <orderEntry type="library" name="Leiningen: prismatic/plumbing:0.2.2" level="project" />
     <orderEntry type="library" name="Leiningen: clojurewerkz/scrypt:1.1.0" level="project" />
     <orderEntry type="library" name="Leiningen: com.taoensso/nippy:2.4.1" level="project" />
     <orderEntry type="library" name="Leiningen: org.bouncycastle/bcpkix-jdk15on:1.50" level="project" />
@@ -85,9 +84,6 @@
     <orderEntry type="library" name="Leiningen: org.clojure/tools.macro:0.1.2" level="project" />
     <orderEntry type="library" name="Leiningen: hiccup:1.0.2" level="project" />
     <orderEntry type="library" name="Leiningen: jkkramer/verily:0.4.1" level="project" />
-    <orderEntry type="library" name="Leiningen: de.kotka/lazymap:3.1.0" level="project" />
-    <orderEntry type="library" name="Leiningen: prismatic/schema:0.2.1" level="project" />
-    <orderEntry type="library" name="Leiningen: potemkin:0.3.2" level="project" />
   </component>
 </module>
 

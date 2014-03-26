@@ -633,7 +633,7 @@
 (defn add-zalf-test-farm [in-partition]
   @(d/transact (db/connection)
                [{:db/id (db/new-entity-id in-partition)
-                 :farm/id "zalf/test-farm"
+                 :farm/id "zalf:test-farm"
                  :farm/name "ZALF Test Betrieb"
                  :farm/addresses [{:address/street "Eberswalder Str. 84"
                                    :address/postal-code "15374"
@@ -658,8 +658,8 @@
                                  [30 3.5, 60 3.0, 90 3.7, 120 3.7, 200 3.0])
 
         plot {:db/id (db/new-entity-id in-partition)
-              :farm/_plots [:farm/id "zalf/test-farm"]
-              :plot/id "zalf/versuchsfeld"
+              :farm/_plots [:farm/id "zalf:test-farm"]
+              :plot/id "zalf:versuchsfeld"
               :plot/crop-area 1.0
               :plot/irrigation-area 1.0
               :plot/stt 6212

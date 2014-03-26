@@ -9,8 +9,16 @@
   {:db/id #db/id[:db.part/db]
           :db/ident :plot/id
           :db/valueType :db.type/string
+          :db/unique :db.unique/identity
           :db/cardinality :db.cardinality/one
           :db/doc "A plots id, e.g. the german Feldblock-ID."
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :plot/name
+          :db/valueType :db.type/string
+          :db/cardinality :db.cardinality/one
+          :db/doc "A plots name, might be used for display purposes."
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]

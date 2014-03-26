@@ -9,7 +9,7 @@
           :db/valueType :db.type/string
           :db/cardinality :db.cardinality/one
           :db/doc "A stations human identifiable id, should be clojure like namespaced
-  e.g. dwd/F475 for Müncheberg, that way it's possible to namespace local stations
+  e.g. dwd:F475 for Müncheberg, that way it's possible to namespace local stations
   and if available use other stations as well"
           :db.install/_attribute :db.part/db}
 
