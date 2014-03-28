@@ -4,7 +4,8 @@
             [clj-time.core :as ctc]
             [clj-time.format :as ctf]
             [clj-time.coerce :as ctcoe]
-            [berest.datomic :as bd]
+            [clj-time.periodic :as ctp]
+            [berest.datomic :as db]
             [berest.util :as bu]
             [datomic.api :as d]
             #_[miner.ftp :as ftp]
@@ -59,7 +60,8 @@
                                            (rest stations)
                                            (partition 4 (rest line*)))]
       {:weather-station/id (str "dwd_" station)
-       :weather-station/data {:weather-data/date date*
+       :weather-station/data {:weather-data/prognosis-data? false
+                              :weather-data/date date*
                               :weather-data/precipitation (parse-german-double rr-s)
                               :weather-data/evaporation (parse-german-double vp-t)
                               :weather-data/average-temperature (parse-german-double tm)
@@ -80,14 +82,16 @@
   "A transaction function creating data and just allowing unique data per station and day"
   [db data]
   (let [station-id (:weather-station/id data)
-        date (-> data :weather-station/data :weather-data/date)
+        {date :weather-data/date
+         prognosis? :weather-data/prognosis-data?} (:weather-station/data data)
         q (datomic.api/q '[:find ?se ?e
-                           :in $ ?station-id ?date
+                           :in $ ?station-id ?date ?prognosis?
                            :where
                            [?se :weather-station/id ?station-id]
                            [?se :weather-station/data ?e]
-                           [?e :weather-data/date ?date]]
-                         db station-id date)
+                           [?e :weather-data/date ?date]
+                           [?e :weather-data/prognosis-data? ?prognosis?]]
+                         db station-id date prognosis?)
         [station-entity-id data-entity-id] (first q)
         data* (if data-entity-id
                 (assoc-in data [:weather-station/data :db/id] data-entity-id)
@@ -105,14 +109,16 @@
   :db/fn #db/fn {:lang \"clojure\"
                  :params [db data]
                  :code \"(let [station-id (:weather-station/id data)
-        date (-> data :weather-station/data :weather-data/date)
+       {date :weather-data/date
+         prognosis? :weather-data/prognosis-data?} (:weather-station/data data)
         q (datomic.api/q '[:find ?se ?e
-                           :in $ ?station-id ?date
+                           :in $ ?station-id ?date ?prognosis?
                            :where
                            [?se :weather-station/id ?station-id]
                            [?se :weather-station/data ?e]
-                           [?e :weather-data/date ?date]]
-                         db station-id date)
+                           [?e :weather-data/date ?date]
+                           [?e :weather-data/prognosis-data? ?prognosis?]]
+                         db station-id date prognosis?)
         [station-entity-id data-entity-id] (first q)
         data* (if data-entity-id
                 (assoc-in data [:weather-station/data :db/id] data-entity-id)
@@ -185,15 +191,29 @@
       (try
         @(d/transact (db/connection) transaction-data->add-data)
         (catch Exception e
-          (log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
+          (println #_log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
           (throw e)))
       true)
     (catch Exception _ false)))
 
+(defn bulk-import-dwd-data-into-datomic
+  [kind from-date to-date]
+  (doseq [date (take (ctc/in-days (ctc/interval from-date (ctc/plus to-date (ctc/days 1))))
+                     (ctp/periodic-seq from-date (ctc/days 1)))]
+    (import-dwd-data-into-datomic kind date)))
+
 (comment
 
-  (import-dwd-data-into-datomic :prognosis (ctc/date-time 2014 2 4))
-  (import-dwd-data-into-datomic :measured (ctc/date-time 2014 2 4))
+  (import-dwd-data-into-datomic :prognosis (ctc/date-time 2014 2 3))
+  (import-dwd-data-into-datomic :measured (ctc/date-time 2014 2 7))
+
+  (bulk-import-dwd-data-into-datomic :prognosis
+                                     (ctc/date-time 2014 2 3)
+                                     (ctc/date-time 2014 3 28))
+
+  (bulk-import-dwd-data-into-datomic :measured
+                                     (ctc/date-time 2014 2 3)
+                                     (ctc/date-time 2014 3 28))
 
   )
 

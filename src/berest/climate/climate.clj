@@ -1,6 +1,8 @@
 (ns berest.climate.climate
+  (:import (java.util Date))
   (:require [clojure.java.io :as cjio]
             [clojure.string :as str]
+            #_[simple-time.core :as time]
             [clj-time.core :as ctc]
             [clj-time.format :as ctf]
             [clj-time.coerce :as ctcoe]
@@ -9,12 +11,22 @@
             [berest.util :as bu]
             [berest.queries :as queries]
             [datomic.api :as d]
-            [clojure.pprint :as pp]))
+            [clojure.pprint :as pp])
+  (:import java.util.Date))
 
-(defn weather-data
-  [db weather-station-id year]
-  (let [start-of-year-1 (ctcoe/to-date (ctc/date-time (dec year) 12 31))
-        end-of-year+1 (ctcoe/to-date (ctc/date-time (inc year) 1 1))
+(defn- before-start+after-end-of-year
+  [year]
+  [(ctcoe/to-date (ctc/date-time (dec year) 12 31))
+   (ctcoe/to-date (ctc/date-time (inc year) 1 1))])
+
+(defn- weather-data-in-year?
+  [start-of-year-1 end-of-year+1 {date :weather-data/date} ]
+  (and (.after date start-of-year-1)
+       (.before date end-of-year+1)))
+
+(defn weather-station-data
+  [db year weather-station-id]
+  (let [[start-of-year-1 end-of-year+1] (before-start+after-end-of-year year)
         data (d/q '[:find ?ws-e-id ?data-e-id
                     :in $ ?ws-id ?soy-1 ?eoy+1
                     :where
@@ -27,9 +39,44 @@
     {:station (d/entity db (ffirst data))
      :data (map #(d/entity db (second %)) data)}))
 
+(defn final-sorted-weather-data-map-for-plot
+  [db year plot-id]
+  (let [plot-e (->> plot-id (db/query-entities db :plot/id ,,,) first)
+        {plot-wstation-e :plot/weather-station
+         plot-wdata-es :plot/weather-data
+         farm-e :farm/_plots} plot-e
+        {auth-farm-wstation-e :farm/authorative-weather-station
+         farm-wstation-e :farm/weather-station
+         farm-wdata-es :farm/weather-data} farm-e
+
+        [start-of-year-1 end-of-year+1] (before-start+after-end-of-year year)
+        wdiy (partial weather-data-in-year? start-of-year-1 end-of-year+1)
+        data-as-sorted-map (fn [weather-data-result]
+                             (->> weather-data-result
+                                  :data
+
+                                  (map #(vector (bu/date-to-doy (:weather-data/date %)) %) ,,,)
+                                  (map (fn [[k v]] [k (d/touch v)]) ,,,)
+                                  (into (sorted-map) ,,,)))
+
+        auth-farm-ws-data (data-as-sorted-map (weather-station-data db year (:weather-station/id auth-farm-wstation-e)))
+        farm-ws-data (when farm-wstation-e
+                       (data-as-sorted-map (weather-station-data db year (:weather-station/id farm-wstation-e))))
+        farm-wdata (data-as-sorted-map (filter wdiy farm-wdata-es))
+        plot-ws-data (when plot-wstation-e
+                       (data-as-sorted-map (weather-station-data db (:weather-station/id plot-wstation-e) year)))
+        plot-wdata (data-as-sorted-map (filter wdiy plot-wdata-es))]
+    (merge auth-farm-ws-data
+           farm-ws-data
+           farm-wdata
+           plot-ws-data
+           plot-wdata)))
+
+
+
 (defn sorted-weather-data-map
   [db weather-station-id year]
-  (->> (weather-data db weather-station-id year)
+  (->> (weather-station-data db weather-station-id year)
        (map #(vector (bu/date-to-doy (:weather-data/date %)) %) ,,,)
        (into (sorted-map) ,,,)))
 
@@ -56,7 +103,7 @@
 
 (comment "check weather-data of a station"
 
-  (def t (weather-data (db/current-db "berest") "zalf/zalf" 1993))
+  (def t (weather-station-data (db/current-db "berest") "zalf/zalf" 1993))
   (sort-by :weather-data/date (map d/touch (:data t)))
   (count (:data t))
 
@@ -123,3 +170,6 @@
   (if-let [v (find m doy)]
     (second v)
     (assoc (longterm-evap-precip doy) :prognosis? true)))
+
+
+

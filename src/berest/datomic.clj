@@ -215,14 +215,14 @@
 
 (defn query-entities
   ([db attr]
-   (map (>>> first (partial d/entity db))
+   (map (rcomp first (partial d/entity db))
         (d/q '[:find ?e
                :in $ ?id-attr
                :where
                [?e ?id-attr]]
              db attr)))
   ([db attr value]
-  (map (>>> first (partial d/entity db))
+  (map (rcomp first (partial d/entity db))
        (d/q '[:find ?e
               :in $ ?attr ?value
               :where
