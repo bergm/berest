@@ -191,7 +191,7 @@
       (try
         @(d/transact (db/connection) transaction-data->add-data)
         (catch Exception e
-          (println #_log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
+          (log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
           (throw e)))
       true)
     (catch Exception _ false)))
