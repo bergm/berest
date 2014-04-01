@@ -3,3 +3,4 @@
 .nrepl-port
 /.idea
 /src/hoplon-client/.boot
+/resources/public

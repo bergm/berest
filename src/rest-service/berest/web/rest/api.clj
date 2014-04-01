@@ -86,7 +86,7 @@
 ;; api functions
 
 (defn calculate-plot-from-db
-  [& {:keys [db farm-id plot-id weather-station-id
+  [& {:keys [db farm-id plot-id
              until-julian-day year
              irrigation-donations dc-assertions]}]
   (let? [plot (bc/db-read-plot db plot-id year)
@@ -156,7 +156,7 @@
         {:keys [farm-id
                 plot-id
                 until-date
-                irrigation-data]} (-> request :path-params)
+                irrigation-data]} (-> request :params)
         db (db/current-db)
         until-date* (time/parse until-date)
         year (time/datetime->year until-date*)

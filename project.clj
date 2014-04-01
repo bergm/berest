@@ -49,7 +49,7 @@
 
   :min-lein-version "2.0.0"
 
-  :source-paths ["src/core" "src/immutant" "src/rest-service"]
+  :source-paths ["src/core" "src/rest-service" #_"src/immutant"]
   :resource-paths ["config", "resources"]
 
   :immutant {:context-path "/"}

@@ -17,7 +17,7 @@
 
                  [cljs-ajax "0.2.3"]
 
-                 ;#_(
+                 #_(
                  [com.datomic/datomic-pro "0.9.4556"]
 
                  [crypto-password "0.1.1"]
@@ -41,7 +41,7 @@
                  [org.clojure/tools.logging "0.2.6"]
                  [org.clojure/tools.namespace "0.2.4"]
                  [clojurewerkz/propertied "1.1.0"]
-                 ;  )
+                   )
 
                  ]
  :out-path     "../../resources/public"

@@ -13,6 +13,7 @@
 (enable-console-print!)
 
 (def server-url "http://localhost:3000/")
+#_(def server-url "https://berest-zalflsa.rhcloud.com/")
 
 ;; state
 
@@ -89,7 +90,7 @@
   {"Accept" "application/edn"
    "X-Auth-Token" @session-token})
 
-(ajax/POST "http://localhost:3000/login"
+(ajax/POST (str server-url "login")
            {:headers {"Accept" "application/edn"
                       "Content-Type" "application/x-www-form-urlencoded"}
             :params {:username "zalf"
@@ -99,7 +100,7 @@
 
 ;get all farm ids
 (cell= (when session-token
-         (ajax/GET "http://localhost:3000/data/farms/"
+         (ajax/GET (str server-url "data/farms/")
                    {:headers (request-headers)
                     :handler #(do
                                (swap! ~(cell state) assoc :farms %)
@@ -109,7 +110,7 @@
 
 ;if a farm is being selected get all plots of this farm
 (cell= (when selected-farm-id
-         (ajax/GET (str "http://localhost:3000/data/farms/" selected-farm-id "/plots/")
+         (ajax/GET (str server-url "data/farms/" selected-farm-id "/plots/")
                    {:headers (request-headers)
                     :handler #(do
                                (swap! ~(cell state) assoc :plots %)
