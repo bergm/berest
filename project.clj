@@ -1,5 +1,5 @@
 (defproject berest "0.0.1-SNAPSHOT"
-  :description "BEREST core library"
+  :description "BEREST"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
@@ -9,9 +9,18 @@
                  [com.datomic/datomic-pro "0.9.4556"]
                  #_[com.datomic/datomic-free "0.8.4218"]
 
+                 [buddy "0.1.0-beta4"]
                  [crypto-password "0.1.1"]
 
-                 [buddy "0.1.0-beta4"]
+                 [ring "1.2.1"]
+                 [ring-server "0.3.1"]
+                 [fogus/ring-edn "0.2.0"]
+
+                 #_[compojure "1.1.6"]
+                 [bidi "1.10.2"]
+                 [liberator "0.11.0"]
+
+                 [hiccup "1.0.4"]
 
                  #_[prismatic/plumbing "0.2.2"]
 
@@ -39,7 +48,14 @@
                                    :password "dfe713b3-62f0-469d-8ac9-07d6b02b0175"}}
 
   :min-lein-version "2.0.0"
+
+  :source-paths ["src/core" "src/immutant" "src/rest-service"]
   :resource-paths ["config", "resources"]
+
+  :immutant {:context-path "/"}
+
+  :ring {:handler berest.web.rest.handler/rest-service}
+
   ;:main ^{:skip-aot true} berest.core
   )
 

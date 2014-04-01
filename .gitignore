@@ -1,3 +1,5 @@
 /target
 
 .nrepl-port
+/.idea
+/src/hoplon-client/.boot
