@@ -158,11 +158,11 @@
                 until-date
                 irrigation-data]} (-> request :params)
         db (db/current-db)
-        until-date* (time/parse until-date)
+        until-date* (time/parse until-date :year-month-day)
         year (time/datetime->year until-date*)
         until-julian-day (time/datetime->day-of-year until-date*)
         irrigation-donations (for [[day month amount] (edn/read-string irrigation-data)]
-                               {:irrigation/abs-day (time/datetime->day-of-year until-date*)
+                               {:irrigation/abs-day (time/datetime->day-of-year (time/datetime year month day))
                                 :irrigation/amount amount})]
     (calculate-plot-from-db :db db
                             :farm-id farm-id :plot-id plot-id

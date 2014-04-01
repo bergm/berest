@@ -27,6 +27,7 @@
 
 (defc session-token nil)
 (defc temp-irrigation-data [nil nil nil])
+(defc result nil)
 
 (defc= farms (:farms state))
 (defc= selected-farm-id (:selected-farm-id state))
@@ -35,15 +36,16 @@
 (defc= until-date (:until-date state))
 (defc= irrigation-data (:irrigation-data state))
 
-#_(cell= (println "plots: " plots))
+#_(cell= (println "until-data: " until-date))
 #_(cell= (println "session-token: " session-token))
-#_(cell= (println "selected-plot-id: " selected-plot-id))
+(cell= (println "selected-farm-id: " selected-farm-id))
+(cell= (println "selected-plot-id: " selected-plot-id))
 #_(cell= (println "temp-irrigation-data: " temp-irrigation-data))
 
 ;; util
 
 (defn date-str [date]
-  (-> date .toJSON (.split,,, "T") first))
+  (-> date .toJSON (.split ,,, "T") first))
 
 (defn is-leap-year [year]
   (= 0 (rem (- 2012 year) 4)))
@@ -55,6 +57,8 @@
 
 (defn val-event [event]
   (-> event .-target .-value))
+
+
 
 (defn calc-and-download []
   (let [url (str server-url "auth-api/calculate"
@@ -114,10 +118,20 @@
                    {:headers (request-headers)
                     :handler #(do
                                (swap! ~(cell state) assoc :plots %)
-                               (swap! ~(cell state) assoc :selected-plot-id (first plots)))
+                               (swap! ~(cell state) assoc :selected-plot-id
+                                      (-> plots first :plot/id)))
                     :error-handler error-alert})))
 
-
+(defn calc-and-download*
+  []
+  (ajax/GET (str server-url "auth-api/calculate")
+            {:headers (request-headers)
+             :params {:farm-id @selected-farm-id
+                      :plot-id @selected-plot-id
+                      :until-date (date-str @until-date)
+                      :irrigation-data (prn-str @irrigation-data)}
+             :handler #(reset! result %)
+             :error-handler error-alert}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -203,8 +217,9 @@
           (div
             :class "col-xs-3"
             (select
-              :id "farm-id"
-              :class "form-control" ;:on-change #(swap! state assoc :weather-year 0)
+              :id "farm"
+              :class "form-control"
+              :on-change #(swap! state assoc :selected-farm-id (val-id "farm"))
               (loop-tpl :bindings [{fid  :farm/id
                                     name :farm/name} farms]
                         (create-option fid @selected-farm-id name)))))
@@ -216,7 +231,8 @@
             :class "col-xs-3"
             (select
               :id "plot"
-              :class "form-control" ;:on-change #(swap! state assoc :weather-year 0)
+              :class "form-control"
+              :on-change #(swap! state assoc :selected-plot-id (val-id "plot"))
               (loop-tpl :bindings [{pid  :plot/id
                                     name :plot/name} plots]
                         (create-option pid @selected-plot-id name)))))
@@ -253,7 +269,7 @@
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
-              :on-click calc-and-download
+              :on-click calc-and-download*
               :value "Berechnen & CSV-Downloaden"))
           (div
             :class "col-sm-4"
@@ -268,7 +284,14 @@
             (a
               :class "btn btn-primary btn-lg"
               :href "https://dl.dropboxusercontent.com/u/29574974/Weberest/output-analysis.xlsx"
-              "Analyse Excel-File herunterladen")))))))
+              "Analyse Excel-File herunterladen")))
+
+        (hr)
+
+        (div
+          (text "~{result}"))
+
+        ))))
 
 
 

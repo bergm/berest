@@ -462,7 +462,7 @@
          (first (d/q '[:find ?plot-e-id ?yv-e-id
                        :in $ ?plot-id ?year
                        :where
-                       [?plot-e-id :plot/number ?plot-id]
+                       [?plot-e-id :plot/id ?plot-id]
                        [?plot-e-id :plot/annuals ?yv-e-id]
                        [?yv-e-id :plot.annual/year ?year]]
                      db plot-id year))
