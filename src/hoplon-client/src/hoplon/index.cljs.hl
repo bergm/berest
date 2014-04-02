@@ -28,6 +28,7 @@
 (defc session-token nil)
 (defc temp-irrigation-data [nil nil nil])
 (defc result nil)
+#_(cell= (println "result: " result))
 
 (defc= farms (:farms state))
 (defc= selected-farm-id (:selected-farm-id state))
@@ -90,8 +91,8 @@
   [error]
   (js/alert (str "Error: " error)))
 
-(defn request-headers []
-  {"Accept" "application/edn"
+(defn request-headers [& [accept-media-type]]
+  {"Accept" (or accept-media-type "application/edn")
    "X-Auth-Token" @session-token})
 
 (ajax/POST (str server-url "login")
@@ -125,11 +126,12 @@
 (defn calc-and-download*
   []
   (ajax/GET (str server-url "auth-api/calculate")
-            {:headers (request-headers)
+            {:headers (request-headers "text/tab-separated-values" #_"text/csv")
              :params {:farm-id @selected-farm-id
                       :plot-id @selected-plot-id
                       :until-date (date-str @until-date)
                       :irrigation-data (prn-str @irrigation-data)}
+             :response-format :raw
              :handler #(reset! result %)
              :error-handler error-alert}))
 
@@ -245,6 +247,7 @@
             :class "col-xs-2"
             (input
               :id "until-date"
+              :class "form-control"
               :type "date"
               :placeholder "Datum"
               :value (date-str @until-date)
@@ -289,7 +292,19 @@
         (hr)
 
         (div
-          (text "~{result}"))
+          :class "form-group"
+          (label :for "result" :class "col-sm-2 control-label" "Berechnungsergebnis")
+          (div
+            :class "col-xs-8"
+            (textarea
+              :id "result"
+              :class "form-control"
+              :rows "20" ;:cols "150"
+              :placeholder "Berechnungsergebnis wird hier angezeigt werden ..."
+              :value (cell= result)))
+
+
+          #_(text "~{result}"))
 
         ))))
 

@@ -13,6 +13,7 @@
             [berest.plot :as plot]
             [berest.datomic :as db]
             [berest.util :as bu]
+            [berest.helper :as bh :refer [rcomp]]
             [berest.climate.climate :as climate]
             [berest.web.rest.common :as common]
             [berest.web.rest.queries :as queries]
@@ -86,42 +87,35 @@
 ;; api functions
 
 (defn calculate-plot-from-db
-  [& {:keys [db farm-id plot-id
-             until-julian-day year
-             irrigation-donations dc-assertions]}]
-  (let? [plot (bc/db-read-plot db plot-id year)
-         :else [:div#error "Fehler: Konnte Schlag mit Nummer: " plot-id " nicht laden!"]
+  [db farm-id plot-id until-julian-day year irrigation-donations dc-assertions]
+  (if-let [plot (bc/db-read-plot db plot-id year)]
+    (let [;plot could be updated with given dc-assertions
+          ;plot* (update-in plot [])
 
-         ;plot could be updated with given dc-assertions
-         ;plot* (update-in plot [])
+           sorted-weather-map (climate/final-sorted-weather-data-map-for-plot db year plot-id)
 
-         sorted-weather-map (climate/final-sorted-weather-data-map-for-plot db year plot-id)
+           inputs (bc/create-input-seq plot sorted-weather-map (+ until-julian-day 7)
+                                       irrigation-donations :sprinkle-losses)
+           inputs-7 (drop-last 7 inputs)
 
-         inputs (bc/create-input-seq| :plot plot
-                                      :sorted-weather-map sorted-weather-map
-                                      :irrigation-donations irrigation-donations
-                                      :until-abs-day (+ until-julian-day 7)
-                                      :irrigation-mode :sprinkle-losses)
-         inputs-7 (drop-last 7 inputs)
+          ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs-7)
+          ;_ (println xxx)
 
-         ;xxx (map (|-> (--< :abs-day :irrigation-amount) str) inputs-7)
-         ;_ (println xxx)
+           prognosis-inputs (take-last 7 inputs)
+           days (range (-> inputs first :abs-day) (+ until-julian-day 7 1))
 
-         prognosis-inputs (take-last 7 inputs)
-         days (range (-> inputs first :abs-day) (+ until-julian-day 7 1))
+           sms-7* (bc/calc-soil-moistures* inputs-7 (:plot.annual/initial-soil-moistures plot))
+           {soil-moistures-7 :soil-moistures
+            :as sms-7} (last sms-7*)
+          #_(bc/calc-soil-moistures inputs-7 (:plot.annual/initial-soil-moistures plot))
 
-         sms-7* (bc/calc-soil-moistures* inputs-7 (:plot.annual/initial-soil-moistures plot))
-         {soil-moistures-7 :soil-moistures
-          :as sms-7} (last sms-7*)
-         #_(bc/calc-soil-moistures inputs-7 (:plot.annual/initial-soil-moistures plot))
-
-         prognosis* (bc/calc-soil-moisture-prognosis* 7 prognosis-inputs soil-moistures-7)
-         prognosis (last prognosis*)
-         #_(bc/calc-soil-moisture-prognosis 7 prognosis-inputs soil-moistures-7)
-         ]
-
-        {:soil-moistures-7 sms-7*
-         :prognosis prognosis*}))
+           prognosis* (bc/calc-soil-moisture-prognosis* 7 prognosis-inputs soil-moistures-7)
+           prognosis (last prognosis*)
+          #_(bc/calc-soil-moisture-prognosis 7 prognosis-inputs soil-moistures-7)]
+      {:inputs inputs
+       :soil-moistures-7 (rest sms-7*)
+       :prognosis (rest prognosis*)})
+    (str "Fehler: Konnte Schlag " plot-id " nicht laden!")))
 
 (defn- split-plot-id-format [plot-id-format]
   (-> plot-id-format
@@ -149,9 +143,15 @@
                             :weather-station-id weather-station-id
                             :irrigation-donations irrigation-donations)))
 
+(defn create-liberator-csv-output
+  [csv-out]
+  (let [header (first csv-out)
+        body (rest csv-out)]
+    (map #(apply array-map (interleave header %)) body)))
+
 (defn auth-calculate
   "use calculation service, but mainly using a users data taken from database"
-  [request]
+  [media-type request]
   (let [user-id (-> request :session :identity :user/id)
         {:keys [farm-id
                 plot-id
@@ -163,11 +163,20 @@
         until-julian-day (time/datetime->day-of-year until-date*)
         irrigation-donations (for [[day month amount] (edn/read-string irrigation-data)]
                                {:irrigation/abs-day (time/datetime->day-of-year (time/datetime year month day))
-                                :irrigation/amount amount})]
-    (calculate-plot-from-db :db db
-                            :farm-id farm-id :plot-id plot-id
-                            :until-julian-day until-julian-day :year year
-                            :irrigation-donations irrigation-donations)))
+                                :irrigation/amount amount})
+        {:keys [inputs soil-moistures-7 prognosis]}
+        (calculate-plot-from-db db farm-id plot-id until-julian-day year
+                                irrigation-donations [])
+        soil-moistures (concat soil-moistures-7 prognosis)
+        csv-sms (->> soil-moistures
+                     (bc/create-csv-output inputs ,,,)
+                     create-liberator-csv-output)]
+    (case media-type
+      "text/html" csv-sms
+      "application/edn" soil-moistures
+      "application/json" soil-moistures
+      "text/csv" csv-sms
+      "text/tab-separated-values" csv-sms)))
 
 
 (defn simulate
@@ -214,12 +223,10 @@
                                           (Integer/parseInt until-month)
                                           weather-year*)
 
-         inputs (bc/create-input-seq| :plot plot
-                                      :sorted-weather-map weathers
-                                      :until-abs-day until-julian-day #_(+ until-julian-day 7)
-                                      :irrigation-mode :sprinkle-losses)
+         inputs (bc/create-input-seq plot weathers until-julian-day #_(+ until-julian-day 7) []
+         :sprinkle-losses)
 
-         ;xxx (map (|-> (--< :abs-day :irrigation-amount) str) inputs)
+         ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs)
          ;_ (println xxx)
 
          days (range (-> inputs first :abs-day) (+ until-julian-day 1))

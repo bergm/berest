@@ -6,7 +6,7 @@
             [berest.core :as bc]
             [berest.datomic :as bd]
             [berest.util :as bu]
-            [berest.helper :as bh :refer [args-21->12 args-231->123 --< --<* |-> |* |*kw]]
+            [berest.helper :as bh :refer [partial-kw rcomp ajuxt args-21->12 args-231->123]]
             [berest.climate.climate :as climate]
             [berest.climate.algo :as c-algo]
             [c2.scale :as scale]
@@ -192,7 +192,7 @@
                                   {:hs [] :vs []} data)
                           {:hs [] :vs []})
 
-        data* (map (|* merge default-props) data)
+        data* (map (partial merge default-props) data)
 
         dayss (map :days data*)
         max-days (apply max (apply concat vs dayss))
@@ -209,7 +209,7 @@
                             (map :values ,,,)
                             (apply concat hs ,,,)
                             (#(when (seq %) %) ,,,)
-                            (--<* (|* m|m min) (|* m|m max) ,,,)
+                            (ajuxt (partial m|m min) (partial m|m max) ,,,)
                             (apply add-margins ,,,)))
 
         colors (map :color data*)
@@ -218,10 +218,10 @@
 
         ;align two sided graphs to a zero line if possible
         y-min-max (if (and  align-zero
-                            (some (|* > 0) (:left y-min-max*))
-                            (not-any? nil? (--<* :left :right y-min-max*)))
+                            (some (partial > 0) (:left y-min-max*))
+                            (not-any? nil? (ajuxt :left :right y-min-max*)))
                     (let [[[yll ylh] [yrl yrh]]
-                          (--<* :left :right y-min-max*)
+                          (ajuxt :left :right y-min-max*)
 
                           left-ratio (/ ylh yll)
                           upper-factor (Math/abs (/ (* yrl left-ratio)
@@ -309,11 +309,8 @@
                                                                 (:plot/number plot)
                                                                 (:plot/irrigation-area plot))
 
-         inputs (bc/create-input-seq| :plot plot
-                                      :sorted-weather-map weather
-                                      :irrigation-donations irrigation-donations-map
-                                      :until-abs-day (+ until 7)
-                                      :irrigation-mode :spinkle-losses)
+         inputs (bc/create-input-seq plot weather (+ until 7) irrigation-donations-map
+                                     :spinkle-losses)
          inputs-7 (drop-last 7 inputs)
          prognosis-inputs (take-last 7 inputs)
          days (range (-> inputs first :abs-day) (+ until 7 1))
@@ -326,9 +323,9 @@
                         count)
 
          sms-layers (for [i (range no-of-layers)]
-                      (map  (|->  :soil-moistures
-                                  (|* args-21->12 nth i)
-                                  (|*kw bu/round :digits 5))
+                      (map  (rcomp  :soil-moistures
+                                  (partial args-21->12 nth i)
+                                  (partial-kw bu/round :digits 5))
                             (rest sms-7*)))
 
          sms-days (map :abs-day (rest sms-7*))
@@ -363,15 +360,15 @@
                              :color :black}
 
                           {:days (->> inputs
-                                      (filter (|-> :qu-target
-                                                   (|* < 0))
+                                      (filter (rcomp :qu-target
+                                                   (partial < 0))
                                               ,,,)
                                       (map :abs-day ,,,))
                            :values (->> inputs
                                         (map :qu-target ,,,)
-                                        (filter (|* < 0) ,,,)
-                                        (map  (|->  (|* * 100)
-                                                    (|*kw bu/round :digits 1))
+                                        (filter (partial < 0) ,,,)
+                                        (map  (rcomp  (partial * 100)
+                                                    (partial-kw bu/round :digits 1))
                                               ,,,))
                             :color :green
                             :assoc-y :left
@@ -379,15 +376,15 @@
                             :unit "%"}
 
                           { :days (->> (rest sms-7*)
-                                       (filter (|-> :aet7pet
-                                                    (|* < 0))
+                                       (filter (rcomp :aet7pet
+                                                    (partial < 0))
                                                ,,,)
                                        (map :abs-day ,,,))
                             :values (->> (rest sms-7*)
                                          (map :aet7pet ,,,)
-                                         (filter (|* < 0) ,,,)
-                                         (map  (|->  (|* * 100)
-                                                     (|*kw bu/round :digits 1))
+                                         (filter (partial < 0) ,,,)
+                                         (map  (rcomp  (partial * 100)
+                                                     (partial-kw bu/round :digits 1))
                                                ,,,))
                             :color :goldenrod
                             :assoc-y :left
@@ -395,9 +392,9 @@
                             :unit "%"}
 
                           { :days days
-                            :values (map  (|->  (--< :precipitation :evaporation)
-                                                (|* apply -)
-                                                (|*kw bu/round :digits 1))
+                            :values (map  (rcomp  (juxt :precipitation :evaporation)
+                                                (partial apply -)
+                                                (partial-kw bu/round :digits 1))
                                           inputs)
                             :color-f #(if (< % 0) :red :blue)
                             :type :bar
@@ -408,8 +405,8 @@
                           { :days days
                             :values (->> inputs
                                       (map :irrigation-amount ,,,)
-                                      (filter (|* < 0) ,,,)
-                                      (map  (|*kw bu/round :digits 1)
+                                      (filter (partial < 0) ,,,)
+                                      (map  (partial-kw bu/round :digits 1)
                                             ,,,))
                             :color :darkblue
                             :type :bar
@@ -432,15 +429,15 @@
                             :color :black}
 
                           { :days (->> (rest sms-7*)
-                                    (filter (|->  :aet7pet
-                                                  (|* < 0))
+                                    (filter (rcomp  :aet7pet
+                                                  (partial < 0))
                                             ,,,)
                                     (map :abs-day ,,,))
                             :values (->> (rest sms-7*)
                                       (map :aet7pet ,,,)
-                                      (filter (|* < 0) ,,,)
-                                      (map  (|->  (|* * 100)
-                                                  (|*kw bu/round :digits 1))
+                                      (filter (partial < 0) ,,,)
+                                      (map  (rcomp  (partial * 100)
+                                                  (partial-kw bu/round :digits 1))
                                             ,,,))
                             :color :goldenrod
                             :assoc-y :left
@@ -483,7 +480,7 @@
                             :color :red
                             :label "Verd." :unit "mm"}
                           { :days days
-                            :values (map  (|->  (--< :precipitation :evaporation)
+                            :values (map  (rcomp  (juxt :precipitation :evaporation)
                                                 (partial apply -))
                                           inputs)
                             :color :black
@@ -506,14 +503,14 @@
                             :color :darkkhaki
                             :label "Trans."}
                           { :days days
-                            :values (map (|-> :rounded-extraction-depth-cm
-                                              (|* bh/swap / 100)) inputs)
+                            :values (map (rcomp :rounded-extraction-depth-cm
+                                              (partial bh/swap / 100)) inputs)
                             :color :blue
                             :label "D.wurz.tiefe" :unit "m"}
                           { :days days
                             :values (map :cover-degree inputs)
                             :color :green
-                            :label "Bed.grad" :unit "%" :f (|* * 100)}
+                            :label "Bed.grad" :unit "%" :f (partial * 100)}
                           { :days days
                             :values (map :qu-target inputs)
                             :color :brown
@@ -587,9 +584,9 @@
 
 (def default-weather-data nil
      #_(->> (get bc/weather-map 1993)
-          (map (|-> second
-                    (--< :doy :precipitation :evaporation)
-                    (|* map str)) ,,,)
+          (map (rcomp second
+                    (juxt :doy :precipitation :evaporation)
+                    (partial map str)) ,,,)
           (cons ["Tag im Jahr" "Niederschlag" "Verdunstung"] ,,,)
           (#(csv/write-csv % :delimiter ";") ,,,)))
 
@@ -719,14 +716,11 @@
                                                weather-year*)
                                (Integer/parseInt until-julian-day))
 
-         inputs (bc/create-input-seq| :plot plot
-                                      :sorted-weather-map weather
-                                      :irrigation-mode irrigation-donations
-                                      :until-abs-day (+ until-julian-day* 7)
-                                      :irrigation-mode :sprinkle-losses)
+         inputs (bc/create-input-seq plot weather (+ until-julian-day* 7) irrigation-donations
+                                     :sprinkle-losses)
          inputs-7 (drop-last 7 inputs)
 
-         ;xxx (map (|-> (--< :abs-day :irrigation-amount) str) inputs-7)
+         ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs-7)
          ;_ (println xxx)
 
          prognosis-inputs (take-last 7 inputs)
@@ -749,9 +743,9 @@
 
           #_sms-layers
           #_(for [i (range no-of-layers)]
-                 (map (|-> :soil-moistures
-                           (|* args-21->12 nth i)
-                           (|*kw bu/round :digits 5))
+                 (map (rcomp :soil-moistures
+                           (partial args-21->12 nth i)
+                           (partial-kw bu/round :digits 5))
                       (rest sms-7*)))
 
         ;sms-days (map :abs-day (rest sms-7*))
@@ -796,14 +790,11 @@
                                           (Integer/parseInt until-month)
                                           weather-year*)
 
-         inputs (bc/create-input-seq| :plot plot
-                                      :sorted-weather-map weather
-                                      :irrigation-donations irrigation-donations
-                                      :until-abs-day (+ until-julian-day 7)
-                                      :irrigation-mode :sprinkle-losses)
+         inputs (bc/create-input-seq plot weather (+ until-julian-day 7)
+                                     irrigation-donations :sprinkle-losses)
          inputs-7 (drop-last 7 inputs)
 
-         ;xxx (map (|-> (--< :abs-day :irrigation-amount) str) inputs-7)
+         ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs-7)
          ;_ (println xxx)
 
          prognosis-inputs (take-last 7 inputs)
@@ -826,9 +817,9 @@
 
           #_sms-layers
           #_(for [i (range no-of-layers)]
-                 (map (|-> :soil-moistures
-                           (|* args-21->12 nth i)
-                           (|*kw bu/round :digits 5))
+                 (map (rcomp :soil-moistures
+                           (partial args-21->12 nth i)
+                           (partial-kw bu/round :digits 5))
                       (rest sms-7*)))
 
         ;sms-days (map :abs-day (rest sms-7*))
@@ -858,12 +849,10 @@
                                           (Integer/parseInt until-month)
                                           weather-year*)
 
-         inputs (bc/create-input-seq| :plot plot
-                                      :sorted-weather-map weather
-                                      :until-abs-day until-julian-day #_(+ until-julian-day 7)
-                                      :irrigation-mode :sprinkle-losses)
+         inputs (bc/create-input-seq plot weather until-julian-day #_(+ until-julian-day 7)
+                                     [] :sprinkle-losses)
 
-         ;xxx (map (|-> (--< :abs-day :irrigation-amount) str) inputs)
+         ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs)
          ;_ (println xxx)
 
          days (range (-> inputs first :abs-day) (+ until-julian-day 1))

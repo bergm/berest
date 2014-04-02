@@ -9,9 +9,9 @@
             [clj-time.coerce :as ctcoe]
             [clojure.java.io :as cjio]
             [clojure.tools.logging :as log]
-            [datomic.api :as d :refer [q db]]
+            [datomic.api :as d]
             [berest.util :as bu]
-            [berest.helper :as bh :refer [>>> rcomp |->]]
+            [berest.helper :as bh :refer [rcomp]]
             [clojurewerkz.propertied.properties :as properties]))
 
 (def ^:dynamic *db-id* "berest")

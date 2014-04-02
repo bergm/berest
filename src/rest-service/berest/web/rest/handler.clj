@@ -98,14 +98,16 @@
 (defresource auth-simulate
   (authorized-default-resource :admin :farmer :consultant)
   :allowed-methods [:get]
-  :available-media-types ["text/html" "text/csv" "application/edn" "application/json"]
+  :available-media-types ["text/html" "text/csv" "text/tab-separated-values"
+                          "application/edn" "application/json"]
   :handle-ok #(api/auth-simulate (:request %)))
 
 (defresource auth-calculate
   (authorized-default-resource :admin :farmer :consultant)
   :allowed-methods [:get :options]
-  :available-media-types ["text/html" "text/csv" "application/edn" "application/json"]
-  :handle-ok #(api/auth-calculate (:request %)))
+  :available-media-types ["text/html" "text/csv" "text/tab-separated-values"
+                          "application/edn" "application/json"]
+  :handle-ok #(api/auth-calculate (-> % :representation :media-type) (:request %)))
 
 (def auth-api-subroutes
   {"" auth-api
