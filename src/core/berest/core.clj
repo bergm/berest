@@ -1551,19 +1551,17 @@
   [inputs initial-soil-moistures]
   (calc-soil-moistures* inputs initial-soil-moistures :red-fn reduce))
 
-(defn- format-german-value
-  [value]
-  (println "value: " value " type: " (type value))
-  (try
-    (if (instance? String value)
-      value
-      (.. java.text.NumberFormat (getInstance java.util.Locale/GERMAN) (format value)))
-    (catch Exception e
-      #_(println "e: " e)
-      (str value))))
 
 (defn create-csv-output [inputs full-reductions-results]
-  (let [header-line ["doy"
+  (let [value->german-string
+        (fn [value]
+          (if (nil? value)
+            ""
+            (if (instance? String value)
+              value
+              (.. java.text.NumberFormat (getInstance java.util.Locale/GERMAN) (format value)))))
+
+        header-line ["doy"
                      "date"
                      "rel DC day"
                      "precip [mm]"
@@ -1613,8 +1611,7 @@
                      "rounded-extraction-depth [cm]"]
 
         body-lines (map (fn [input rres]
-                          #_(println rres)
-                          (map format-german-value
+                          (map value->german-string
                                [(:abs-day input)
                                 (ctf/unparse (ctf/formatter "dd.MM.")
                                              (bu/doy-to-date (:abs-day input)))
