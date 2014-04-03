@@ -203,25 +203,33 @@
 (def chart (make-elem-ctor* "chart"))
 (def repeat (make-elem-ctor* "repeat"))
 (def dot (make-elem-ctor* "dot"))
+(def guide-x (make-elem-ctor* "guide-x"))
+(def guide-y (make-elem-ctor* "guide-y"))
+(def line (make-elem-ctor* "line"))
 
 
 
-(html ;:ng-app ""
+(html ;:ng-app "myApp"
   (head
     (meta :name "viewport"
           :content "width=device-width, initial-scale=1"
           :charset "UTF-8")
     (link :rel "stylesheet" :href "css/bootstrap.css")
+    (link :rel "stylesheet" :href "css/variance-base.css")
+    (link :rel "stylesheet" :href "css/charts.css")
+
     #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css")
     #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css")
     #_(script :src "//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js")
-    (script :src "https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"))
+    (link :id "temps"
+          :rel "variance-data"
+          :href "https://variancecharts.com/data/global_temp_fiveyear_mean.csv")
+    )
+
+
   (body
 
-    (script :src "http://variancecharts.com/cdn/variance-noncommercial-9bc0f5e.min.js"
-            :charset "UTF-8")
-
-    #_(p "Nothing here {{'yet' + '!'}}")
+    (p "Nothing here {{'yet' + '!'}}")
 
     (div
       :class "container"
@@ -331,20 +339,36 @@
 
       (hr)
 
-      (csv :id "quarterly-sales"
-           (text
-             "quarter, sales
+      #_(csv :id "quarterly-sales"
+           ;;{{
+           quarter, sales
              Q1,493
              Q2,573
              Q3,639
-             Q4,855"))
+             Q4,855
+             ;;}}
+             )
 
-      (div
+      #_(div
         (chart :data "#quarterly-sales" :scale-x-linear "300 1000"
                (repeat
                  (dot :map-position "sales"))))
 
+      (div :id "line-example"
+
+           (h3 "Change in Global Surface Temperature, 5 Year Mean")
+
+           (chart :data "#temps"
+                  :map-xy "year five_year_mean"
+                  :scale-x-linear "1882 2010"
+                  :scale-y-linear "-0.5 0.8"
+                  (guide-y
+                    (span :class "label" "{{value}}°"))
+                  (guide-x)
+                  (line)))
+
       )
+
 
     )
 
