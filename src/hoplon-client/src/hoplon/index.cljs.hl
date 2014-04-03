@@ -1,4 +1,5 @@
 (page "index.html"
+      (:refer-clojure :exclude [repeat])
       (:require #_[ui.tabs :as tabs]
                 [ajax.core :as ajax]
                 [clojure.string :as str]))
@@ -195,12 +196,32 @@
         :on-click (if template? add-irrigation-row (partial remove-irrigation-row @row-no))))))
 
 
+(defn- make-elem-ctor* [tag]
+  (fn [& args]
+    (apply (.createElement js/document tag) args)))
+(def csv (make-elem-ctor* "csv"))
+(def chart (make-elem-ctor* "chart"))
+(def repeat (make-elem-ctor* "repeat"))
+(def dot (make-elem-ctor* "dot"))
 
-(html
+
+
+(html ;:ng-app ""
   (head
-    (meta :name "viewport" :content "width=device-width, initial-scale=1")
-    (link :rel "stylesheet" :href "css/bootstrap.css"))
+    (meta :name "viewport"
+          :content "width=device-width, initial-scale=1"
+          :charset "UTF-8")
+    (link :rel "stylesheet" :href "css/bootstrap.css")
+    #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css")
+    #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css")
+    #_(script :src "//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js")
+    (script :src "https://ajax.googleapis.com/ajax/libs/angularjs/1.2.15/angular.min.js"))
   (body
+
+    (script :src "http://variancecharts.com/cdn/variance-noncommercial-9bc0f5e.min.js"
+            :charset "UTF-8")
+
+    #_(p "Nothing here {{'yet' + '!'}}")
 
     (div
       :class "container"
@@ -306,8 +327,28 @@
 
           #_(text "~{result}"))
 
-        ))))
+        )
 
+      (hr)
+
+      (csv :id "quarterly-sales"
+           (text
+             "quarter, sales
+             Q1,493
+             Q2,573
+             Q3,639
+             Q4,855"))
+
+      (div
+        (chart :data "#quarterly-sales" :scale-x-linear "300 1000"
+               (repeat
+                 (dot :map-position "sales"))))
+
+      )
+
+    )
+
+  )
 
 
 

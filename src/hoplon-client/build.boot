@@ -1,9 +1,9 @@
 #!/usr/bin/env boot
 
-#tailrecursion.boot.core/version "2.2.1"
+#tailrecursion.boot.core/version "2.3.1"
 
 (set-env!
- :project      'berest-client
+ :project      'berest-hoplon-client
  :version      "0.1.0-SNAPSHOT"
 
  ;doesn't work right now, as the repository must be a string, even though pomegrante allows this, but boot doesn't
@@ -13,6 +13,8 @@
 
  :dependencies '[[tailrecursion/boot.task   "2.1.1"]
                  [tailrecursion/hoplon      "5.5.1"]
+                 [tailrecursion/boot.notify "2.0.0-snapshot"]
+                 #_[tailrecursion/boot.ring   "0.1.0-snapshot"]
                  [org.clojure/clojurescript "0.0-2156"]
 
                  [cljs-ajax "0.2.3"]
@@ -56,6 +58,8 @@
 (add-sync! (get-env :out-path) #{"assets"})
 
 (require '[tailrecursion.hoplon.boot :refer :all]
+         #_'[tailrecursion.boot.task.ring   :refer [dev-server]]
+         '[tailrecursion.boot.task.notify :refer [hear]]
          '[tailrecursion.castra.handler :as c])
 
 (deftask castra
@@ -68,19 +72,18 @@
   (comp (r/head) (r/dev-mode) (r/session-cookie) (r/files) (castra 'demo.api.chat) (r/jetty)))
 
 (deftask chat-demo
-  "Build the castra chat demo. Server on port 8000."
+         "Build the castra chat demo. Server on port 8000."
   []
   (comp (watch) (hoplon {:prerender false}) (server)))
-
 
 
 
 (deftask dev
   "Build berest-client for development."
   []
-  (comp (watch) (hoplon {:prerender false :pretty-print true})))
+  (comp (watch) (hear) (hoplon {:prerender false :pretty-print true}) #_(dev-server)))
 
-(deftask production
+(deftask prod
   "Build berest-client for production."
   []
   (hoplon {:optimizations :advanced}))
