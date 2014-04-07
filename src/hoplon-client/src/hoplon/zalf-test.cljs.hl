@@ -1,8 +1,9 @@
-(page "index.html"
-      (:refer-clojure :exclude [repeat])
+(page "zalf-test.html"
+      #_(:refer-clojure :exclude [repeat])
       (:require #_[ui.tabs :as tabs]
                 [ajax.core :as ajax]
-                [clojure.string :as str]))
+                [clojure.string :as str]
+                [berest.client.hoplon.variance-charts :as vc]))
 
 #_(ns hoplon.index
   (:require-macros [tailrecursion.javelin :refer :all]
@@ -28,7 +29,10 @@
 
 (defc session-token nil)
 (defc temp-irrigation-data [nil nil nil])
-(defc result nil)
+(defc edn-result nil)
+(cell= (println "edn-result: " edn-result))
+
+(defc csv-result nil)
 #_(cell= (println "result: " result))
 
 (defc= farms (:farms state))
@@ -37,6 +41,80 @@
 (defc= selected-plot-id (:selected-plot-id state))
 (defc= until-date (:until-date state))
 (defc= irrigation-data (:irrigation-data state))
+
+
+(def sum (partial reduce + 0))
+
+(defc= soil-moistures
+       (do
+         (println "first ed-result: " (first edn-result))
+         (mapv (fn [{:keys [abs-day soil-moistures] :as all}]
+                 {:abs-day    abs-day
+                  :sm-0-10    (sum (subvec (vec soil-moistures) 0 2))
+                  :sm-10-30   (sum (subvec (vec soil-moistures) 2 4))
+                  :sm-30-60   (sum (subvec (vec soil-moistures) 4 7))
+                  :sm-60-100  (sum (subvec (vec soil-moistures) 7 11))
+                  :sm-100-150 (sum (subvec (vec soil-moistures) 11 16))
+                  ;:sm-0-30  (sum (subvec (vec soil-moistures) 0 4))
+                  ;:sm-30-60 (sum (subvec (vec soil-moistures) 4 7))
+                  ;:sm-60-90 (sum (subvec (vec soil-moistures) 7 10))
+                  })
+               (drop-last 7 edn-result))))
+#_(cell= (println "soil-moistures: " soil-moistures))
+(cell= (when (not-empty soil-moistures) (vc/set-data "soil-moisture-chart" soil-moistures)))
+
+#_(map value->german-string
+     [(:abs-day input)
+      (ctf/unparse (ctf/formatter "dd.MM.")
+                   (bu/doy-to-date (:abs-day input)))
+      (:rel-dc-day input)
+      (:precipitation input)
+      (:tavg input)
+      (:globrad input)
+      (- (:evaporation input))
+      (:irrigation-amount rres #_input)
+      (:pet rres)
+      (:aet rres)
+      (:aet7pet rres)
+      (:qu-target rres)
+      (:groundwater-infiltration rres)
+      (bu/sum (subvec (vec (:soil-moistures rres)) 0 4))
+      (bu/sum (subvec (vec (:soil-moistures rres)) 4 7))
+      (bu/sum (subvec (vec (:soil-moistures rres)) 7 10))
+      (nth (:soil-moistures rres) 0)
+      (nth (:soil-moistures rres) 1)
+      (nth (:soil-moistures rres) 2)
+      (nth (:soil-moistures rres) 3)
+      (nth (:soil-moistures rres) 4)
+      (nth (:soil-moistures rres) 5)
+      (nth (:soil-moistures rres) 6)
+      (nth (:soil-moistures rres) 7)
+      (nth (:soil-moistures rres) 8)
+      (nth (:soil-moistures rres) 9)
+      (nth (:soil-moistures rres) 10)
+      (nth (:soil-moistures rres) 11)
+      (nth (:soil-moistures rres) 12)
+      (nth (:soil-moistures rres) 13)
+      (nth (:soil-moistures rres) 14)
+      (nth (:soil-moistures rres) 15)
+      (nth (:soil-moistures rres) 16)
+      (nth (:soil-moistures rres) 17)
+      (nth (:soil-moistures rres) 18)
+      (nth (:soil-moistures rres) 19)
+      (nth (:soil-moistures rres) 20)
+      (bu/sum (subvec (vec (:soil-moistures rres)) 0 2))
+      (bu/sum (subvec (vec (:soil-moistures rres)) 2 4))
+      (bu/sum (subvec (vec (:soil-moistures rres)) 4 7))
+      (bu/sum (subvec (vec (:soil-moistures rres)) 7 11))
+      (bu/sum (subvec (vec (:soil-moistures rres)) 11 16))
+      (:effective-precipitation rres)
+      (:effective-irrigation rres)
+      (:effective-irrigation-uncovered rres)
+      (* (:cover-degree input) 100)
+      (:dc input)
+      (:rounded-extraction-depth-cm input)])
+
+
 
 #_(cell= (println "until-data: " until-date))
 #_(cell= (println "session-token: " session-token))
@@ -60,23 +138,6 @@
 (defn val-event [event]
   (-> event .-target .-value))
 
-
-
-(defn calc-and-download []
-  (let [url (str server-url "auth-api/calculate"
-                 "?farm-id=" @selected-farm-id
-                 "&plot-id=" @selected-plot-id
-                 "&until-date=" (date-str @until-date)
-                 "&irrigation-data="(prn-str @irrigation-data))]
-    (-> js/window
-        (.open ,,, url))))
-
-(defn sim-and-download []
-  (let [url (str "rest/farms/111/plots/" @selected-plot-id ".csv"
-                 ;"?format=csv"
-                 "?sim=true&until-date=" (date-str @until-date))]
-    (-> js/window
-        (.open ,,, url))))
 
 (defn remove-irrigation-row [row-no]
   (swap! state assoc :irrigation-data
@@ -124,7 +185,7 @@
                                       (-> plots first :plot/id)))
                     :error-handler error-alert})))
 
-(defn calc-and-download*
+(defn calculate-and-get-csv
   []
   (ajax/GET (str server-url "auth-api/calculate")
             {:headers (request-headers "text/tab-separated-values" #_"text/csv")
@@ -133,7 +194,19 @@
                       :until-date (date-str @until-date)
                       :irrigation-data (prn-str @irrigation-data)}
              :response-format :raw
-             :handler #(reset! result %)
+             :handler #(reset! csv-result %)
+             :error-handler error-alert}))
+
+(defn calculate-and-get-edn
+  []
+  (ajax/GET (str server-url "auth-api/calculate")
+            {:headers (request-headers)
+             :params {:farm-id @selected-farm-id
+                      :plot-id @selected-plot-id
+                      :until-date (date-str @until-date)
+                      :irrigation-data (prn-str @irrigation-data)}
+             :response-format :edn
+             :handler #(reset! edn-result %)
              :error-handler error-alert}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -196,18 +269,16 @@
         :on-click (if template? add-irrigation-row (partial remove-irrigation-row @row-no))))))
 
 
-(defn- make-elem-ctor* [tag]
-  (fn [& args]
-    (apply (.createElement js/document tag) args)))
-(def csv (make-elem-ctor* "csv"))
-(def chart (make-elem-ctor* "chart"))
-(def repeat (make-elem-ctor* "repeat"))
-(def dot (make-elem-ctor* "dot"))
-(def guide-x (make-elem-ctor* "guide-x"))
-(def guide-y (make-elem-ctor* "guide-y"))
-(def line (make-elem-ctor* "line"))
+(defc sales nil)
 
-
+(def saless
+  (clj->js [{"quarter" "Q1", "sales" "493"}
+            {"quarter" "Q2", "sales" "573"}
+            {"quarter" "Q3", "sales" "639"}
+            {"quarter" "Q4", "sales" "855"}
+            {"quarter" "Q5", "sales" "1100"}
+            {"quarter" "Q6", "sales" "200"}
+            {"quarter" "Q7", "sales" "500"}]))
 
 (html ;:ng-app "myApp"
   (head
@@ -221,15 +292,12 @@
     #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css")
     #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css")
     #_(script :src "//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js")
-    (link :id "temps"
-          :rel "variance-data"
-          :href "https://variancecharts.com/data/global_temp_fiveyear_mean.csv")
+
     )
 
 
   (body
 
-    (p "Nothing here {{'yet' + '!'}}")
 
     (div
       :class "container"
@@ -301,14 +369,7 @@
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
-              :on-click calc-and-download*
-              :value "Berechnen & CSV-Downloaden"))
-          (div
-            :class "col-sm-4"
-            (input
-              :class "btn btn-primary btn-lg"
-              :type "button"
-              :on-click sim-and-download
+              :on-click nil #_sim-and-download
               :value "Simulieren & CSV-Downloaden"))
 
           (div
@@ -322,7 +383,14 @@
 
         (div
           :class "form-group"
-          (label :for "result" :class "col-sm-2 control-label" "Berechnungsergebnis")
+          (label
+            :for "result"
+            :class "col-sm-2 control-label"
+            (input
+              :class "btn btn-primary btn-lg"
+              :type "button"
+              :on-click calculate-and-get-csv
+              :value "Berechnen & CSV"))
           (div
             :class "col-xs-8"
             (textarea
@@ -330,42 +398,99 @@
               :class "form-control"
               :rows "20" ;:cols "150"
               :placeholder "Berechnungsergebnis wird hier angezeigt werden ..."
-              :value (cell= result)))
-
-
-          #_(text "~{result}"))
-
-        )
+              :value (cell= csv-result)))))
 
       (hr)
 
-      #_(csv :id "quarterly-sales"
-           ;;{{
-           quarter, sales
-             Q1,493
-             Q2,573
-             Q3,639
-             Q4,855
-             ;;}}
-             )
+      (div
+        (h3 "Berechneter Bodenfeuchteverlauf")
 
-      #_(div
-        (chart :data "#quarterly-sales" :scale-x-linear "300 1000"
-               (repeat
-                 (dot :map-position "sales"))))
+        (button
+          :class "btn btn-primary btn-lg"
+          :click calculate-and-get-edn
+          "Berechnen & Graph")
+
+        (vc/chart
+          :id "soil-moisture-chart"
+          ;:map-xy "abs-day sm-0-30"
+          :scale-x-linear "85 300"
+          :scale-y-linear "0 100"
+          #_(vc/debug-table)
+          (vc/guide-y
+            :class "right"
+            (span :class "label" "{{value}} mm"))
+          (vc/guide-x)
+          #_(vc/line :id "line-sm-0-30" :map-xy "abs-day sm-0-30")
+          #_(vc/line :id "line-sm-30-60" :map-xy "abs-day sm-30-60")
+          #_(vc/line :id "line-sm-60-90" :map-xy "abs-day sm-60-90")
+          (vc/line :id "line-sm-0-10" :map-xy "abs-day sm-0-10")
+          (vc/line :id "line-sm-10-30" :map-xy "abs-day sm-10-30")
+          (vc/line :id "line-sm-30-60" :map-xy "abs-day sm-30-60")
+          (vc/line :id "line-sm-60-100" :map-xy "abs-day sm-60-100")
+          (vc/line :id "line-sm-100-150" :map-xy "abs-day sm-100-150")))
+
+
+
+
+
+      (hr)
+      (p "tests ........")
+      (hr)
+
+      #_(p "Nothing here {{'yet' + '!'}}")
+
+      (div
+        :id "sales-example"
+        (vc/csv :id "quarterly-sales-csv"
+                ;;{{
+                quarter,sales
+                Q1,493
+                Q2,573
+                Q3,639
+                Q4,855
+                ;;}}
+                )
+
+
+        (let [sales* (clj->js [{:quarter "Q1", :sales 493}
+                               {:quarter "Q2", :sales 573}
+                               {:quarter "Q3", :sales 639}
+                               {:quarter "Q4", :sales 855}
+                               {:quarter "Q5", :sales 1100}
+                               {:quarter "Q6", :sales 200}
+                               {:quarter "Q7", :sales 500}])]
+          (button :click #(vc/set-data "testchart" sales*) "add sales"))
+
+          #_#(reset! sales sales*)
+
+        (h4 :style "text-align: center;" "Quarterly Sales ($USD)")
+
+        (vc/chart
+          :id "testchart"
+          :style "width: 20.25rem; height: 13.25rem; margin: auto"
+          ;:data #_"salesdata" "#quarterly-sales-csv"
+          :scale-x-linear "0 1200"
+          (vc/guide-x)
+          (vc/repeat
+            (vc/annotation :class "left" "{{quarter}}")
+            (vc/dot :map-position "sales"))))
+
 
       (div :id "line-example"
+           (link :id "temps"
+                 :rel "variance-data"
+                 :href "https://variancecharts.com/data/global_temp_fiveyear_mean.csv")
 
            (h3 "Change in Global Surface Temperature, 5 Year Mean")
 
-           (chart :data "#temps"
-                  :map-xy "year five_year_mean"
-                  :scale-x-linear "1882 2010"
-                  :scale-y-linear "-0.5 0.8"
-                  (guide-y
-                    (span :class "label" "{{value}}°"))
-                  (guide-x)
-                  (line)))
+           (vc/chart :data "#temps"
+                     :map-xy "year five_year_mean"
+                     :scale-x-linear "1882 2010"
+                     :scale-y-linear "-0.5 0.8"
+                     (vc/guide-y
+                       (span :class "label" "{{value}}°"))
+                     (vc/guide-x)
+                     (vc/line)))
 
       )
 

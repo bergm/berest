@@ -17,3 +17,69 @@
   stroke-width: 2px;
   stroke: #dc7062;
 }
+
+#line-example .label {
+  color: #000000;
+}
+
+
+#soil-moisture-chart {
+  width: 100%;
+  padding: 60px 80px 80px 120px;
+  color: #444444;
+  font-family: Helvetica, Arial, sans-serif;
+  font-weight: bold;
+}
+#soil-moisture-chart h3 {
+  text-align: center;
+  margin: 0 0 28px 0;
+}
+#soil-moisture-chart chart {
+  width: 100%;
+  height: 400px;
+}
+#soil-moisture-chart #line-sm-0-30 path {
+  stroke-width: 2px;
+  stroke: #2717f1;
+}
+
+#soil-moisture-chart #line-sm-30-60 path {
+  stroke-width: 2px;
+  stroke: #1c59f1;
+}
+
+#soil-moisture-chart #line-sm-60-90 path {
+  stroke-width: 2px;
+  stroke: #25a1dc;
+}
+
+#soil-moisture-chart #line-sm-0-10 path {
+  stroke-width: 2px;
+  stroke: #420cdc;
+}
+
+#soil-moisture-chart #line-sm-10-30 path {
+  stroke-width: 2px;
+  stroke: #270fdc;
+}
+
+#soil-moisture-chart #line-sm-30-60 path {
+  stroke-width: 2px;
+  stroke: #0f29dc;
+}
+
+#soil-moisture-chart #line-sm-60-100 path {
+  stroke-width: 2px;
+  stroke: #0d57dc;
+}
+
+#soil-moisture-chart #line-sm-100-150 path {
+  stroke-width: 2px;
+  stroke: #0c85dc;
+}
+
+
+
+#soil-moisture-chart .label {
+  color: #000000;
+}

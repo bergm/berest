@@ -25,13 +25,13 @@
                :repeat 3
                :singleton true) ;just one server has to fetch and store the data
 
-(jobs/schedule :fetch-dwd-prognosis-data
-               (partial dwd/import-dwd-data-into-datomic :prognosis)
+(jobs/schedule :fetch-dwd-data
+               dwd/import-dwd-data-into-datomic
                :at "10:30"
                :every :day #_[3 :days]
                :singleton true)
 
-(jobs/schedule :fetch-dwd-measured-data
+#_(jobs/schedule :fetch-dwd-measured-data
                (partial dwd/import-dwd-data-into-datomic :measured)
                :at "10:35"
                :every :day

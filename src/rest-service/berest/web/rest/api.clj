@@ -164,7 +164,7 @@
         irrigation-donations (for [[day month amount] (edn/read-string irrigation-data)]
                                {:irrigation/abs-day (time/datetime->day-of-year (time/datetime year month day))
                                 :irrigation/amount amount})
-        {:keys [inputs soil-moistures-7 prognosis]}
+        {:keys [inputs soil-moistures-7 prognosis] :as result}
         (calculate-plot-from-db db farm-id plot-id until-julian-day year
                                 irrigation-donations [])
         soil-moistures (concat soil-moistures-7 prognosis)
@@ -173,8 +173,8 @@
                      create-liberator-csv-output)]
     (case media-type
       "text/html" csv-sms
-      "application/edn" soil-moistures
-      "application/json" soil-moistures
+      "application/edn" #_result soil-moistures
+      "application/json" result #_soil-moistures
       "text/csv" csv-sms
       "text/tab-separated-values" csv-sms)))
 

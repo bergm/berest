@@ -8,7 +8,7 @@
             [berest.datomic :as db]
             [berest.util :as bu]
             [datomic.api :as d]
-            #_[miner.ftp :as ftp]
+            [miner.ftp :as ftp]
             [clojure.tools.logging :as log]
             [clojure.pprint :as pp]))
 
@@ -150,8 +150,11 @@
 
   )
 
+(def kind-pattern #"FY60DWL(A|B)-\d{8}_\d{4}.txt")
 
-(defn make-filename [kind date & {:keys [h min] :or {h 9, min 15}}]
+(def date-pattern #"FY60DWL\w-(\d{8})_\d{4}.txt")
+
+#_(defn make-filename [kind date & {:keys [h min] :or {h 9, min 15}}]
   (str "FY60DWL" ({:prognosis "A"
                    :measured "B"} kind)
        "-" (ctf/unparse (ctf/formatter "yyyyMMdd") date) "_" (format "%02d%02d" h min) ".txt"))
@@ -168,51 +171,65 @@
 
   )
 
+(comment
+
+  (def files (ftp/list-files "ftp://anonymous@tran.zalf.de/pub/net/wetter/"))
+
+  )
+
+(defn import-dwd-data-into-datomic*
+  "import the dwd data under the given url [and filename] into datomic"
+  ([ftp-url filename]
+   (try
+     (let [ftp-url-to-filename (str ftp-url filename)
+           kind-identifier (second (re-find kind-pattern filename))
+           data (try
+                  (slurp ftp-url-to-filename)
+                  (catch Exception e
+                    (log/info (str "Couldn't read file from ftp server! URL was " ftp-url-to-filename))
+                    (throw e)))
+           transaction-data (case kind-identifier
+                              "A" (parse-prognosis-data data)
+                              "B" (parse-measured-data data))
+
+           ;insert transaction data via :weather-station/add-data transaction function, to create unique data per station and day
+           transaction-data->add-data (map #(vector :weather-station/add-data %) transaction-data)]
+       (try
+         @(d/transact (db/connection) transaction-data->add-data)
+         (catch Exception e
+           (log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
+           (throw e)))
+       true)
+     (catch Exception _ false))))
 
 (defn import-dwd-data-into-datomic
   "import the requested kind [:prognosis | :measured] dwd data into datomic"
-  [kind & [date]]
-  (try
-    (let [date* (or date (ctc/now))
-          url "ftp://tran.zalf.de/pub/net/wetter/"
-          url* (str url (make-filename kind date*))
-          data (try
-                 (slurp url*)
-                 (catch Exception e
-                   (log/info (str "Couldn't read " (name kind) " file from ftp server! URL was " url*))
-                   (throw e)))
-          transaction-data (case kind
-                             :prognosis (parse-prognosis-data data)
-                             :measured (parse-measured-data data))
-
-          ;insert transaction data via :weather-station/add-data transaction function, to create unique data per station and day
-          transaction-data->add-data (map #(vector :weather-station/add-data %) transaction-data)
-          ]
-      (try
-        @(d/transact (db/connection) transaction-data->add-data)
-        (catch Exception e
-          (log/info "Couldn't write dwd data to datomic! data: [\n" transaction-data->add-data "\n]")
-          (throw e)))
-      true)
-    (catch Exception _ false)))
+  [& dates]
+  (let [dates* (or dates [(ctc/now)])
+        dates** (map #(ctf/unparse (ctf/formatter "yyyyMMdd") %) dates*)
+        url "ftp://anonymous@tran.zalf.de/pub/net/wetter/"
+        all-files (ftp/list-files url)
+        grouped-files (group-by #(second (re-find date-pattern %)) all-files)
+        grouped-files-at-dates (select-keys grouped-files dates**)]
+    (doseq [[d files-at-date] grouped-files-at-dates
+            file-at-date files-at-date]
+      (import-dwd-data-into-datomic* (str/replace-first url "anonymous@" "") file-at-date))))
 
 (defn bulk-import-dwd-data-into-datomic
-  [kind from-date to-date]
-  (doseq [date (take (ctc/in-days (ctc/interval from-date (ctc/plus to-date (ctc/days 1))))
-                     (ctp/periodic-seq from-date (ctc/days 1)))]
-    (import-dwd-data-into-datomic kind date)))
+  [from-date to-date]
+  (apply import-dwd-data-into-datomic
+         (take (ctc/in-days (ctc/interval from-date (ctc/plus to-date (ctc/days 1))))
+               (ctp/periodic-seq from-date (ctc/days 1)))))
 
 (comment
 
-  (import-dwd-data-into-datomic :prognosis (ctc/date-time 2014 2 3))
-  (import-dwd-data-into-datomic :measured (ctc/date-time 2014 2 7))
+  (import-dwd-data-into-datomic (ctc/date-time 2014 2 3))
+  (import-dwd-data-into-datomic (ctc/date-time 2014 2 7))
 
-  (bulk-import-dwd-data-into-datomic :prognosis
-                                     (ctc/date-time 2014 2 3)
+  (bulk-import-dwd-data-into-datomic (ctc/date-time 2014 2 3)
                                      (ctc/date-time 2014 3 28))
 
-  (bulk-import-dwd-data-into-datomic :measured
-                                     (ctc/date-time 2014 2 3)
+  (bulk-import-dwd-data-into-datomic (ctc/date-time 2014 2 3)
                                      (ctc/date-time 2014 3 28))
 
   )
