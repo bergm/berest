@@ -173,7 +173,7 @@
                      create-liberator-csv-output)]
     (case media-type
       "text/html" csv-sms
-      "application/edn" #_result soil-moistures
+      "application/edn" result #_soil-moistures
       "application/json" result #_soil-moistures
       "text/csv" csv-sms
       "text/tab-separated-values" csv-sms)))

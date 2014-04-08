@@ -19,6 +19,8 @@
 
                  [cljs-ajax "0.2.3"]
 
+                 [org.clojure/core.match "0.2.1"]
+
                  #_(
                  [com.datomic/datomic-pro "0.9.4556"]
 
@@ -49,6 +51,8 @@
  :out-path     "../../resources/public"
  :src-paths    #{"src/hoplon"
                  "src/cljs"
+                 "src/apogee"
+
 
                  ;both will be used if castra is used for rpc, for now we use the REST service (has to work anyway)
                  #_"src/castra"

@@ -2,8 +2,12 @@
       #_(:refer-clojure :exclude [repeat])
       (:require #_[ui.tabs :as tabs]
                 [ajax.core :as ajax]
+                [berest.helper :as bh :refer [rcomp partial-kw]]
                 [clojure.string :as str]
-                [berest.client.hoplon.variance-charts :as vc]))
+                [berest.client.hoplon.variance-charts :as vc]
+                [berest.client.hoplon.apogee-charts :as ac]
+                [apogee.charts :as acharts]
+                [tailrecursion.hoplon.svg :as hsvg]))
 
 #_(ns hoplon.index
   (:require-macros [tailrecursion.javelin :refer :all]
@@ -42,24 +46,36 @@
 (defc= until-date (:until-date state))
 (defc= irrigation-data (:irrigation-data state))
 
+(defn round [value & {:keys [digits] :or {digits 0}}]
+  (let [factor (.pow js/Math 10 digits)]
+    (-> value
+        (* ,,, factor)
+        (#(.round js/Math %) ,,,)
+        (/ ,,, factor))))
 
 (def sum (partial reduce + 0))
 
+(defc= soil-moistures-7 (:soil-moistures-7 edn-result))
+(defc= prognosis (:prognosis edn-result))
+(defc= inputs (:inputs edn-result))
+(defc= days (range (-> inputs first :abs-day) (-> inputs last :abs-day)))
+
 (defc= soil-moistures
-       (do
-         (println "first ed-result: " (first edn-result))
-         (mapv (fn [{:keys [abs-day soil-moistures] :as all}]
-                 {:abs-day    abs-day
-                  :sm-0-10    (sum (subvec (vec soil-moistures) 0 2))
-                  :sm-10-30   (sum (subvec (vec soil-moistures) 2 4))
-                  :sm-30-60   (sum (subvec (vec soil-moistures) 4 7))
-                  :sm-60-100  (sum (subvec (vec soil-moistures) 7 11))
-                  :sm-100-150 (sum (subvec (vec soil-moistures) 11 16))
-                  ;:sm-0-30  (sum (subvec (vec soil-moistures) 0 4))
-                  ;:sm-30-60 (sum (subvec (vec soil-moistures) 4 7))
-                  ;:sm-60-90 (sum (subvec (vec soil-moistures) 7 10))
-                  })
-               (drop-last 7 edn-result))))
+       (mapv (fn [{:keys [abs-day soil-moistures
+                          irrigation-amount] :as all}]
+               {:abs-day    abs-day
+                :sm-0-10    (sum (subvec (vec soil-moistures) 0 2))
+                :sm-10-30   (sum (subvec (vec soil-moistures) 2 4))
+                :sm-30-60   (sum (subvec (vec soil-moistures) 4 7))
+                :sm-60-100  (sum (subvec (vec soil-moistures) 7 11))
+                :sm-100-150 (sum (subvec (vec soil-moistures) 11 16))
+                ;:sm-0-30  (sum (subvec (vec soil-moistures) 0 4))
+                ;:sm-30-60 (sum (subvec (vec soil-moistures) 4 7))
+                ;:sm-60-90 (sum (subvec (vec soil-moistures) 7 10))}
+                })
+             soil-moistures-7))
+
+
 #_(cell= (println "soil-moistures: " soil-moistures))
 (cell= (when (not-empty soil-moistures) (vc/set-data "soil-moisture-chart" soil-moistures)))
 
@@ -268,17 +284,11 @@
         :value (if template? "Zeile hinzufügen" "Zeile entfernen")
         :on-click (if template? add-irrigation-row (partial remove-irrigation-row @row-no))))))
 
-
-(defc sales nil)
-
-(def saless
-  (clj->js [{"quarter" "Q1", "sales" "493"}
-            {"quarter" "Q2", "sales" "573"}
-            {"quarter" "Q3", "sales" "639"}
-            {"quarter" "Q4", "sales" "855"}
-            {"quarter" "Q5", "sales" "1100"}
-            {"quarter" "Q6", "sales" "200"}
-            {"quarter" "Q7", "sales" "500"}]))
+(defc= chart-config
+       (ac/xy-config :width 750 :height 500
+                     :domain-x [1 365]
+                     :domain-left-y (:left [0 100])
+                     :domain-right-y (:right [0 40])))
 
 (html ;:ng-app "myApp"
   (head
@@ -286,8 +296,8 @@
           :content "width=device-width, initial-scale=1"
           :charset "UTF-8")
     (link :rel "stylesheet" :href "css/bootstrap.css")
-    (link :rel "stylesheet" :href "css/variance-base.css")
-    (link :rel "stylesheet" :href "css/charts.css")
+    #_(link :rel "stylesheet" :href "css/variance-base.css")
+    #_(link :rel "stylesheet" :href "css/charts.css")
 
     #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css")
     #_(link :rel "stylesheet" :href "//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css")
@@ -402,7 +412,93 @@
 
       (hr)
 
-      (div
+      #_(hsvg/svg
+        (acharts/xy-plot))
+
+      #_(ac/graph :id "d2plot"
+                :data (cell= [{:days    days
+                               :values  (map (rcomp (juxt :precipitation :evaporation)
+                                                    (partial apply -)
+                                                    (partial-kw round :digits 1))
+                                             inputs)
+                               :color-f #(if (< % 0) :red :blue)
+                               :type    :bar
+                               :assoc-y :right
+                               :label   "N-V"
+                               :unit    "mm"}])
+
+                )
+
+      (container :config chart-config
+                 (ac/xy-plot :config chart-config
+                             :x 40 :y 30
+                             :grid-lines (/ (- xmax xmin) 10)))
+
+
+      #_(ac/graph :d2Plot [
+                       {:const true
+                        :horizontal 0
+                        :assoc-y :left
+                        :color :black}
+
+                       {:days (->> inputs
+                                   (filter (rcomp :qu-target
+                                                  (partial < 0))
+                                     ,,,)
+                                   (map :abs-day ,,,))
+                        :values (->> inputs
+                                     (map :qu-target ,,,)
+                                     (filter (partial < 0) ,,,)
+                                     (map  (rcomp  (partial * 100)
+                                                   (partial-kw bu/round :digits 1))
+                                       ,,,))
+                        :color :green
+                        :assoc-y :left
+                        :label "AET/PET S."
+                        :unit "%"}
+
+                       { :days (->> (rest sms-7*)
+                                    (filter (rcomp :aet7pet
+                                                   (partial < 0))
+                                      ,,,)
+                                    (map :abs-day ,,,))
+                         :values (->> (rest sms-7*)
+                                      (map :aet7pet ,,,)
+                                      (filter (partial < 0) ,,,)
+                                      (map  (rcomp  (partial * 100)
+                                                    (partial-kw bu/round :digits 1))
+                                        ,,,))
+                         :color :goldenrod
+                         :assoc-y :left
+                         :label "AET/PET"
+                         :unit "%"}
+
+                       { :days days
+                         :values (map  (rcomp  (juxt :precipitation :evaporation)
+                                               (partial apply -)
+                                               (partial-kw bu/round :digits 1))
+                                       inputs)
+                         :color-f #(if (< % 0) :red :blue)
+                         :type :bar
+                         :assoc-y :right
+                         :label "N-V"
+                         :unit "mm"}
+
+                       { :days days
+                         :values (->> inputs
+                                      (map :irrigation-amount ,,,)
+                                      (filter (partial < 0) ,,,)
+                                      (map  (partial-kw bu/round :digits 1)
+                                        ,,,))
+                         :color :darkblue
+                         :type :bar
+                         :assoc-y :right
+                         :label "Gabe" :unit "mm"}
+                       ]
+             :align-zero true)
+
+
+      #_(div
         (h3 "Berechneter Bodenfeuchteverlauf")
 
         (button
@@ -427,19 +523,14 @@
           (vc/line :id "line-sm-10-30" :map-xy "abs-day sm-10-30")
           (vc/line :id "line-sm-30-60" :map-xy "abs-day sm-30-60")
           (vc/line :id "line-sm-60-100" :map-xy "abs-day sm-60-100")
-          (vc/line :id "line-sm-100-150" :map-xy "abs-day sm-100-150")))
+          (vc/line :id "line-sm-100-150" :map-xy "abs-day sm-100-150")
+          (vc/points :id "irrigation" :map-xy "abs-day irrigation")
+          ))
 
-
-
-
-
-      (hr)
-      (p "tests ........")
-      (hr)
 
       #_(p "Nothing here {{'yet' + '!'}}")
 
-      (div
+      #_(div
         :id "sales-example"
         (vc/csv :id "quarterly-sales-csv"
                 ;;{{
@@ -476,7 +567,7 @@
             (vc/dot :map-position "sales"))))
 
 
-      (div :id "line-example"
+      #_(div :id "line-example"
            (link :id "temps"
                  :rel "variance-data"
                  :href "https://variancecharts.com/data/global_temp_fiveyear_mean.csv")

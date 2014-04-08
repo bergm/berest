@@ -5,6 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
 
+                 [tailrecursion/hoplon "5.5.1"]
+
                  #_[org.infinispan/infinispan-client-hotrod "6.0.0.CR1"]
                  [com.datomic/datomic-pro "0.9.4556"]
                  #_[com.datomic/datomic-free "0.8.4218"]

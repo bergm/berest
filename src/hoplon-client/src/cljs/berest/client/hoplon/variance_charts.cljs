@@ -9,6 +9,7 @@
 
 ;geometries
 (def point (make-elem-ctor "point"))
+(def points (make-elem-ctor "points"))
 (def dot (make-elem-ctor "dot"))
 (def range (make-elem-ctor "range"))
 (def bar (make-elem-ctor "bar"))
