@@ -59,6 +59,53 @@
 
 
 
+
+
+
+(defn rgb
+  [r g b]
+  (str "rgb(" r "," g "," b ")"))
+
+(defn translate-value
+  [v from-min from-max to-min to-max]
+  (let [scale (/ (- to-max to-min)
+                 (- from-max from-min))
+        trans (- to-min (* from-min scale))]
+    (+ (* v scale) trans)))
+
+(defn translate
+  ([x] (str "translate(" x ")"))
+  ([x y] (str "translate(" x "," y ")")))
+
+
+(def default-chart-background-props
+  {:width 750
+   :height 500
+   :major-grid-color (rgb 255 255 255)
+   :background-color (rgb 225 225 225)
+   :major-grid-width 2})
+
+(def default-grid-props
+  {:width 750,
+   :height 500
+   :grid-lines 10
+   :major-color (rgb 255 255 255)
+   :minor-color (rgb 245 245 245)
+   :major-width 2
+   :minor-width 1})
+
+(def default-axis-props
+  {:width 750,
+   :height 500
+   :min 0
+   :max 100
+   :grid-lines 10,
+   :font-family "Verdana"
+   :font-size "12px"
+   :number-format 1})
+
+
+
 (defrecord XY-Chart-Config [width height min-x max-x min-left-y max-left-y min-right-y max-right-y])
 
 (defn xy-config [& {:keys [width height]
@@ -74,8 +121,8 @@
 (defn rel-coord
   [{:keys [width height min-x max-x min-left-y max-left-y min-right-y max-right-y]} y-domain x y]
   (let [[min-y max-y] (case y-domain
-                        :left [min-left-y max-left-y]
-                        :right [min-right-y max-right-y])
+                            :left [min-left-y max-left-y]
+                            :right [min-right-y max-right-y])
         w (- max-x min-x)
         h (- max-y min-y)
         dw (- x min-x)
@@ -92,7 +139,7 @@
   [{:keys [chart data]
     y-domain :y-domain
     :or {y-domain :left}
-    :as attr} _]
+    :as attr} children]
   (let [rels (cell= (for [[x y] data]
                       (let [[x' y'] (rel-coord chart y-domain x y)]
                         (str x' "," y'))))
@@ -112,66 +159,152 @@
             (/ (- x (first domain))
                domain-length))))))
 
-#_(defn style [m]
-  (reduce (fn [s [k v]]
-            (str s (name k) ": "
-                 (match [v]
-                        [[val unit]] (str val (name unit))
 
-                        [n :guard number?]
-                        (if (#{:height :width :top :left :bottom :right} k)
-                          (str n "px")
-                          n)
+(defelem chart-background
+  [{:keys [height width background-color
+           major-grid-color major-grid-width]} children]
+  (hsvg/rect
+    :x 0
+    :y 0
+    :height height
+    :width width
+    :css {:fill background-color
+          :stroke major-grid-color
+          :stroke-width major-grid-width}))
 
-                        [val] (name val))
-                 ";"))
-          "" m))
+(defelem x-grid
+  [{:keys [height width
+           grid-lines
+           major-color minor-color
+           major-width minor-width]} children]
+  (let [space (cell= (/ width grid-lines))]
+    (loop-tpl
+      :bindings [i (range 1 grid-lines)]
+      (hsvg/line
+        :x1 (cell= (* i space))
+        :y1 0
+        :x2 (cell= (* i space))
+        :y2 height
+        :css {:stroke       (cell= (if (even? i) major-color minor-color))
+              :stroke-width (cell= (if (even? i) major-width minor-width))}))))
 
-#_(defn seq->vec [analemma-forms]
-  (cw/prewalk #(if (seq? %1) (into [] %1) %1) analemma-forms))
+(defelem y-grid
+  [{:keys [height width
+           grid-lines
+           major-color minor-color
+           major-width minor-width]} children]
+  (let [space (cell= (/ height grid-lines))]
+    (loop-tpl
+      :bindings [i (range 1 (cell= grid-lines))]
+      (hsvg/line
+        :x1 0
+        :y1 (cell= (* i space))
+        :x2 width
+        :y2 (cell= (* i space))
+        :css {:stroke       (cell= (if (even? i) major-color minor-color))
+              :stroke-width (cell= (if (even? i) major-width minor-width))}))))
 
+(defelem x-axis
+  [{:keys [height width
+           min max
+           grid-lines
+           font-family font-size
+           number-format]} children]
+  (let [space (cell= (/ width grid-lines))]
+    (loop-tpl
+      :bindings [i (filter even? (range 0 (inc grid-lines)))]
+      (let [display-value (cell= (translate-value (* i space)
+                                                  0 width min max))]
+        (hsvg/text
+          :x (cell= (* i space))
+          :y (cell= (+ height 20))
+          :css {:fill        (rgb 150 150 150)
+                :font-family font-family
+                :font-size   font-size
+                :text-anchor :middle}
+          (text "~{(.toFixed display-value number-format}"))))))
 
 (defelem y-axis
   [{:keys [height width
-           ymin ymax
+           min max
            grid-lines
-           axis-font-family axis-font-size
-           axis-number-format
-           side] :or {side :left}} _]
-  (let [grid-y-space (/ height grid-lines)]
-    (for [i (range 1 (inc grid-lines)) :when (even? i)]
-      (hsvg/text :x (match side
-                           :left 0
-                           :right width)
-                 :y (- height (* i grid-y-space))
-                 (autil/format axis-number-format
-                               (asvg/translate-value (* i grid-y-space)
-                                                     0 height ymin ymax))
-                 :css {:fill (asvg/rgb 150 150 150)
-                       :font-family axis-font-family
-                       :font-size axis-font-size
-                       :text-anchor (match side :left :end :right :start)
-                       :alignment-baseline :middle}))))
+           font-family font-size
+           number-format
+           side]
+    :or {side :left}
+    :as attrs} children]
+  (let [space (cell= (/ height grid-lines))]
+    (loop-tpl
+      :bindings [i (filter even? (range 1 (inc grid-lines)))]
+      (let [display-value (cell= (translate-value (* i space)
+                                                  0 height min max))])
+      (hsvg/text
+          :x (cell= (case side
+                          :left 0
+                          :right width))
+          :y (cell= (- height (* i space)))
+          :css {:fill (rgb 150 150 150)
+                :font-family font-family
+                :font-size font-size
+                :text-anchor (case side
+                                   :left :end
+                                   :right :start)
+                :alignment-baseline :middle}
+          (text "~{(.toFixed display-value number-format)}")))))
 
 (defelem xy-chart
-  [{:keys [chart-config] :as attrs} children]
-  (let [{x :x y :y :as props} (merge acharts/default-chart-props attrs)
-        {:keys [min-left-y max-left-y
-                min-right-y max-right-y]} chart-config]
-    (hsvg/g ;:transform (acharts/translate x y)
-            (acharts/chart-background props)
-            (acharts/x-grid props)
-            (acharts/y-grid props)
-            (acharts/x-axis props)
-            (when (and min-left-y max-left-y)
-              (y-axis (merge props {:side :left
-                                    :ymin min-left-y
-                                    :ymax max-left-y})))
-            (when (and min-right-y max-right-y)
-              (y-axis (merge props {:side :right
-                                    :ymin min-right-y
-                                    :ymax max-right-y})))
-            children)))
+  [{:keys [props] :as attrs} children]
+  (let [{:keys [width height
+                x-domain y-left-domain y-right-domain]} attrs
+        {:keys [major-grid-color minor-grid-color
+                major-grid-width minor-grid-width
+                axis-font-family axis-font-size
+                axis-number-format]} props
+        {:keys [x y width height]
+         :as general-props} props
+        grid-props (merge default-grid-props
+                          general-props
+                          {:major-color major-grid-color
+                           :minor-color minor-grid-color
+                           :major-width major-grid-width
+                           :minor-width minor-grid-width})
+        axis-props (merge default-axis-props
+                          general-props
+                          {:font-family axis-font-family
+                           :font-size axis-font-size
+                           :number-format axis-number-format})]
+    (hsvg/svg
+      :x x :y y
+      :width width :height height
+
+      (acharts/chart-background
+        :props (merge default-chart-background-props
+                      (select-keys props [:width :height
+                                          :major-grid-color
+                                          :major-grid-width
+                                          :background-color])))
+
+      (acharts/x-grid :props grid-props)
+
+      (acharts/y-grid :props grid-props)
+
+      (acharts/x-axis
+        :props (merge axis-props {:min (first x-domain)
+                                  :max (last x-domain)}))
+
+      (when (not-any? nil? y-left-domain)
+        (y-axis
+          :props (merge axis-props {:min  (first y-left-domain)
+                                    :max  (last y-left-domain)
+                                    :side :left})))
+
+      (when (not-any? nil? y-right-domain)
+        (y-axis
+          :props (merge axis-props  {:min  (first y-right-domain)
+                                     :max  (last y-right-domain)
+                                     :side :right})))
+
+      children)))
 
 
 (defn point-label [id x y text options]
@@ -179,7 +312,7 @@
                  :label-font-family "Verdana"
                  :label-font-size "55px"
                  :visibility :visible
-                 :fill (asvg/rgb 100 100 150)} options)
+                 :fill (rgb 100 100 150)} options)
    text])
 
 
@@ -326,13 +459,13 @@
                      y-min-max*)
 
         ;create chart which is used as background
-         chart (config :width width :height height
+         chart (xy-config :width width :height height
                        :domain-x [xmin xmax]
                        :domain-left-y (:left y-min-max)
                        :domain-right-y (:right y-min-max))
 
          container (container :chart chart
-                              (xy-plot :width width :height height
+                              (xy-chart :width width :height height
                                        :x (:left x-margin) :y (:top y-margin)
                                        :xmin xmin :xmax xmax
                                        :y-range-left (:left y-min-max)

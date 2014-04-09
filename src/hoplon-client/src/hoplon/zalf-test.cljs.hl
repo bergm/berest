@@ -7,6 +7,7 @@
                 [berest.client.hoplon.variance-charts :as vc]
                 [berest.client.hoplon.apogee-charts :as ac]
                 [apogee.charts :as acharts]
+                [apogee.svg :as svg]
                 [tailrecursion.hoplon.svg :as hsvg]))
 
 #_(ns hoplon.index
@@ -30,6 +31,9 @@
        :selected-plot-id nil
        :until-date #inst "1993-09-30"
        :irrigation-data [[1 4 22] [2 5 10] [11 7 30]]})
+
+(defc error-msg nil)
+#_(cell= (println "error-msg: " error-msg))
 
 (defc session-token nil)
 (defc temp-irrigation-data [nil nil nil])
@@ -179,7 +183,7 @@
             :params {:username "zalf"
                      :password "fLAz"}
             :handler #(reset! session-token (:session-token %))
-            :error-handler #(js/alert (str "Error: " %))})
+            :error-handler #(reset! error-msg "POST login failed")})
 
 ;get all farm ids
 (cell= (when session-token
@@ -189,7 +193,7 @@
                                (swap! ~(cell state) assoc :farms %)
                                (swap! ~(cell state) assoc :selected-farm-id
                                       (-> farms first :farm/id)))
-                    :error-handler error-alert})))
+                    :error-handler #(reset! error-msg "GET data/farms/ failed")})))
 
 ;if a farm is being selected get all plots of this farm
 (cell= (when selected-farm-id
@@ -199,7 +203,7 @@
                                (swap! ~(cell state) assoc :plots %)
                                (swap! ~(cell state) assoc :selected-plot-id
                                       (-> plots first :plot/id)))
-                    :error-handler error-alert})))
+                    :error-handler #(reset! error-msg (str "GET data/farms/" selected-farm-id "/plots/ failed"))})))
 
 (defn calculate-and-get-csv
   []
@@ -211,7 +215,7 @@
                       :irrigation-data (prn-str @irrigation-data)}
              :response-format :raw
              :handler #(reset! csv-result %)
-             :error-handler error-alert}))
+             :error-handler #(reset! error-msg "GET csv from auth-api/calculate failed")}))
 
 (defn calculate-and-get-edn
   []
@@ -223,7 +227,7 @@
                       :irrigation-data (prn-str @irrigation-data)}
              :response-format :edn
              :handler #(reset! edn-result %)
-             :error-handler error-alert}))
+             :error-handler #(reset! error-msg "GET edn from auth-api/calculate failed")}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -284,11 +288,33 @@
         :value (if template? "Zeile hinzufügen" "Zeile entfernen")
         :on-click (if template? add-irrigation-row (partial remove-irrigation-row @row-no))))))
 
-(defc= chart-config
-       (ac/xy-config :width 750 :height 500
-                     :domain-x [1 365]
-                     :domain-left-y (:left [0 100])
-                     :domain-right-y (:right [0 40])))
+(def chart-config
+  {:x 50
+   :y 50
+   :width (cell 750)
+   :height (cell 500)
+   :x-domain [1 365]
+   :y-left-domain [0 100]
+   :y-right-domain [0 40]
+   :grid-lines (cell= (/ (- 365 1) 10)),
+   ;:label-points? false,
+   ;:points []
+   :major-grid-color (svg/rgb 255 255 255)
+   :minor-grid-color (svg/rgb 245 245 245)
+   :background-color (svg/rgb 225 225 225)
+   :major-grid-width 2
+   :minor-grid-width 1
+   :axis-font-family "Verdana"
+   :axis-font-size "12px"
+   :axis-number-format 1
+   :label-font-family "Verdana"
+   :label-font-size "10px"
+   :label-number-format 1})
+
+
+(defc width 750)
+(defc height 500)
+
 
 (html ;:ng-app "myApp"
   (head
@@ -307,6 +333,59 @@
 
 
   (body
+
+    (p :do-css (cell= {:display (if (nil? error-msg) "none" "block")})
+       :style "color:red"
+       (text "Error: ~{error-msg}"))
+
+    (ac/xy-chart :props chart-config)
+
+    (hsvg/svg ;:width "100%"  :height "100%"
+
+              (hsvg/g :transform (acharts/translate 50 50)
+                      (acharts/chart-background
+                        :width width :height height :background-color (svg/rgb 225 225 225)
+                        :major-grid-width 2
+                        :major-grid-color (svg/rgb 255 255 255))
+                      (acharts/x-grid
+                        :width width :height height
+                        :grid-lines 10
+                        :xmin 1 :xmax 365
+                        :major-grid-color (svg/rgb 255 255 255)
+                        :minor-grid-color (svg/rgb 245 245 245))
+                      (acharts/y-grid
+                        :width width :height height
+                        :grid-lines 10
+                        :ymin 0 :ymax 100
+                        :major-grid-color (svg/rgb 255 255 255)
+                        :minor-grid-color (svg/rgb 245 245 245))
+                      (acharts/x-axis
+                        :width width :height height
+                        :grid-lines 10
+                        :xmin 1 :xmax 365
+                        :axis-font-family "Verdana"
+                        :axis-font-size "12px"
+                        :axis-number-format 1)
+                      (ac/y-axis
+                        :width width :height height
+                        :grid-lines 10
+                        :ymin 0 :ymax 100
+                        :axis-font-family "Verdana"
+                        :axis-font-size "12px"
+                        :axis-number-format 1
+                        :side :left))
+              (hsvg/text :x 100 :y 100
+                         :css {:fill (svg/rgb 150 150 150)
+                               :font-family "Verdana"
+                               :font-size "12px"
+                               :text-anchor :end
+                               :alignment-baseline :middle}
+                         "blalba")
+              )
+
+
+
+
 
 
     (div
@@ -429,10 +508,10 @@
 
                 )
 
-      (container :config chart-config
-                 (ac/xy-plot :config chart-config
-                             :x 40 :y 30
-                             :grid-lines (/ (- xmax xmin) 10)))
+
+
+
+      #_(ac/xy-chart chart-config)
 
 
       #_(ac/graph :d2Plot [
@@ -581,9 +660,7 @@
                      (vc/guide-y
                        (span :class "label" "{{value}}°"))
                      (vc/guide-x)
-                     (vc/line)))
-
-      )
+                     (vc/line))))
 
 
     )

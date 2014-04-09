@@ -42,7 +42,7 @@
 
 (defelem chart-background
   [{:keys [height width background-color
-           major-grid-color major-grid-width]} _]
+           major-grid-color major-grid-width]} children]
   (hsvg/rect :x 0 :y 0 :height height :width width
              :css {:fill background-color
                    :stroke major-grid-color
@@ -53,10 +53,10 @@
            xmin xmax
            grid-lines
            major-grid-color minor-grid-color
-           major-grid-width minor-grid-width]} _]
-  (let [grid-x-space (/ width grid-lines)]
+           major-grid-width minor-grid-width]} children]
+  (let [grid-x-space (cell= (/ width grid-lines))]
     (for [i (range 1 grid-lines)]
-      (hsvg/line :x1 (* i grid-x-space) :y1 0 :x2 (* i grid-x-space) :y2 height
+      (hsvg/line :x1 (cell= (* i grid-x-space)) :y1 0 :x2 (cell= (* i grid-x-space)) :y2 height
                  :css {:stroke (if (even? i) major-grid-color minor-grid-color)
                        :stroke-width (if (even? i) major-grid-width minor-grid-width)}))))
 
@@ -65,10 +65,10 @@
            ymin ymax
            grid-lines
            major-grid-color minor-grid-color
-           major-grid-width minor-grid-width]} _]
-  (let [grid-y-space (/ height grid-lines)]
+           major-grid-width minor-grid-width]} children]
+  (let [grid-y-space (cell= (/ height grid-lines))]
     (for [i (range 1 grid-lines)]
-      (hsvg/line :x1 0 :y1 (* i grid-y-space) :x2 width :y2 (* i grid-y-space)
+      (hsvg/line :x1 0 :y1 (cell= (* i grid-y-space)) :x2 width :y2 (cell= (* i grid-y-space))
                  :css {:stroke (if (even? i) major-grid-color minor-grid-color)
                        :stroke-width (if (even? i) major-grid-width minor-grid-width)}))))
 
@@ -77,35 +77,38 @@
            xmin xmax
            grid-lines
            axis-font-family axis-font-size
-           axis-number-format]} _]
-  (let [grid-x-space (/ width grid-lines)]
-    (for [i (range 0 (inc grid-lines)) :when (even? i)]
-      (hsvg/text :x (* i grid-x-space) :y (+ 20 height)
-                 (util/format axis-number-format
-                              (svg/translate-value (* i grid-x-space)
-                                                   0 width xmin xmax))
-                 :css {:fill (svg/rgb 150 150 150)
-                       :font-family axis-font-family
-                       :font-size axis-font-size
-                       :text-anchor :middle}))))
+           axis-number-format]} children]
+  (let [grid-x-space (cell= (/ width grid-lines))]
+    (for [i (range 0 (inc grid-lines))
+          :when (even? i)]
+      (do
+        (println "i: " i " grid-lines: " grid-lines " width: " @width)
+        (hsvg/text :x (cell= (* i grid-x-space)) :y (cell= (+ height 20))
+                   :css {:fill        (svg/rgb 150 150 150)
+                         :font-family axis-font-family
+                         :font-size   axis-font-size
+                         :text-anchor :middle}
+                   (text "~{(util/format axis-number-format
+                                    (svg/translate-value (* i grid-x-space)
+                                                         0 width xmin xmax))}"))))))
 
 (defelem y-axis
   [{:keys [height width
            ymin ymax
            grid-lines
            axis-font-family axis-font-size
-           axis-number-format]} _]
-  (let [grid-y-space (/ height grid-lines)]
+           axis-number-format]} children]
+  (let [grid-y-space (cell= (/ height grid-lines))]
     (for [i (range 1 (inc grid-lines)) :when (even? i)]
-      (hsvg/text :x 0 :y (- height (* i grid-y-space))
-                 (util/format axis-number-format
-                              (svg/translate-value (* i grid-y-space)
-                                                   0 height ymin ymax))
+      (hsvg/text :x 0 :y (cell= (- height (* i grid-y-space)))
                  :css {:fill (svg/rgb 150 150 150)
                        :font-family axis-font-family
                        :font-size axis-font-size
                        :text-anchor :end
-                       :alignment-baseline :middle}))))
+                       :alignment-baseline :middle}
+                 (text "~{(util/format axis-number-format
+                              (svg/translate-value (* i grid-y-space)
+                                                   0 height ymin ymax))}")))))
 
 (defelem xy-plot
   [attrs content]
