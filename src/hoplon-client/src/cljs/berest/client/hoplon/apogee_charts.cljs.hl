@@ -80,24 +80,9 @@
 
 
 
-(def default-grid-props
-  {:width 750,
-   :height 500
-   :grid-lines 10
-   :major-grid-color (rgb 255 255 255)
-   :minor-grid-color (rgb 245 245 245)
-   :major-grid-width 2
-   :minor-grid-width 1})
 
-(def default-axis-props
-  {:width 750,
-   :height 500
-   :min 0
-   :max 100
-   :grid-lines 10,
-   :font-family "Verdana"
-   :font-size "12px"
-   :number-format 1})
+
+
 
 
 
@@ -155,21 +140,6 @@
                domain-length))))))
 
 
-(defelem chart-background*
-  [{{:keys [height width
-           background-color
-           border-color border-width]} :props
-    :as attrs} children]
-  ((hsvg/rect
-    :x 0
-    :y 0
-    :height height
-    :width width
-    :css (cell= {:fill         background-color
-                 :stroke       border-color
-                 :stroke-width border-width}))
-   (dissoc attrs :props)))
-
 (def ^:dynamic *default-chart-background-attrs*
   {:width 750
    :height 500
@@ -199,6 +169,16 @@
     (apply this attrs* children)))
 
 
+(def ^:dynamic *default-chart-grid-attrs*
+  {:orientation :horizontal #_:vertical
+   :width 750,
+   :height 500
+   :grid-lines 10
+   :major-grid-color (rgb 255 255 255)
+   :minor-grid-color (rgb 245 245 245)
+   :major-grid-width 2
+   :minor-grid-width 1})
+
 (defelem x-grid
   [{{:keys [height width
            grid-lines
@@ -221,6 +201,55 @@
                                        minor-grid-width)}))
        (dissoc attrs :props)))))
 
+(defelem chart-grid
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-chart-grid-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "chart-grid")})
+
+        {:keys [orientation
+                height width
+                grid-lines
+                major-grid-color minor-grid-color
+                major-grid-width minor-grid-width]} attrs*
+
+        spacing (cell= (/ (case orientation
+                                 :horizontal height
+                                 :vertical width)
+                           grid-lines))
+
+        this (hsvg/g
+               (loop-tpl
+                 :bindings [i (cell= (range 1 grid-lines))]
+                 (let [step (cell= (* i spacing))
+                       line (case orientation
+                                  :horizontal (hsvg/line :x1 0 :y1 step
+                                                         :x2 width :y2 step)
+                                  :vertical (hsvg/line :x1 step :y1 0
+                                                       :x2 step :y2 height))]
+                     ((line :css (cell= {:stroke       (if (even? i)
+                                                         major-grid-color
+                                                         minor-grid-color)
+                                         :stroke-width (if (even? i)
+                                                         major-grid-width
+                                                         minor-grid-width)}))
+                    (dissoc attrs*
+                            :orientation :height :width :grid-lines
+                            :major-grid-color :minor-grid-color
+                            :major-grid-width :minor-grid-width)))))]
+    this
+    ;; Implement appendChild/setAttribute.
+    #_(on-append! this
+                (fn [attrs children]
+                  ;set custom attributes as css style attributes
+                  (doseq [[k v] (select-keys attrs [:background-color :border-color :border-width])]
+                    (add-attributes! this {:css (cell= {(k->css k) v})}))
+                  (add-attributes! this (dissoc attrs :background-color :border-color :border-width))
+                  (add-children! this children)))
+    ;; Initialize element.
+    #_(apply this attrs* children)))
+
+
 (defelem y-grid
   [{{:keys [height width
             grid-lines
@@ -242,6 +271,18 @@
                                       major-grid-width
                                       minor-grid-width)}))
        (dissoc attrs :props)))))
+
+
+
+(def ^:dynamic *default-axis-attrs*
+  {:width 750,
+   :height 500
+   :min 0
+   :max 100
+   :grid-lines 10,
+   :font-family "Verdana"
+   :font-size "12px"
+   :number-format 1})
 
 (defelem x-axis
   [{{:keys [height width
@@ -302,13 +343,13 @@
                 major-grid-color major-grid-width
                 axis-font-family axis-font-size
                 axis-number-format]} props
-        grid-props (merge default-grid-props
+        grid-props (merge *default-chart-grid-attrs*
                           (select-keys props [:width :height
                                               :major-grid-color
                                               :minor-grid-color
                                               :major-grid-width
                                               :minor-grid-width]))
-        axis-props (merge default-axis-props
+        axis-props (merge *default-axis-attrs*
                           {:width width :height height
                            :font-family axis-font-family
                            :font-size axis-font-size
@@ -356,13 +397,13 @@
                 major-grid-color major-grid-width
                 axis-font-family axis-font-size
                 axis-number-format]} props
-        grid-props (merge default-grid-props
+        grid-props (merge *default-chart-grid-attrs*
                           (select-keys props [:width :height
                                               :major-grid-color
                                               :minor-grid-color
                                               :major-grid-width
                                               :minor-grid-width]))
-        axis-props (merge default-axis-props
+        axis-props (merge *default-axis-attrs*
                           {:width width :height height
                            :font-family axis-font-family
                            :font-size axis-font-size

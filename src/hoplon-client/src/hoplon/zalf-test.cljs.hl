@@ -338,11 +338,14 @@
        :style "color:red"
        (text "Error: ~{error-msg}"))
 
+    #_(button :click #(swap! width (partial + 50)) "add50")
 
     (hsvg/svg
-      (((ac/chart-background :width 150 :height 500)
-        :background-color (ac/rgb 255 255 225))
-       :height 50))
+      (ac/chart-background :width width :height 500
+                           :background-color (ac/rgb 225 225 225))
+      (ac/chart-grid :orientation :horizontal :width width)
+      (ac/chart-grid :orientation :vertical :width width)
+      )
 
     #_(ac/xy-chart
       :props chart-config
