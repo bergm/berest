@@ -334,54 +334,23 @@
 
   (body
 
-    (p :do-css (cell= {:display (if (nil? error-msg) "none" "block")})
+    (p :css (cell= {:display (if (nil? error-msg) "none" "block")})
        :style "color:red"
        (text "Error: ~{error-msg}"))
 
-    (ac/xy-chart :props chart-config)
 
-    (hsvg/svg ;:width "100%"  :height "100%"
+    (hsvg/svg
+      (((ac/chart-background :width 150 :height 500)
+        :background-color (ac/rgb 255 255 225))
+       :height 50))
 
-              (hsvg/g :transform (acharts/translate 50 50)
-                      (acharts/chart-background
-                        :width width :height height :background-color (svg/rgb 225 225 225)
-                        :major-grid-width 2
-                        :major-grid-color (svg/rgb 255 255 255))
-                      (acharts/x-grid
-                        :width width :height height
-                        :grid-lines 10
-                        :xmin 1 :xmax 365
-                        :major-grid-color (svg/rgb 255 255 255)
-                        :minor-grid-color (svg/rgb 245 245 245))
-                      (acharts/y-grid
-                        :width width :height height
-                        :grid-lines 10
-                        :ymin 0 :ymax 100
-                        :major-grid-color (svg/rgb 255 255 255)
-                        :minor-grid-color (svg/rgb 245 245 245))
-                      (acharts/x-axis
-                        :width width :height height
-                        :grid-lines 10
-                        :xmin 1 :xmax 365
-                        :axis-font-family "Verdana"
-                        :axis-font-size "12px"
-                        :axis-number-format 1)
-                      (ac/y-axis
-                        :width width :height height
-                        :grid-lines 10
-                        :ymin 0 :ymax 100
-                        :axis-font-family "Verdana"
-                        :axis-font-size "12px"
-                        :axis-number-format 1
-                        :side :left))
-              (hsvg/text :x 100 :y 100
-                         :css {:fill (svg/rgb 150 150 150)
-                               :font-family "Verdana"
-                               :font-size "12px"
-                               :text-anchor :end
-                               :alignment-baseline :middle}
-                         "blalba")
-              )
+    #_(ac/xy-chart
+      :props chart-config
+
+
+
+
+      )
 
 
 
