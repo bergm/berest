@@ -1,6 +1,7 @@
 (ns berest.client.hoplon.apogee-charts
   (:require-macros [cljs.core.match.macros :as ccmm :refer [match]])
   (:require [clojure.string :as str]
+            [clojure.set :as set]
             [apogee.charts :as acharts]
             [apogee.svg :as asvg]
             [apogee.util :as autil]
@@ -172,7 +173,7 @@
 (def ^:dynamic *default-chart-grid-attrs*
   {:orientation :horizontal #_:vertical
    :width 750,
-   :height 500
+   :height 300
    :grid-lines 10
    :major-grid-color (rgb 255 255 255)
    :minor-grid-color (rgb 245 245 245)
@@ -201,22 +202,51 @@
                                        minor-grid-width)}))
        (dissoc attrs :props)))))
 
+(defn used-defaults
+  [default-attrs-map attrs-map]
+  (set/difference (into #{} (keys default-attrs-map)) (into #{} (keys attrs-map))))
+
+(defn set-cells
+  [attr-2-cell-map attrs-map]
+  (println "attr-2-cell-map: " attr-2-cell-map " attrs-map: " attrs-map)
+  (doseq [[attr cell] (select-keys attr-2-cell-map (keys attrs-map))]
+    (let [attr-value (attr attrs-map)]
+      (println "before cell: " cell " attr: " attr " value: " attr-value)
+      (set-cell!= cell attr-value))
+    (println "after cell: " cell)))
+
+(defn make-cell=s
+  [attrs-map]
+  (into {} (for [[k v] attrs-map]
+             [k (cell= v)])))
+
 (defelem chart-grid
   [{:keys [class] :as attrs} children]
   (let [attrs* (merge *default-chart-grid-attrs*
                       (dissoc attrs :class)
                       {:class (merge-str-attrs class "chart-grid")})
 
-        {:keys [orientation
-                height width
+        used-defs (used-defaults *default-chart-background-attrs* attrs)
+
+        cell-attr-keys #{:height :width
+                         :grid-lines
+                         :major-grid-color :minor-grid-color
+                         :major-grid-width :minor-grid-width}
+
+        cell-attrs (make-cell=s (select-keys attrs* cell-attr-keys))
+
+        orientation (:orientation attrs*)
+        {:keys [height width
                 grid-lines
                 major-grid-color minor-grid-color
-                major-grid-width minor-grid-width]} attrs*
+                major-grid-width minor-grid-width]} cell-attrs
 
         spacing (cell= (/ (case orientation
                                  :horizontal height
                                  :vertical width)
                            grid-lines))
+
+        _ (cell= (println "spacing:" spacing))
 
         this (hsvg/g
                (loop-tpl
@@ -233,21 +263,29 @@
                                          :stroke-width (if (even? i)
                                                          major-grid-width
                                                          minor-grid-width)}))
-                    (dissoc attrs*
-                            :orientation :height :width :grid-lines
-                            :major-grid-color :minor-grid-color
-                            :major-grid-width :minor-grid-width)))))]
-    this
+                    (apply dissoc attrs* (conj cell-attr-keys :orientation ))))))]
+
     ;; Implement appendChild/setAttribute.
-    #_(on-append! this
+    (on-append! this
                 (fn [attrs children]
+                  (let [attrs* (merge (select-keys (:parent-attrs attrs) used-defs)
+                                      (dissoc attrs :parent-attrs))]
+                    (set-cells cell-attrs attrs*)
+                    #_(println "before: " (:height attrs*) " | " (:height cell-attrs))
+                    #_(set-cell!= (:height cell-attrs) (cell= (:height attrs*)))
+                    #_(println "after: " (:height cell-attrs))
+
+                    this)
+
                   ;set custom attributes as css style attributes
-                  (doseq [[k v] (select-keys attrs [:background-color :border-color :border-width])]
+                  #_(doseq [[k v] (select-keys attrs [:background-color :border-color :border-width])]
                     (add-attributes! this {:css (cell= {(k->css k) v})}))
-                  (add-attributes! this (dissoc attrs :background-color :border-color :border-width))
-                  (add-children! this children)))
+                  #_(add-attributes! this (dissoc attrs :background-color :border-color :border-width))
+                  #_(add-children! this children)
+                  #_this))
     ;; Initialize element.
-    #_(apply this attrs* children)))
+    #_(apply this attrs* children)
+    this))
 
 
 (defelem y-grid

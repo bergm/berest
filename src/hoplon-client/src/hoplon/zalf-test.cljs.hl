@@ -312,8 +312,51 @@
    :label-number-format 1})
 
 
+#_(
+(defc a 42)               ;; cell containing the number 42
+(defc b '(+ 1 2))         ;; cell containing the list (+ 1 2)
+(defc c (+ 1 2))          ;; cell containing the number 3
+(defc d {:x @a})          ;; cell containing the map {:x 42}
+
+(println "println a: " a " b: " b " c: " c " d: " d)
+(cell= (println "cell= println a: " a " b: " b " c: " c " d: " d))
+
+(defc= e {:x a})          ;; cell with formula {:x a}, updated when a changes
+(defc= f (+ a 1))         ;; cell with formula (+ a 1), updated when a changes
+(defc= g (+ a ~(inc @a))) ;; cell with formula (+ a 43), updated when a changes
+(defc= h [e f g])         ;; cell with formula [e f g], updated when e, f, or g change
+
+(println "println e: " e " f: " f " g: " g " h: " h)
+(cell= (println "println e: " e " f: " f " g: " g " h: " h))
+
+
+(def z {:cell (cell 1)})
+(def z2 (:cell z))
+#_(defc= x {:x (:cell z)})
+(defc= x {:x z2})
+(defc y 2)
+
+(println "println z: " z " x: " x " y: " y)
+(cell= (println "cell= println z: " z " x: " x " y: " y))
+)
+
 (defc width 750)
 (defc height 500)
+
+#_((def a {:cell (cell 1)})
+(defc= x (:cell a))
+(defc y 2)
+
+(println "a: " a " x: " x " y: " y)
+(cell= (println "a: " a " x: " x " y: " y))
+
+(defn set-a [c]
+  (set-cell!= (:cell a) c))
+
+(set-a y)
+
+(println ".. a:" a " x: " x " y: " y)
+)
 
 
 (html ;:ng-app "myApp"
@@ -338,17 +381,27 @@
        :style "color:red"
        (text "Error: ~{error-msg}"))
 
-    #_(button :click #(swap! width (partial + 50)) "add50")
+    (button :click #(swap! height (partial + 10)) "add10")
 
     (hsvg/svg
       (ac/chart-background :width width :height 500
                            :background-color (ac/rgb 225 225 225))
-      (ac/chart-grid :orientation :horizontal :width width)
-      (ac/chart-grid :orientation :vertical :width width)
+      ((ac/chart-grid :orientation :horizontal) :parent-attrs {:height height})
+      (ac/chart-grid :orientation :vertical :width width :height height)
       )
 
     #_(ac/xy-chart
-      :props chart-config
+      :width width :height height
+
+      (ac/chart-background
+        :background-color (ac/rgb 225 225 225)
+        :width (cell= (/ width 2)) :height (cell= (/ height 2)))
+      (ac/chart-grid :orientation :horizontal)
+      (ac/chart-grid :orientation :vertical)
+      (ac/chart-axis :orientation :vertical :place :left)
+      (ac/chart-axis :orientation :vertical :place :right)
+      (ac/chart-axis :orientation :horizontal :place :bottom)
+
 
 
 
