@@ -180,7 +180,7 @@
    :major-grid-width 2
    :minor-grid-width 1})
 
-(defelem x-grid
+#_(defelem x-grid
   [{{:keys [height width
            grid-lines
            major-grid-color minor-grid-color
@@ -202,20 +202,17 @@
                                        minor-grid-width)}))
        (dissoc attrs :props)))))
 
-(defn used-defaults
+(defn- used-defaults
   [default-attrs-map attrs-map]
   (set/difference (into #{} (keys default-attrs-map)) (into #{} (keys attrs-map))))
 
-(defn set-cells
+(defn- set-cells
   [attr-2-cell-map attrs-map]
-  (println "attr-2-cell-map: " attr-2-cell-map " attrs-map: " attrs-map)
   (doseq [[attr cell] (select-keys attr-2-cell-map (keys attrs-map))]
     (let [attr-value (attr attrs-map)]
-      (println "before cell: " cell " attr: " attr " value: " attr-value)
-      (set-cell!= cell attr-value))
-    (println "after cell: " cell)))
+      (set-cell!= cell attr-value))))
 
-(defn make-cell=s
+(defn- make-cell=s
   [attrs-map]
   (into {} (for [[k v] attrs-map]
              [k (cell= v)])))
@@ -226,7 +223,7 @@
                       (dissoc attrs :class)
                       {:class (merge-str-attrs class "chart-grid")})
 
-        used-defs (used-defaults *default-chart-background-attrs* attrs)
+        used-defs (used-defaults *default-chart-grid-attrs* attrs)
 
         cell-attr-keys #{:height :width
                          :grid-lines
@@ -245,8 +242,6 @@
                                  :horizontal height
                                  :vertical width)
                            grid-lines))
-
-        _ (cell= (println "spacing:" spacing))
 
         this (hsvg/g
                (loop-tpl
@@ -267,28 +262,23 @@
 
     ;; Implement appendChild/setAttribute.
     (on-append! this
-                (fn [attrs children]
-                  (let [attrs* (merge (select-keys (:parent-attrs attrs) used-defs)
-                                      (dissoc attrs :parent-attrs))]
+                (fn [{parent-attrs? :parent-attrs
+                      :as           attrs} _]
+                  (let [attrs* (if parent-attrs?
+                                 ;if attrs are settings from parent, only set values not already set before
+                                 ;thus just attrs which use default values will be updated
+                                 (select-keys attrs used-defs)
+                                 ;if attrs have been set directly from user on the elements all attrs can
+                                 ;be updated
+                                 (dissoc attrs :parent-attrs))]
+                    (println "attrs*: " attrs*)
                     (set-cells cell-attrs attrs*)
-                    #_(println "before: " (:height attrs*) " | " (:height cell-attrs))
-                    #_(set-cell!= (:height cell-attrs) (cell= (:height attrs*)))
-                    #_(println "after: " (:height cell-attrs))
-
-                    this)
-
-                  ;set custom attributes as css style attributes
-                  #_(doseq [[k v] (select-keys attrs [:background-color :border-color :border-width])]
-                    (add-attributes! this {:css (cell= {(k->css k) v})}))
-                  #_(add-attributes! this (dissoc attrs :background-color :border-color :border-width))
-                  #_(add-children! this children)
-                  #_this))
-    ;; Initialize element.
-    #_(apply this attrs* children)
+                    this)))
+    ;return initial set of vertical or horizontal lines
     this))
 
 
-(defelem y-grid
+#_(defelem y-grid
   [{{:keys [height width
             grid-lines
             major-grid-color minor-grid-color
@@ -312,8 +302,9 @@
 
 
 
-(def ^:dynamic *default-axis-attrs*
-  {:width 750,
+(def ^:dynamic *default-chart-axis-attrs*
+  {:place :left #_:right #_:bottom #_:top
+   :width 750,
    :height 500
    :min 0
    :max 100
@@ -322,7 +313,83 @@
    :font-size "12px"
    :number-format 1})
 
-(defelem x-axis
+(defelem chart-axis
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-chart-axis-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "chart-axis")})
+
+        used-defs (used-defaults *default-chart-axis-attrs* attrs)
+
+        cell-attr-keys #{:height :width
+                         :min :max
+                         :grid-lines}
+
+        cell-attrs (make-cell=s (select-keys attrs* cell-attr-keys))
+
+        {:keys [place
+                font-family font-size
+                number-format]} attrs*
+        {:keys [height width
+                min max
+                grid-lines]} cell-attrs
+
+        size (case place
+                   (:left :right) height
+                   (:top :bottom) width)
+
+        spacing (cell= (/ size grid-lines))
+
+        this (hsvg/g
+               (loop-tpl
+                 :bindings [i (cell= (filter even? (range (case place
+                                                                (:left :right) 1
+                                                                (:top :bottom) 0)
+                                                          (inc grid-lines))))]
+                 (let [step (cell= (* i spacing))
+                       display-value (cell= (translate-value step 0 size min max))
+                       text* (case place
+                                  (:left :right) (hsvg/text
+                                                   :x (cell= (case place
+                                                                   :left 0
+                                                                   :right width))
+                                                   :y (cell= (- height step)))
+                                  (:top :bottom) (hsvg/text
+                                                   :x (cell= step)
+                                                   :y (cell= (case place
+                                                                   :top (- 0 20)
+                                                                   :bottom (+ height 20)))))]
+                   ((text* :css (cell= {:fill        (rgb 150 150 150)
+                                        :font-family font-family
+                                        :font-size   font-size
+                                        :text-anchor (case place
+                                                           (:top :bottom) "middle"
+                                                           :left "end"
+                                                           :right "start")})
+                           (text "~(.toFixed display-value number-format)"))
+                    (apply dissoc attrs* (conj cell-attr-keys
+                                               :place
+                                               :font-family :font-size
+                                               :number-format))))))]
+
+    ;; Implement appendChild/setAttribute.
+    (on-append! this
+                (fn [{parent-attrs? :parent-attrs
+                      :as           attrs} _]
+                  (let [attrs* (if parent-attrs?
+                                 ;if attrs are settings from parent, only set values not already set before
+                                 ;thus just attrs which use default values will be updated
+                                 (select-keys (:parent-attrs attrs) used-defs)
+                                 ;if attrs have been set directly from user on the elements all attrs can
+                                 ;be updated
+                                 (dissoc attrs :parent-attrs))]
+                    (set-cells cell-attrs attrs*)
+                    this)))
+    ;return initial set of axis labels
+    this))
+
+
+#_(defelem x-axis
   [{{:keys [height width
            min max
            grid-lines
@@ -344,7 +411,7 @@
           (text "~(.toFixed display-value number-format)"))
          (dissoc attrs :props))))))
 
-(defelem y-axis
+#_(defelem y-axis
   [{{:keys [height width
             min max
             grid-lines
@@ -374,7 +441,7 @@
            (text "~(.toFixed display-value number-format)"))
          (dissoc attrs :props))))))
 
-(defelem xy-chart
+#_(defelem xy-chart
   [{:keys [props] :as attrs} children]
   (let [{:keys [x y width height
                 x-domain y-left-domain y-right-domain

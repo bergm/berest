@@ -386,8 +386,10 @@
     (hsvg/svg
       (ac/chart-background :width width :height 500
                            :background-color (ac/rgb 225 225 225))
-      ((ac/chart-grid :orientation :horizontal) :parent-attrs {:height height})
+      ((ac/chart-grid :orientation :horizontal) :parent-attrs true :height height)
       (ac/chart-grid :orientation :vertical :width width :height height)
+      (ac/chart-axis :place :left)
+      (ac/chart-axis :place :bottom)
       )
 
     #_(ac/xy-chart
