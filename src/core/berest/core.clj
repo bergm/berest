@@ -1540,11 +1540,12 @@
   "calculate the soil-moistures for the given inputs and initial soil-moisture returning
   all intermediate steps, unless red-fn is defined to be reduce"
   [inputs initial-soil-moistures & {red-fn :red-fn :or {red-fn reductions}}]
-  (red-fn calc-soil-moisture
-          {:qu-sum-deficits 0
-           :qu-sum-targets 0
-           :soil-moistures initial-soil-moistures}
-          inputs))
+  (-> (red-fn calc-soil-moisture
+              {:qu-sum-deficits 0
+               :qu-sum-targets 0
+               :soil-moistures initial-soil-moistures}
+              inputs)
+      rest))
 
 (defn calc-soil-moistures
   "calculate the soil-moistures for the given inputs and initial soil-moisture"

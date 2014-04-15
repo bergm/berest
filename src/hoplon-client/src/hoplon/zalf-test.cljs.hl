@@ -229,6 +229,31 @@
              :handler #(reset! edn-result %)
              :error-handler #(reset! error-msg "GET edn from auth-api/calculate failed")}))
 
+(defn simulate-and-get-csv
+  []
+  (ajax/GET (str server-url "auth-api/simulate")
+            {:headers (request-headers "text/tab-separated-values" #_"text/csv")
+             :params {:farm-id @selected-farm-id
+                      :plot-id @selected-plot-id
+                      :until-date (date-str @until-date)
+                      :irrigation-data (prn-str @irrigation-data)}
+             :response-format :raw
+             :handler #(reset! csv-result %)
+             :error-handler #(reset! error-msg "GET csv from auth-api/simulate failed")}))
+
+(defn simulate-and-get-edn
+  []
+  (ajax/GET (str server-url "auth-api/simulate")
+            {:headers (request-headers)
+             :params {:farm-id @selected-farm-id
+                      :plot-id @selected-plot-id
+                      :until-date (date-str @until-date)
+                      :irrigation-data (prn-str @irrigation-data)}
+             :response-format :edn
+             :handler #(reset! edn-result %)
+             :error-handler #(reset! error-msg "GET edn from auth-api/simulate failed")}))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod tailrecursion.hoplon/do! :selected
@@ -358,6 +383,27 @@
 (println ".. a:" a " x: " x " y: " y)
 )
 
+(defelem x [as cs]
+  (let [_ (println "before this as: " as " cs: " cs)
+        this (hsvg/svg :width width :height 200)
+        _ (println "after this: " this)]
+    (on-append! this
+                (fn [as cs]
+                  (println "attrs: " as " kids: " cs)
+                  (add-attributes! this as)))
+    this))
+
+(defelem standard-xy-chart
+  [{:keys [width height bg-color]} children]
+  (ac/xy-chart
+    :width (cell= (+ 120 width))
+    :height height
+    (ac/chart-background :background-color bg-color)
+    (ac/chart-grid :orientation :horizontal)
+    (ac/chart-grid :orientation :vertical)
+    (ac/chart-axis :place :left)
+    (ac/chart-axis :place :bottom)))
+
 
 (html ;:ng-app "myApp"
   (head
@@ -377,42 +423,27 @@
 
   (body
 
+    #_(x :c 3 :d 4 (span "hello"))
+
     (p :css (cell= {:display (if (nil? error-msg) "none" "block")})
        :style "color:red"
        (text "Error: ~{error-msg}"))
 
-    (button :click #(swap! height (partial + 10)) "add10")
+    #_(button :click #(swap! height (partial + 10)) "add10")
 
-    (hsvg/svg
-      (ac/chart-background :width width :height 500
-                           :background-color (ac/rgb 225 225 225))
-      ((ac/chart-grid :orientation :horizontal) :parent-attrs true :height height)
-      (ac/chart-grid :orientation :vertical :width width :height height)
-      (ac/chart-axis :place :left)
-      (ac/chart-axis :place :bottom)
-      )
+    #_(standard-xy-chart
+      :width width
+      :height height
+      :bg-color (ac/rgb 225 225 225))
 
     #_(ac/xy-chart
-      :width width :height height
-
-      (ac/chart-background
-        :background-color (ac/rgb 225 225 225)
-        :width (cell= (/ width 2)) :height (cell= (/ height 2)))
+      :width (cell= (+ 120 width))
+      :height height
+      (ac/chart-background :background-color (ac/rgb 225 225 225))
       (ac/chart-grid :orientation :horizontal)
       (ac/chart-grid :orientation :vertical)
-      (ac/chart-axis :orientation :vertical :place :left)
-      (ac/chart-axis :orientation :vertical :place :right)
-      (ac/chart-axis :orientation :horizontal :place :bottom)
-
-
-
-
-
-      )
-
-
-
-
+      (ac/chart-axis :place :left)
+      (ac/chart-axis :place :bottom))
 
 
     (div
@@ -476,18 +507,10 @@
                            (create-irrigation-inputs row-no day month amount)))
             (apply create-irrigation-inputs nil (cell-map identity temp-irrigation-data))))
 
-        (hr)
+        #_(hr)
 
-        (div
+        #_(div
           :class "form-group"
-          (div
-            :class "col-sm-4"
-            (input
-              :class "btn btn-primary btn-lg"
-              :type "button"
-              :on-click nil #_sim-and-download
-              :value "Simulieren & CSV-Downloaden"))
-
           (div
             :class "col-sm-4"
             (a
@@ -501,12 +524,23 @@
           :class "form-group"
           (label
             :for "result"
-            :class "col-sm-2 control-label"
+            :class "col-sm-4 control-label"
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
               :on-click calculate-and-get-csv
-              :value "Berechnen & CSV"))
+              :value "Berechnen & CSV")
+            (div :css {:height "5px"})
+            (input
+              :class "btn btn-primary btn-lg"
+              :type "button"
+              :on-click simulate-and-get-csv
+              :value "Simulieren & CSV")
+            (div :css {:height "5px"})
+            (a
+              :class "btn btn-primary btn-lg"
+              :href "https://dl.dropboxusercontent.com/u/29574974/Weberest/output-analysis.xlsx"
+              "Analyse Excel-File herunterladen"))
           (div
             :class "col-xs-8"
             (textarea

@@ -114,7 +114,7 @@
           #_(bc/calc-soil-moisture-prognosis 7 prognosis-inputs soil-moistures-7)]
       {:inputs inputs
        :soil-moistures-7 (rest sms-7*)
-       :prognosis (rest prognosis*)})
+       :prognosis prognosis*})
     (str "Fehler: Konnte Schlag " plot-id " nicht laden!")))
 
 (defn- split-plot-id-format [plot-id-format]
@@ -179,6 +179,34 @@
       "text/tab-separated-values" csv-sms)))
 
 
+(defn simulate-plot-from-db
+  [db farm-id plot-id until-julian-day year irrigation-donations dc-assertions]
+  (if-let [plot (bc/db-read-plot db plot-id year)]
+    (let [;plot could be updated with given dc-assertions
+          ;plot* (update-in plot [])
+
+           sorted-weather-map (climate/final-sorted-weather-data-map-for-plot db year plot-id)
+
+           inputs (bc/create-input-seq plot sorted-weather-map (+ until-julian-day 7)
+                                       irrigation-donations :sprinkle-losses)
+
+          ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs-7)
+          ;_ (println xxx)
+
+           days (range (-> inputs first :abs-day) (inc until-julian-day))
+
+           sms* (bc/calculate-soil-moistures-by-auto-donations* inputs (:plot.annual/initial-soil-moistures plot)
+                                                                (:plot/slope plot) (:plot.annual/technology plot) 5)
+           {soil-moistures :soil-moistures
+            :as sms} (last sms*)
+           #_(bc/calculate-soil-moistures-by-auto-donations* inputs (:plot.annual/initial-soil-moistures plot)
+                                                           (:plot/slope plot) (:plot.annual/technology plot) 5)
+           ]
+      {:inputs inputs
+       :soil-moistures sms*})
+    (str "Fehler: Konnte Schlag " plot-id " nicht laden!")))
+
+
 (defn simulate
   [{:keys [query-params path-params] :as request}]
   (let [{format :format :as data} query-params
@@ -192,16 +220,32 @@
         (rur/content-type ,,, "text/csv"))))
 
 (defn auth-simulate
-  [{:keys [query-params path-params] :as request}]
-  (let [{format :format :as data} query-params
-        {farm-id :farm-id
-         plot-id-format :plot-id-format} path-params
-        [plot-id format*] (split-plot-id-format plot-id-format)
-        plot-id "zalf"]
-    false
-    #_(-> (simulate-plot :user-id "guest" :farm-id farm-id :plot-id plot-id :data data)
-        rur/response
-        (rur/content-type ,,, "text/csv"))))
+  "use simulation service, but mainly using a users data taken from database"
+  [media-type request]
+  (let [user-id (-> request :session :identity :user/id)
+        {:keys [farm-id
+                plot-id
+                until-date
+                irrigation-data]} (-> request :params)
+        db (db/current-db)
+        until-date* (time/parse until-date :year-month-day)
+        year (time/datetime->year until-date*)
+        until-julian-day (time/datetime->day-of-year until-date*)
+        irrigation-donations (for [[day month amount] (edn/read-string irrigation-data)]
+                               {:irrigation/abs-day (time/datetime->day-of-year (time/datetime year month day))
+                                :irrigation/amount amount})
+        {:keys [inputs soil-moistures] :as result}
+        (simulate-plot-from-db db farm-id plot-id until-julian-day year
+                               irrigation-donations [])
+        csv-sms (->> soil-moistures
+                     (bc/create-csv-output inputs ,,,)
+                     create-liberator-csv-output)]
+    (case media-type
+          "text/html" csv-sms
+          "application/edn" result #_soil-moistures
+          "application/json" result #_soil-moistures
+          "text/csv" csv-sms
+          "text/tab-separated-values" csv-sms)))
 
 
 #_(defn simulate-plot

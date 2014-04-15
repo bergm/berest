@@ -32,7 +32,7 @@
                  [clojure-csv "2.0.1"]
                  [org.clojure/algo.generic "0.1.1"]
                  [org.clojure/math.numeric-tower "0.0.2"]
-                 [com.taoensso/timbre "2.6.3"]
+                 [com.taoensso/timbre "3.1.6"]
                  [egamble/let-else "1.0.6"]
                  [org.clojars.pallix/analemma "1.0.0"]
                  [org.clojure/core.match "0.2.0"]

@@ -97,10 +97,10 @@
 
 (defresource auth-simulate
   (authorized-default-resource :admin :farmer :consultant)
-  :allowed-methods [:get]
+  :allowed-methods [:get :options]
   :available-media-types ["text/html" "text/csv" "text/tab-separated-values"
                           "application/edn" "application/json"]
-  :handle-ok #(api/auth-simulate (:request %)))
+  :handle-ok #(api/auth-simulate (-> % :representation :media-type) (:request %)))
 
 (defresource auth-calculate
   (authorized-default-resource :admin :farmer :consultant)

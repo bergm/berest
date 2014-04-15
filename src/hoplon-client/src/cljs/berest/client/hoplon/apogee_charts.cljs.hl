@@ -170,38 +170,6 @@
     (apply this attrs* children)))
 
 
-(def ^:dynamic *default-chart-grid-attrs*
-  {:orientation :horizontal #_:vertical
-   :width 750,
-   :height 300
-   :grid-lines 10
-   :major-grid-color (rgb 255 255 255)
-   :minor-grid-color (rgb 245 245 245)
-   :major-grid-width 2
-   :minor-grid-width 1})
-
-#_(defelem x-grid
-  [{{:keys [height width
-           grid-lines
-           major-grid-color minor-grid-color
-           major-grid-width minor-grid-width]} :props
-    :as attrs} children]
-  (let [space (cell= (/ width grid-lines))]
-    (loop-tpl
-      :bindings [i (cell= (range 1 grid-lines))]
-      ((hsvg/line
-        :x1 (cell= (* i space))
-        :y1 0
-        :x2 (cell= (* i space))
-        :y2 height
-          :css (cell= {:stroke       (if (even? i)
-                                       major-grid-color
-                                       minor-grid-color)
-                       :stroke-width (if (even? i)
-                                       major-grid-width
-                                       minor-grid-width)}))
-       (dissoc attrs :props)))))
-
 (defn- used-defaults
   [default-attrs-map attrs-map]
   (set/difference (into #{} (keys default-attrs-map)) (into #{} (keys attrs-map))))
@@ -216,6 +184,16 @@
   [attrs-map]
   (into {} (for [[k v] attrs-map]
              [k (cell= v)])))
+
+(def ^:dynamic *default-chart-grid-attrs*
+  {:orientation :horizontal #_:vertical
+   :width 750,
+   :height 300
+   :grid-lines 10
+   :major-grid-color (rgb 255 255 255)
+   :minor-grid-color (rgb 245 245 245)
+   :major-grid-width 2
+   :minor-grid-width 1})
 
 (defelem chart-grid
   [{:keys [class] :as attrs} children]
@@ -271,34 +249,12 @@
                                  ;if attrs have been set directly from user on the elements all attrs can
                                  ;be updated
                                  (dissoc attrs :parent-attrs))]
-                    (println "attrs*: " attrs*)
                     (set-cells cell-attrs attrs*)
                     this)))
     ;return initial set of vertical or horizontal lines
     this))
 
 
-#_(defelem y-grid
-  [{{:keys [height width
-            grid-lines
-            major-grid-color minor-grid-color
-            major-grid-width minor-grid-width]} :props
-    :as attrs} children]
-  (let [space (cell= (/ height grid-lines))]
-    (loop-tpl
-      :bindings [i (cell= (range 1 grid-lines))]
-      ((hsvg/line
-         :x1 0
-         :y1 (cell= (* i space))
-         :x2 width
-         :y2 (cell= (* i space))
-         :css (cell= {:stroke       (if (even? i)
-                                      major-grid-color
-                                      minor-grid-color)
-                      :stroke-width (if (even? i)
-                                      major-grid-width
-                                      minor-grid-width)}))
-       (dissoc attrs :props)))))
 
 
 
@@ -379,7 +335,7 @@
                   (let [attrs* (if parent-attrs?
                                  ;if attrs are settings from parent, only set values not already set before
                                  ;thus just attrs which use default values will be updated
-                                 (select-keys (:parent-attrs attrs) used-defs)
+                                 (select-keys attrs used-defs)
                                  ;if attrs have been set directly from user on the elements all attrs can
                                  ;be updated
                                  (dissoc attrs :parent-attrs))]
@@ -388,186 +344,42 @@
     ;return initial set of axis labels
     this))
 
+(def ^:dynamic *default-xy-chart-attrs*
+  {:x 50
+   :y 50
+   :width 750
+   :height 500})
 
-#_(defelem x-axis
-  [{{:keys [height width
-           min max
-           grid-lines
-           font-family font-size
-           number-format]} :props
-    :as attrs} children]
-  (let [space (cell= (/ width grid-lines))]
-    (loop-tpl
-      :bindings [i (cell= (filter even? (range 0 (inc grid-lines))))]
-      (let [display-value (cell= (translate-value (* i space)
-                                                  0 width min max))]
-        ((hsvg/text
-          :x (cell= (* i space))
-          :y (cell= (+ height 20))
-          :css (cell= {:fill        (rgb 150 150 150)
-                       :font-family font-family
-                       :font-size   font-size
-                       :text-anchor "middle"})
-          (text "~(.toFixed display-value number-format)"))
-         (dissoc attrs :props))))))
+(defelem xy-chart
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-xy-chart-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "xy-chart")})
 
-#_(defelem y-axis
-  [{{:keys [height width
-            min max
-            grid-lines
-            font-family font-size
-            number-format
-            side]
-     :or {side :left}} :props
-    :as attrs} children]
-  (let [space (cell= (/ height grid-lines))
-        _ (println attrs)]
-    (loop-tpl
-      :bindings [i (cell= (filter even? (range 1 (inc grid-lines))))]
-      (let [display-value (cell= (translate-value (* i space)
-                                                  0 height min max))]
-        ((hsvg/text
-           :x (cell= (case side
-                           :left 0
-                           :right width))
-           :y (cell= (- height (* i space)))
-           :css (cell= {:fill               (rgb 150 150 150)
-                        :font-family        font-family
-                        :font-size          font-size
-                        :text-anchor        (case side
-                                                  :left "end"
-                                                  :right "start")
-                        :alignment-baseline :middle})
-           (text "~(.toFixed display-value number-format)"))
-         (dissoc attrs :props))))))
+        used-defs (used-defaults *default-xy-chart-attrs* attrs)
 
-#_(defelem xy-chart
-  [{:keys [props] :as attrs} children]
-  (let [{:keys [x y width height
-                x-domain y-left-domain y-right-domain
-                major-grid-color major-grid-width
-                axis-font-family axis-font-size
-                axis-number-format]} props
-        grid-props (merge *default-chart-grid-attrs*
-                          (select-keys props [:width :height
-                                              :major-grid-color
-                                              :minor-grid-color
-                                              :major-grid-width
-                                              :minor-grid-width]))
-        axis-props (merge *default-axis-attrs*
-                          {:width width :height height
-                           :font-family axis-font-family
-                           :font-size axis-font-size
-                           :number-format axis-number-format})]
-    (hsvg/svg
-      :width (cell= (+ x x width)) :height (cell= (+ y y height))
+        cell-attr-keys #{:height :width}
 
-      (hsvg/g
-        :transform (cell= (str "translate(" x "," y ")"))
+        {:keys [x y]} attrs*
+        cell-attrs (make-cell=s (select-keys attrs* cell-attr-keys))
+        {:keys [height width]} cell-attrs
 
-        (chart-background
-        :props (merge *default-chart-background-attrs*
-                      (select-keys props [:width :height
-                                          :background-color])
-                      {:border-color major-grid-color
-                       :border-width major-grid-width}))
-
-      (x-grid :props grid-props)
-
-      (y-grid :props grid-props)
-
-      (x-axis
-        :props (merge axis-props {:min (first x-domain)
-                                  :max (last x-domain)}))
-
-      (when (not-any? nil? y-left-domain)
-        (y-axis
-          :props (merge axis-props {:min  (first y-left-domain)
-                                    :max  (last y-left-domain)
-                                    :side :left})))
-
-      (when (not-any? nil? y-right-domain)
-        (y-axis
-          :props (merge axis-props  {:min  (first y-right-domain)
-                                     :max  (last y-right-domain)
-                                     :side :right})))
-
-      children))))
-
-
-(defelem xy-chart*
-  [{:keys [props] :as attrs} children]
-  (let [{:keys [x y width height
-                x-domain y-left-domain y-right-domain
-                major-grid-color major-grid-width
-                axis-font-family axis-font-size
-                axis-number-format]} props
-        grid-props (merge *default-chart-grid-attrs*
-                          (select-keys props [:width :height
-                                              :major-grid-color
-                                              :minor-grid-color
-                                              :major-grid-width
-                                              :minor-grid-width]))
-        axis-props (merge *default-axis-attrs*
-                          {:width width :height height
-                           :font-family axis-font-family
-                           :font-size axis-font-size
-                           :number-format axis-number-format})
         container (hsvg/g :transform (cell= (str "translate(" x "," y ")")))
-        this (hsvg/svg :width (cell= (+ x x width)) :height (cell= (+ y y height))
-                       container)
-
-        ]
+        this (hsvg/svg :width (cell= (+ x x width))
+                       :height (cell= (+ y y height))
+                       container)]
     ;; Implement appendChild/setAttribute.
-    #_(on-append!
+    (on-append!
       this
-      (fn [{:keys [title] :as attrs} children]
-        ;; The "title" attribute sets title text.
-        (when title (do! head :text title))
-        ;; Other attributes are set on outer div.
-        (add-attributes! this (dissoc attrs :title))
-        ;; Children are wrapped in <li>s and
-        ;; appended to inner <ul> element.
-        (apply body (map li children))))
-
+      (fn [attrs children]
+        (add-children! container (map #(% :parent-attrs true
+                                          :width width
+                                          :height height)
+                                      children))
+        (add-attributes! this attrs)))
     ;; Initialize element.
-    (apply this attrs children)
+    (apply this (dissoc attrs* :x :y :width :height) children)))
 
-
-    (hsvg/svg
-      :width (cell= (+ x x width)) :height (cell= (+ y y height))
-
-      (hsvg/g
-        :transform (cell= (str "translate(" x "," y ")"))
-
-        (chart-background
-          :props (merge *default-chart-background-attrs*
-                        (select-keys props [:width :height
-                                            :background-color])
-                        {:border-color major-grid-color
-                         :border-width major-grid-width}))
-
-        (x-grid :props grid-props)
-
-        (y-grid :props grid-props)
-
-        (x-axis
-          :props (merge axis-props {:min (first x-domain)
-                                    :max (last x-domain)}))
-
-        (when (not-any? nil? y-left-domain)
-          (y-axis
-            :props (merge axis-props {:min  (first y-left-domain)
-                                      :max  (last y-left-domain)
-                                      :side :left})))
-
-        (when (not-any? nil? y-right-domain)
-          (y-axis
-            :props (merge axis-props  {:min  (first y-right-domain)
-                                       :max  (last y-right-domain)
-                                       :side :right})))
-
-        children))))
 
 
 (defn point-label [id x y text options]
