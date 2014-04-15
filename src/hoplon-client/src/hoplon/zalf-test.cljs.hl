@@ -19,8 +19,8 @@
 
 (enable-console-print!)
 
-(def server-url "http://localhost:3000/")
-#_(def server-url "https://berest-zalflsa.rhcloud.com/")
+#_(def server-url "http://localhost:3000/")
+(def server-url "https://berest-zalflsa.rhcloud.com/")
 
 ;; state
 
