@@ -328,8 +328,7 @@
 
 (def rest-service
   (let [backend #_(signed-token-backend "abcdefg") (session-backend :unauthorized-handler unauthorized-handler)]
-    (-> bidi-service-routes
-        bidi/make-handler
+    (-> (bidi/make-handler bidi-service-routes)
         (wrap-resource ,,, "public")
         wrap-access-control-allow-*
         (wrap-authorization ,,, backend)
@@ -339,5 +338,5 @@
         wrap-edn-params
         wrap-params
         wrap-session
-        (wrap-trace ,,, :header :ui))))
+        #_(wrap-trace ,,, :header :ui))))
 
