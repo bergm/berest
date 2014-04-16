@@ -25,13 +25,4 @@
           :db/doc "a list of dc-assertions made for this crop-instance"
           :db.install/_attribute :db.part/db}
 
-  {:db/id #db/id[:db.part/db]
-          :db/ident :crop.instance/irrigation-donations
-          :db/valueType :db.type/ref
-          :db/isComponent true
-          :db/cardinality :db.cardinality/many
-          :db/doc "a list of irrigation-donations given for this crop-instance"
-          :db.install/_attribute :db.part/db}
-
-
   ]

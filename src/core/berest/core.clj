@@ -302,13 +302,15 @@
 
 #_(defrecord Donation [day amount])
 
-(defn donations-at [donations day]
+(defn donations-at [donations type abs-day]
   (reduce
-   (fn [acc d]
-     (if (= day (:irrigation/abs-day d))
-       (+ acc (:irrigation/amount d))
-       acc))
-   0 donations))
+    (fn [acc {type* :irrigation.donation/type
+              abs-day* :irrigation.donation/abs-day
+              amount :irrigation.donation/amount}]
+      (if (and (= type type*) (= abs-day abs-day*))
+        (+ acc amount)
+        acc))
+    0 donations))
 
 (comment
   (clojure.walk/prewalk-replace {:irrigation/abs-start-day :start
@@ -316,18 +318,17 @@
                                  :irrigation/area :area
                                  :irrigation/amount :amount}))
 
-(defn db-read-irrigation-donations [db plot-no]
+(defn db-read-irrigation-donations
+  [db plot-id]
   (->> (d/q '[:find ?donation-e
-              :in $ ?plot-no
+              :in $ ?plot-id
               :where
-              [?plot-e-id :plot/number ?plot-no]
-              [?plot-e-id :plot/annuals ?yv-e-id]
-              [?yv-e-id :plot.annual/irrigation-water-donations ?donation-e]]
-            db plot-no)
-       (map #(-> %
-                 first
-                 (db/get-entity ,,,))
-            ,,,)))
+              [?plot-e-id :plot/id ?plot-id]
+              [?plot-e-id :plot/annuals ?pa-e-id]
+              [?pa-e-id :plot.annual/irrigation-donations ?donation-e]]
+            db plot-id)
+       (map first ,,,)
+       (db/get-entities db ,,,)))
 
 #_(defn db-create-irrigation-donation
   [datomic-connection plot-no abs-start-day abs-end-day area amount]
@@ -343,15 +344,12 @@
               :plot/irrigation-water-donations (db/get-entity-id donation)}]
     (d/transact datomic-connection (flatten [donation plot]))))
 
-(defn read-irrigation-donations [db plot-no irrigation-area]
-  (->> (db-read-irrigation-donations db plot-no)
-       (filter #(and (>= (:irrigation/abs-end-day %) (:irrigation/abs-start-day %))
-                     (> (:irrigation/area %) (* 0.5 irrigation-area)))
-               ,,,)
-       (map #(assoc % :irrigation/abs-day (/ (+ (:irrigation/abs-start-day %)
-                                                (:irrigation/abs-end-day %))
-                                             2))
-            ,,,)))
+(defn read-irrigation-donations
+  [db plot-id irrigation-area]
+  (->> (db-read-irrigation-donations db plot-id)
+       ;just include donations with more than 50% irrigated area (as we're talking always about averages)
+       (filter #(> (:irrigation.donation/area %) (* 0.5 irrigation-area)) ,,,)
+       (map #(dissoc % :irrigation.donation/area) ,,,)))
 
 (comment
   (def ds (list (:abs-day 1 :amount 20) (:abs-day 2 :amount 10) (:abs-day 1 :amount 30)))
@@ -430,7 +428,7 @@
 
 (defn db-read-crop
   "read a crop from the database by the given number and optional cultivation type and usage"
-  [db number & {:keys [cultivation-type usage] :or {cultivation-type 1 usage 0}}]
+  [db number & {:keys [cultivation-type usage] :or {cultivation-type 0 usage 0}}]
   (let [crop-e (ffirst (d/q '[:find ?crop-e
                               :in $ ?no ?ct ?u
                               :where
@@ -466,7 +464,7 @@
                            [?plot-e-id :plot/annuals ?yv-e-id]
                            [?yv-e-id :plot.annual/year ?year]]
                          db plot-id year))]
-    (let [[plot plot-yv] (map (partial db/get-entity db) [plot-e-id annual-values-e-id])
+    (let [[plot plot-av] (map (partial db/get-entity db) [plot-e-id annual-values-e-id])
 
           fcs-cm (->> (:plot/field-capacities plot)
                       (db/create-map-from-entities :soil/upper-boundary-depth
@@ -484,12 +482,12 @@
           pwps (->> pwps-cm
                     (aggregate-layers + *layer-sizes* ,,,))
 
-          sms (->> (:plot.annual/initial-soil-moistures plot-yv)
+          sms (->> (:plot.annual/initial-soil-moistures plot-av)
                    (db/create-map-from-entities :soil/upper-boundary-depth
                                                 :soil/soil-moisture
                      ,,,)
                    (user-input-soil-moisture-to-cm-layers
-                     fcs-cm pwps-cm (->> (:plot.annual/initial-sm-unit plot-yv)
+                     fcs-cm pwps-cm (->> (:plot.annual/initial-sm-unit plot-av)
                                          remove-namespace-from-keyword))
                    (aggregate-layers + *layer-sizes* ,,,))
 
@@ -501,7 +499,7 @@
           ;read a fallow "crop" to be used with this plot
           fallow (db-read-crop db 0 :cultivation-type 0 :usage 0)
 
-          plot-yv* (->> plot-yv
+          plot-av* (->> plot-av
                         (entity->map db ,,,)
                         (clojure.walk/postwalk (fn [item]
                                                  (if (vector? item)
@@ -513,13 +511,12 @@
                           ,,,))]
       (-> (entity->map db plot)
           (dissoc ,,, :db/id :plot/annuals)
-          (merge ,,, (dissoc plot-yv* :db/id))
-          (assoc ,,,
-              :plot.annual/initial-soil-moistures sms
-                                                  :plot/field-capacities fcs
-                                                  :plot/permanent-wilting-points pwps
-                                                  :lambda-without-correction lwc
-                                                  :fallow fallow)))))
+          (merge ,,, (dissoc plot-av* :db/id))
+          (assoc ,,, :plot.annual/initial-soil-moistures sms
+                     :plot/field-capacities fcs
+                     :plot/permanent-wilting-points pwps
+                     :lambda-without-correction lwc
+                     :fallow fallow)))))
 
 #_(defn db-store-initial-soil-moisture
   [datomic-connection plot-no depths soil-moistures units]
@@ -589,7 +586,7 @@
     {:final-excess-water few
      :infiltration-into-next-layer (+ initial-excess-water infiltration-from-layer-above (- few))}))
 
-(defn interception [precipitation evaporation irrigation transpiration-factor irrigation-mode]
+(defn interception [precipitation evaporation irrigation transpiration-factor irrigation-type]
   (let [null5 0.5
         null2 0.2
         tf (max 1 transpiration-factor)
@@ -605,10 +602,13 @@
          sprinkle-loss,
          pet*] (if (> irrigation 1)
                  (let [[ii, sl]
-                       (condp = irrigation-mode
-                         :sprinkle-losses [(* 0.6 tin (+ 1 (* irrigation 0.05))),
-                                           (* (+ 1 (* (- evaporation 2.5) null2)) null2 irrigation)]
-                         :no-sprinkle-losses [0, 0])]
+                       (condp = irrigation-type
+                         :irrigation.donation.type/sprinkler-irrigation
+                         [(* 0.6 tin (+ 1 (* irrigation 0.05))),
+                          (* (+ 1 (* (- evaporation 2.5) null2)) null2 irrigation)]
+
+                         :irrigation.donation.type/drip-irrigation
+                         [0, 0])]
                    (if (> precipitation 0)
                      [ii, sl, (- evaporation (* (+ ii interception-precipitation) null5))]
                      [ii, sl, (- evaporation (* ii 0.75))]))
@@ -848,7 +848,7 @@
 (defn calc-soil-moisture [{:keys [qu-sum-deficits qu-sum-targets soil-moistures]
                            :as result-accumulator}
                           {:keys [abs-day rel-dc-day crop irrigation-amount
-                                  evaporation precipitation irrigation-mode
+                                  evaporation precipitation irrigation-type
                                   cover-degree qu-target rounded-extraction-depth-cm
                                   transpiration-factor
                                   fcs pwps lambdas groundwaterlevel-cm damage-compaction-depth-cm
@@ -859,7 +859,7 @@
                 effective-irrigation
                 effective-irrigation-uncovered]}
         (interception precipitation evaporation irrigation-amount
-                      transpiration-factor irrigation-mode)
+                      transpiration-factor irrigation-type)
 
         pet* (if (< cover-degree 1/1000)
                0
@@ -1108,14 +1108,11 @@
                              fallow*)
          :else nil)))))
 
-#_(deftest test-abs-dc-day->crop-instance
-    (is (= )))
-
 (defn base-input-seq
   "create a input sequence for soil-moisture calculations
   - takes into account dc assertions which are available in plot map
   - lazy sequence as long as weather is available"
-  [plot sorted-weather-map irrigation-donations irrigation-mode]
+  [plot sorted-weather-map irrigation-donations irrigation-type]
   (let [abs-dc-day-to-crop-instance-data
         (->> (:plot.annual/crop-instances plot)
              dc-to-abs+rel-dc-day-from-plot-dc-assertions
@@ -1137,12 +1134,13 @@
          :abs-day abs-day
          :rel-dc-day rel-dc-day
          :crop crop
-         :irrigation-amount (donations-at irrigation-donations abs-day)
+         :irrigation-amount (donations-at irrigation-donations irrigation-type abs-day)
+         :irrigation-type irrigation-type
+         :irrigation-application-height (or (-> plot :plot.annual/technology :technology/application-height) 200)
          :tavg (bu/round (:weather-data/average-temperature weather) :digits 1)
          :globrad (bu/round (:weather-data/global-radiation weather) :digits 1)
          :evaporation (bu/round (:weather-data/evaporation weather) :digits 1)
          :precipitation (bu/round (:weather-data/precipitation weather) :digits 1)
-         :irrigation-mode irrigation-mode
          :cover-degree cover-degree
          :qu-target (bu/round
                      (if (< prev-day-cover-degree 1/100)
@@ -1167,11 +1165,11 @@
 
 (defn create-input-seq
   "create the input sequence for all the other functions"
-  [plot sorted-weather-map until-abs-day irrigation-donations irrigation-mode]
+  [plot sorted-weather-map until-abs-day irrigation-donations irrigation-type]
   (->> (base-input-seq plot
                        sorted-weather-map
                        irrigation-donations
-                       irrigation-mode)
+                       irrigation-type)
        (drop (dec (:plot.annual/abs-day-of-initial-soil-moisture-measurement plot)) ,,,)
        (take-while #(<= (:abs-day %) until-abs-day) ,,,)))
 
@@ -1301,8 +1299,8 @@
         ;but we're above the effective curve, thus try again in about 4 days
         {:state :check-back-soon}
         ;nope, we've got to irrigate
-        (let [make-donation #(hash-map :irrigation/abs-day (:abs-day input) #_(inc (:abs-day input))
-                                       :irrigation/amount %)
+        (let [make-donation #(hash-map :irrigation.donation/abs-day (:abs-day input) #_(inc (:abs-day input))
+                                       :irrigation.donation/amount %)
 
               qu-target*-fn (fn [qu-target]
                               ;(/ (+ qu-eff qu-target) 2)
@@ -1665,14 +1663,14 @@
                         inputs full-reductions-results)]
     (cons header-line body-lines)))
 
-(defn run [db plot sorted-weather-map irrigation-donations-map until-abs-day irrigation-mode]
+(defn run [db plot sorted-weather-map irrigation-donations-map until-abs-day irrigation-type]
   (append-out out str (str (-> plot :plot/number str (subs ,,, 0 3)) "-"
                            (-> plot :plot/number str (subs ,,, 3 4)) " "
                            (-> plot :assertion/dc-assertions first :assertion/crop crop-id) " "
                            (-> plot :assertion/dc-assertions first :assertion/crop :symbol) "      "))
 
   (let [inputs (create-input-seq plot sorted-weather-map (+ until-abs-day 7)
-                                 irrigation-donations-map irrigation-mode)
+                                 irrigation-donations-map irrigation-type)
         _ (println "inputs:" \newline "----------------------")
         _ (pp/pprint inputs)
         _ (println "----------------------")
@@ -1718,6 +1716,6 @@
                                                             (:plot/number plot)
                                                             (:plot/irrigation-area plot))
         weather+prognosis weather
-        irrigation-mode :sprinkle-losses]
-    (run plot weather irrigation-donations-map (bu/date-to-doy 29 5) irrigation-mode)))
+        irrigation-type :sprinkle-losses]
+    (run plot weather irrigation-donations-map (bu/date-to-doy 29 5) irrigation-type)))
 

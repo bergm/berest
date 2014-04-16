@@ -58,6 +58,14 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
+          :db/ident :farm/irrigation-technologies
+          :db/valueType :db.type/ref
+          :db/isComponent true
+          :db/cardinality :db.cardinality/many
+          :db/doc "The irrigation technologies available to this farm"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
           :db/ident :farm/plots
           :db/valueType :db.type/ref
           :db/isComponent true

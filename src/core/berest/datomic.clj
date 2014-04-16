@@ -84,6 +84,7 @@
                            "private/db/crop-schema.edn"
                            "private/db/crop-instance-schema.edn"
                            "private/db/plot-schema.edn"
+                           "private/db/plot-annual-schema.edn"
                            "private/db/dc-assertion-schema.edn"
                            "private/db/irrigation-donation-schema.edn"
                            "private/db/technology-schema.edn"
@@ -195,7 +196,7 @@
 (defn get-entity-id [entity] (:db/id entity))
 
 (defn get-entities [db entity-ids]
-  (mapv (partial d/entity db) entity-ids))
+  (map (partial d/entity db) entity-ids))
 
 (defn get-entity [db entity-id]
   (first (get-entities db [entity-id])))

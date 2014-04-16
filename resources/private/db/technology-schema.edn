@@ -12,7 +12,7 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :technology/min-donation
+          :db/ident :technology.donation/min
           :db/valueType :db.type/long
           :meta/unit :mm
           :db/cardinality :db.cardinality/one
@@ -20,7 +20,7 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :technology/max-donation
+          :db/ident :technology.donation/max
           :db/valueType :db.type/long
           :meta/unit :mm
           :db/cardinality :db.cardinality/one
@@ -28,7 +28,7 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :technology/opt-donation
+          :db/ident :technology.donation/opt
           :db/valueType :db.type/long
           :meta/unit :mm
           :db/cardinality :db.cardinality/one
@@ -36,11 +36,20 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :technology/donation-step-size
+          :db/ident :technology.donation/step-size
           :db/valueType :db.type/long
           :meta/unit :mm
           :db/cardinality :db.cardinality/one
           :db/doc "Step size in which donations can be increased or decreased"
+          :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :technology/application-height
+          :db/valueType :db.type/long
+          :meta/unit :cm
+          :db/cardinality :db.cardinality/one
+          :db/doc "Height where water application will be done from,
+          positive values mean overhead irrigation and negative values drip irrigation"
           :db.install/_attribute :db.part/db}
 
   ]

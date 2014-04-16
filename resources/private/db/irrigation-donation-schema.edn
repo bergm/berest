@@ -4,7 +4,7 @@
   ;;-----------------------------------------------------------------------------------------------
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :irrigation/abs-start-day
+          :db/ident :irrigation.donation/abs-day
           :db/valueType :db.type/long
           :meta/unit :day
           :db/cardinality :db.cardinality/one
@@ -12,15 +12,7 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :irrigation/abs-end-day
-          :db/valueType :db.type/long
-          :meta/unit :day
-          :db/cardinality :db.cardinality/one
-          :db/doc "Absolute end day of an donation"
-          :db.install/_attribute :db.part/db}
-
-  {:db/id #db/id[:db.part/db]
-          :db/ident :irrigation/amount
+          :db/ident :irrigation.donation/amount
           :db/valueType :db.type/double
           :meta/unit :mm
           :db/cardinality :db.cardinality/one
@@ -28,11 +20,21 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :irrigation/area
+          :db/ident :irrigation.donation/area
           :db/valueType :db.type/double
           :meta/unit :m2
           :db/cardinality :db.cardinality/one
           :db/doc "Area which has already been irrigated"
           :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+          :db/ident :irrigation.donation/type
+          :db/valueType :db.type/ref
+          :db/cardinality :db.cardinality/one
+          :db/doc "Type of irrigation"
+          :db.install/_attribute :db.part/db}
+
+  [:db/add #db/id[:berest.part/system] :db/ident :irrigation.donation.type/drip-irrigation]
+  [:db/add #db/id[:berest.part/system] :db/ident :irrigation.donation.type/sprinkler-irrigation]
 
   ]
