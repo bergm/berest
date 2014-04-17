@@ -45,7 +45,7 @@
         {date :weather-data/date
          prognosis? :weather-data/prognosis-data?} (:weather-station/data data)
         q (datomic.api/q '[:find ?se ?e
-                           :in $ ?station-id ?date
+                           :in $ ?station-id ?date ?prognosis?
                            :where
                            [?se :weather-station/id ?station-id]
                            [?se :weather-station/data ?e]
