@@ -8,7 +8,8 @@
                 [berest.client.hoplon.apogee-charts :as ac]
                 [apogee.charts :as acharts]
                 [apogee.svg :as svg]
-                [tailrecursion.hoplon.svg :as hsvg]))
+                [tailrecursion.hoplon.svg :as hsvg]
+                [tailrecursion.hoplon.reload :refer [reload-all]]))
 
 #_(ns hoplon.index
   (:require-macros [tailrecursion.javelin :refer :all]
@@ -19,11 +20,20 @@
 
 (enable-console-print!)
 
-#_(def server-url "http://localhost:3000/")
-(def server-url "https://berest-zalflsa.rhcloud.com/")
+;; Live-reload when we're local
+(when (-> js/window .-location .-hostname (= "localhost"))
+  (reload-all))
+
+#_(println "hostname: " (-> js/window .-location .-hostname))
+
+(def server-url (condp = (-> js/window .-location .-hostname)
+                  "" "http://localhost:3000/"
+                  "localhost" "http://localhost:3000/"
+                  "https://berest-zalflsa.rhcloud.com/"))
+
+#_(println "server-url: " server-url)
 
 ;; state
-
 (defc state
       {:farms []
        :selected-farm-id nil

@@ -102,7 +102,7 @@
 
 (comment "insert transaction function into db, without full schema reload"
 
-  (d/transact (db/connection)
+  @(d/transact (db/connection)
             [(read-string "{:db/id #db/id[:berest.part/climate]
   :db/ident :weather-station/add-data
   :db/doc \"A transaction function creating data and just allowing unique data per station and day\"
@@ -146,7 +146,7 @@
                  [?se :weather-station/id ?station-id]
                  #_[?se :weather-station/data ?e]
                  #_[?e :weather-data/date ?date]]
-               (db/current-db) "dwd:10162" #inst "2014-02-04T00:00:00.000-00:00")
+               (db/current-db) "dwd_10162" #inst "2014-02-04T00:00:00.000-00:00")
 
   )
 
@@ -203,7 +203,7 @@
      (catch Exception _ false))))
 
 (defn import-dwd-data-into-datomic
-  "import the requested kind [:prognosis | :measured] dwd data into datomic"
+  "import the dwd data at the given dates into datomic"
   [& dates]
   (let [dates* (or dates [(ctc/now)])
         dates** (map #(ctf/unparse (ctf/formatter "yyyyMMdd") %) dates*)
@@ -224,13 +224,9 @@
 (comment
 
   (import-dwd-data-into-datomic (ctc/date-time 2014 2 3))
-  (import-dwd-data-into-datomic (ctc/date-time 2014 2 7))
 
   (bulk-import-dwd-data-into-datomic (ctc/date-time 2014 2 3)
-                                     (ctc/date-time 2014 3 28))
-
-  (bulk-import-dwd-data-into-datomic (ctc/date-time 2014 2 3)
-                                     (ctc/date-time 2014 3 28))
+                                     (ctc/date-time 2014 4 17))
 
   )
 

@@ -44,7 +44,7 @@
         t-data (assoc s-t-data :weather-station/data weather-t-data)]
     (try
       #_(println "t-data: " [t-data])
-      (d/transact db-connection [t-data])
+      @(d/transact db-connection [t-data])
       (catch Exception e
         (log/info "Couldn't transact weather data to datomic! data: [\n" t-data "\n]")
         (throw e)))))

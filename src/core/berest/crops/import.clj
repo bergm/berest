@@ -268,7 +268,7 @@ Effektivitaet  =   1;          Tag
         transaction-data (parse-and-transform-crop-files cfs)]
     #_transaction-data
     (try
-      (d/transact db-connection transaction-data)
+      @(d/transact db-connection transaction-data)
       (catch Exception e
         (log/info "Couldn't transact weather data to datomic! data: [\n" transaction-data "\n]")
         (throw e)))))

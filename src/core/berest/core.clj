@@ -302,12 +302,11 @@
 
 #_(defrecord Donation [day amount])
 
-(defn donations-at [donations type abs-day]
+(defn donations-at [donations abs-day]
   (reduce
-    (fn [acc {type* :irrigation.donation/type
-              abs-day* :irrigation.donation/abs-day
-              amount :irrigation.donation/amount}]
-      (if (and (= type type*) (= abs-day abs-day*))
+    (fn [acc {abs-day* :donation/abs-day
+              amount :donation/amount}]
+      (if (= abs-day abs-day*)
         (+ acc amount)
         acc))
     0 donations))
@@ -325,7 +324,7 @@
               :where
               [?plot-e-id :plot/id ?plot-id]
               [?plot-e-id :plot/annuals ?pa-e-id]
-              [?pa-e-id :plot.annual/irrigation-donations ?donation-e]]
+              [?pa-e-id :plot.annual/donations ?donation-e]]
             db plot-id)
        (map first ,,,)
        (db/get-entities db ,,,)))
@@ -348,8 +347,8 @@
   [db plot-id irrigation-area]
   (->> (db-read-irrigation-donations db plot-id)
        ;just include donations with more than 50% irrigated area (as we're talking always about averages)
-       (filter #(> (:irrigation.donation/area %) (* 0.5 irrigation-area)) ,,,)
-       (map #(dissoc % :irrigation.donation/area) ,,,)))
+       (filter #(> (:donation/area %) (* 0.5 irrigation-area)) ,,,)
+       (map #(dissoc % :donation/area) ,,,)))
 
 (comment
   (def ds (list (:abs-day 1 :amount 20) (:abs-day 2 :amount 10) (:abs-day 1 :amount 30)))
@@ -603,11 +602,11 @@
          pet*] (if (> irrigation 1)
                  (let [[ii, sl]
                        (condp = irrigation-type
-                         :irrigation.donation.type/sprinkler-irrigation
+                         :technology.type/sprinkler
                          [(* 0.6 tin (+ 1 (* irrigation 0.05))),
                           (* (+ 1 (* (- evaporation 2.5) null2)) null2 irrigation)]
 
-                         :irrigation.donation.type/drip-irrigation
+                         :technology.type/drip
                          [0, 0])]
                    (if (> precipitation 0)
                      [ii, sl, (- evaporation (* (+ ii interception-precipitation) null5))]
@@ -847,9 +846,12 @@
 
 (defn calc-soil-moisture [{:keys [qu-sum-deficits qu-sum-targets soil-moistures]
                            :as result-accumulator}
-                          {:keys [abs-day rel-dc-day crop irrigation-amount
-                                  evaporation precipitation irrigation-type
-                                  cover-degree qu-target rounded-extraction-depth-cm
+                          {:keys [abs-day rel-dc-day
+                                  crop
+                                  donation-amount technology-type technology-outlet-height
+                                  evaporation precipitation
+                                  cover-degree qu-target
+                                  rounded-extraction-depth-cm
                                   transpiration-factor
                                   fcs pwps lambdas groundwaterlevel-cm damage-compaction-depth-cm
                                   sm-prognosis?]
@@ -858,8 +860,8 @@
                 effective-precipitation
                 effective-irrigation
                 effective-irrigation-uncovered]}
-        (interception precipitation evaporation irrigation-amount
-                      transpiration-factor irrigation-type)
+        (interception precipitation evaporation donation-amount
+                      transpiration-factor technology-type)
 
         pet* (if (< cover-degree 1/1000)
                0
@@ -884,7 +886,7 @@
 
     {:abs-day abs-day
      :rel-dc-day rel-dc-day
-     :irrigation-amount irrigation-amount
+     :irrigation-amount donation-amount
      :effective-precipitation effective-precipitation
      :effective-irrigation effective-irrigation
      :effective-irrigation-uncovered effective-irrigation-uncovered
@@ -1112,7 +1114,7 @@
   "create a input sequence for soil-moisture calculations
   - takes into account dc assertions which are available in plot map
   - lazy sequence as long as weather is available"
-  [plot sorted-weather-map irrigation-donations irrigation-type]
+  [plot sorted-weather-map donations technology-type]
   (let [abs-dc-day-to-crop-instance-data
         (->> (:plot.annual/crop-instances plot)
              dc-to-abs+rel-dc-day-from-plot-dc-assertions
@@ -1134,9 +1136,9 @@
          :abs-day abs-day
          :rel-dc-day rel-dc-day
          :crop crop
-         :irrigation-amount (donations-at irrigation-donations irrigation-type abs-day)
-         :irrigation-type irrigation-type
-         :irrigation-application-height (or (-> plot :plot.annual/technology :technology/application-height) 200)
+         :donation-amount (donations-at donations abs-day)
+         :technology-type technology-type
+         :technology-outlet-height (or (-> plot :plot.annual/technology :technology/outlet-height) 200)
          :tavg (bu/round (:weather-data/average-temperature weather) :digits 1)
          :globrad (bu/round (:weather-data/global-radiation weather) :digits 1)
          :evaporation (bu/round (:weather-data/evaporation weather) :digits 1)
@@ -1152,7 +1154,6 @@
                                              (interpolated-value (:crop/rel-dc-day-to-extraction-depths crop) rel-dc-day))
                                            (+ 1 ,,,)
                                            (bh/swap / 10 ,,,)
-                                           #_nt/round
                                            (#(Math/round (double %)) ,,,)
                                            (* 10 ,,,))
          :transpiration-factor (interpolated-value (:crop/rel-dc-day-to-transpiration-factors crop) rel-dc-day)
@@ -1165,11 +1166,11 @@
 
 (defn create-input-seq
   "create the input sequence for all the other functions"
-  [plot sorted-weather-map until-abs-day irrigation-donations irrigation-type]
+  [plot sorted-weather-map until-abs-day donations technology-type]
   (->> (base-input-seq plot
                        sorted-weather-map
-                       irrigation-donations
-                       irrigation-type)
+                       donations
+                       technology-type)
        (drop (dec (:plot.annual/abs-day-of-initial-soil-moisture-measurement plot)) ,,,)
        (take-while #(<= (:abs-day %) until-abs-day) ,,,)))
 
@@ -1273,7 +1274,7 @@
                                  (->> inputs
                                       (take irrigation-prognosis-days ,,,)
                                       ;set irrigation amount just for first day (of all the irrigation days)
-                                      ((fn [[f-input & rest-input]] (cons (assoc f-input :irrigation-amount irrigation-amount) rest-input)) ,,,)
+                                      ((fn [[f-input & rest-input]] (cons (assoc f-input :donation-amount irrigation-amount) rest-input)) ,,,)
                                       ;set sm-prognosis true for all inputs
                                       (map #(assoc % :sm-prognosis? true) ,,,)
                                       ;calculate soil-moisture for the irrigation days
@@ -1299,8 +1300,8 @@
         ;but we're above the effective curve, thus try again in about 4 days
         {:state :check-back-soon}
         ;nope, we've got to irrigate
-        (let [make-donation #(hash-map :irrigation.donation/abs-day (:abs-day input) #_(inc (:abs-day input))
-                                       :irrigation.donation/amount %)
+        (let [make-donation #(hash-map :donation/abs-day (:abs-day input) #_(inc (:abs-day input))
+                                       :donation/amount %)
 
               qu-target*-fn (fn [qu-target]
                               ;(/ (+ qu-eff qu-target) 2)
@@ -1358,10 +1359,10 @@
 (defn calc-donation-boundaries
   "calculate the irrigation-water donation data given a soil-moisture and
   the technological restrictions"
-  [forecast-days slope {opt-donation-technology :technology/opt-donation
-                        donation-step-size :technology/donation-step-size
-                        max-donation-technology :technology/max-donation
-                        min-donation-technology :technology/min-donation}
+  [forecast-days slope {opt-donation-technology :donation/opt
+                        donation-step-size :donation/step-size
+                        max-donation-technology :donation/max
+                        min-donation-technology :donation/min}
    inputs soil-moistures]
   (let [{:keys [abs-day fcs pwps]} (first inputs)
 
@@ -1448,9 +1449,8 @@
 
         technology+boundaries (-> boundaries
                                   (dissoc ,,, :high-soil-moisture?)
-                                  (assoc ,,,
-                                    :cycle-days (:technology/cycle-days technology)
-                                    :step-size (:technology/donation-step-size technology)))
+                                  (assoc ,,, :cycle-days (:technology/cycle-days technology)
+                                             :step-size (:donation/step-size technology)))
 
         {qu-prognosis-avg-current :qu-avg-current
          qu-prognosis-avg-target :qu-avg-target}
@@ -1513,7 +1513,7 @@
                   _ (debug "days-to-go*: " (dec days-to-go*) " final donation to apply: " donation)
                   ]
               {:days-to-go (dec days-to-go*)
-               :current-sm (calc-soil-moisture current-sm (assoc f-input :irrigation-amount donation))}))
+               :current-sm (calc-soil-moisture current-sm (assoc f-input :donation-amount donation))}))
           {:days-to-go 0
            :current-sm {:qu-sum-deficits 0
                         :qu-sum-targets 0
@@ -1619,7 +1619,7 @@
                                 (:tavg input)
                                 (:globrad input)
                                 (- (:evaporation input))
-                                (:irrigation-amount rres #_input)
+                                (:donation-amount rres #_input)
                                 (:pet rres)
                                 (:aet rres)
                                 (:aet7pet rres)

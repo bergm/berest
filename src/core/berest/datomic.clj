@@ -86,8 +86,7 @@
                            "private/db/plot-schema.edn"
                            "private/db/plot-annual-schema.edn"
                            "private/db/dc-assertion-schema.edn"
-                           "private/db/irrigation-donation-schema.edn"
-                           "private/db/technology-schema.edn"
+                           "private/db/technology-and-donation-schema.edn"
                            "private/db/soil-schema.edn"
                            "private/db/climate-schema.edn"
 
@@ -140,8 +139,6 @@
 
 (comment
   "instarepl debugging code"
-
-
 
   (apply create-db *db-id* datomic-schema-files)
   (d/create-database (datomic-connection-string *db-id*))
@@ -259,29 +256,19 @@
   (map #(apply create-dc-assertion in-partition in-year %) assertions))
 
 
-(defn create-irrigation-donation*
-	"Create datomic map for an irrigation donation given an start-abs-day and optionally
-  an end-abs-day (else this will be the same as start-abs-day) and the irrigation-donation in [mm]"
-  [in-partition start-abs-day donation-mm & [end-abs-day]]
-  {:db/id (new-entity-id in-partition)
-   :irrigation/abs-start-day start-abs-day
-   :irrigation/abs-end-day (or end-abs-day start-abs-day)
-   :irrigation/amount donation-mm})
-
 (defn create-irrigation-donation
-  "create datomic map for an irrigation donation"
-  [in-partition in-year [start-day start-month] donation-mm & [[end-day end-month :as end-date]]]
-  (let [start-abs-day (bu/date-to-doy start-day start-month in-year)
-        end-abs-day (if (not-any? nil? (or end-date [nil]))
-                       (bu/date-to-doy end-day end-month in-year)
-                       start-abs-day)]
-       (create-irrigation-donation* in-partition start-abs-day donation-mm end-abs-day)))
+	"Create datomic map for an irrigation donation given an start-abs-day
+	and the irrigation-donation in [mm]"
+  [in-partition in-year [start-day start-month] donation-mm]
+  (let [start-abs-day (bu/date-to-doy start-day start-month in-year)]
+    {:db/id            (new-entity-id in-partition)
+     :donation/abs-day start-abs-day
+     :donation/amount  donation-mm}))
 
 (defn create-irrigation-donations
   "Create multiple irrigation donation datomic maps at once"
   [in-partition in-year donations]
   (map #(apply create-irrigation-donation in-partition in-year %) donations))
-
 
 
 ;;transaction functions
@@ -312,9 +299,7 @@
 
 (comment
 
-  (store-credentials (connection)
-                     "michael" "#zALf!" "Michael Berg" [:admin :guest :farmer :consultant])
-
+  (store-credentials (connection) "michael" "#zALf!" "Michael Berg" [:admin :guest :farmer :consultant])
   (store-credentials (connection) "guest" "guest" "Guest Guest" [:guest])
   (store-credentials (connection) "zalf" "fLAz" "Zalf Zalf" [:consultant])
 

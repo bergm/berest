@@ -95,7 +95,7 @@
            sorted-weather-map (climate/final-sorted-weather-data-map-for-plot db year plot-id)
 
            inputs (bc/create-input-seq plot sorted-weather-map (+ until-julian-day 7)
-                                       irrigation-donations :irrigation.donation.type/sprinkler-irrigation)
+                                       irrigation-donations :technology.type/sprinkler)
            inputs-7 (drop-last 7 inputs)
 
           ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs-7)
@@ -161,13 +161,12 @@
         until-date* (time/parse until-date :year-month-day)
         year (time/datetime->year until-date*)
         until-julian-day (time/datetime->day-of-year until-date*)
-        irrigation-donations (for [[day month amount] (edn/read-string irrigation-data)]
-                               {:irrigation.donation/abs-day (time/datetime->day-of-year (time/datetime year month day))
-                                :irrigation.donation/amount amount
-                                :irrigation.donation/type :irrigation.donation.type/sprinkler-irrigation})
+        donations (for [[day month amount] (edn/read-string irrigation-data)]
+                    {:donation/abs-day (time/datetime->day-of-year (time/datetime year month day))
+                     :donation/amount amount})
         {:keys [inputs soil-moistures-7 prognosis] :as result}
         (calculate-plot-from-db db farm-id plot-id until-julian-day year
-                                irrigation-donations [])
+                                donations [])
         soil-moistures (concat soil-moistures-7 prognosis)
         csv-sms (->> soil-moistures
                      (bc/create-csv-output inputs ,,,)
@@ -181,15 +180,18 @@
 
 
 (defn simulate-plot-from-db
-  [db farm-id plot-id until-julian-day year irrigation-donations dc-assertions]
+  [db farm-id plot-id until-julian-day year donations dc-assertions]
   (if-let [plot (bc/db-read-plot db plot-id year)]
     (let [;plot could be updated with given dc-assertions
           ;plot* (update-in plot [])
 
            sorted-weather-map (climate/final-sorted-weather-data-map-for-plot db year plot-id)
 
-           inputs (bc/create-input-seq plot sorted-weather-map (+ until-julian-day 7)
-                                       irrigation-donations :irrigation.donation.type/sprinkler-irrigation)
+           inputs (bc/create-input-seq plot
+                                       sorted-weather-map
+                                       (+ until-julian-day 7)
+                                       donations
+                                       (-> plot :plot.annual/technology :technology/type))
 
           ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs-7)
           ;_ (println xxx)
@@ -199,7 +201,7 @@
            sms* (bc/calculate-soil-moistures-by-auto-donations*
                   inputs (:plot.annual/initial-soil-moistures plot)
                   (:plot/slope plot)
-                  (:plot.annual/irrigation-technology plot)
+                  (:plot.annual/technology plot)
                   5)
 
            {soil-moistures :soil-moistures
@@ -237,9 +239,8 @@
         year (time/datetime->year until-date*)
         until-julian-day (time/datetime->day-of-year until-date*)
         irrigation-donations (for [[day month amount] (edn/read-string irrigation-data)]
-                               {:irrigation.donation/abs-day (time/datetime->day-of-year (time/datetime year month day))
-                                :irrigation.donation/amount amount
-                                :irrigation.donation/type :irrigation.donation.type/sprinkler-irrigation})
+                               {:donation/abs-day (time/datetime->day-of-year (time/datetime year month day))
+                                :donation/amount amount})
         {:keys [inputs soil-moistures] :as result}
         (simulate-plot-from-db db farm-id plot-id until-julian-day year
                                irrigation-donations [])
@@ -252,47 +253,4 @@
           "application/json" result #_soil-moistures
           "text/csv" csv-sms
           "text/tab-separated-values" csv-sms)))
-
-
-#_(defn simulate-plot
-  [& {:keys [user-id farm-id plot-id]
-      {:keys [until-day until-month
-              weather-year
-              #_dc-state-data]} :data
-      :as all}]
-  (let? [db (bd/current-db user-id)
-         :else [:div#error "Fehler: Konnte keine Verbindung zur Datenbank herstellen!"]
-
-         weather-year* (Integer/parseInt weather-year)
-         weathers (get bc/weather-map weather-year*)
-
-         plot (bc/db-read-plot db plot-id weather-year*)
-         :else [:div#error "Fehler: Konnte Schlag mit Nummer: " plot-id " nicht laden!"]
-
-         until-julian-day (bu/date-to-doy (Integer/parseInt until-day)
-                                          (Integer/parseInt until-month)
-                                          weather-year*)
-
-         inputs (bc/create-input-seq plot weathers until-julian-day #_(+ until-julian-day 7) []
-         :sprinkle-losses)
-
-         ;xxx (map (rcomp (juxt :abs-day :irrigation-amount) str) inputs)
-         ;_ (println xxx)
-
-         days (range (-> inputs first :abs-day) (+ until-julian-day 1))
-
-         sms* (bc/calculate-soil-moistures-by-auto-donations* inputs (:plot.annual/initial-soil-moistures plot)
-                                                              (:plot/slope plot) (:plot.annual/technology plot) 5)
-         {soil-moistures :soil-moistures
-          :as sms} (last sms*)
-         #_(bc/calc-soil-moistures inputs-7 (:plot.annual/initial-soil-moistures plot))
-
-         ;_ (map pp/pprint sms*)
-         ]
-
-        ;use rest on sms-7* etc. to skip the initial value prepended by reductions
-        ;which doesn't fit to the input list
-        (csv/write-csv (bc/create-csv-output inputs (rest sms*)) :delimiter ";")))
-
-
 

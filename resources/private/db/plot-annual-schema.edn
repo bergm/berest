@@ -35,7 +35,7 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :plot.annual/irrigation-technology
+          :db/ident :plot.annual/technology
           :db/valueType :db.type/ref
           :db/isComponent true
           :db/cardinality :db.cardinality/one
@@ -51,7 +51,7 @@
           :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
-          :db/ident :plot.annual/irrigation-donations
+          :db/ident :plot.annual/donations
           :db/valueType :db.type/ref
           :db/isComponent true
           :db/cardinality :db.cardinality/many

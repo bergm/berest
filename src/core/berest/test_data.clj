@@ -342,11 +342,12 @@
   [in-partition plot-e-id]
   (let [year 1993
         technology {:db/id (db/new-entity-id in-partition)
+                    :technology/type :technology.type/sprinkler
                     :technology/cycle-days 1
-                    :technology/min-donation 5
-                    :technology/max-donation 30
-                    :technology/opt-donation 20
-                    :technology/donation-step-size 5}
+                    :donation/min 5
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
 
         dc-assertions (db/create-dc-assertions in-partition year
                                                [[[21 5] 1]
@@ -362,8 +363,7 @@
         crop-instances [{:db/id (db/new-entity-id in-partition)
                          :crop.instance/template [:crop/id "0801/1/0"]
                          :crop.instance/name "Zuckerrübe - 801/1/0"
-                         :crop.instance/dc-assertions (map :db/id dc-assertions)
-                         :crop.instance/irrigation-donations (map :db/id irrigation-donations)}]
+                         :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
                                         :soil/upper-boundary-depth :soil/soil-moisture
                                         [30 80.0, 60 90.0, 90 100.0, 150 100.0])
@@ -373,7 +373,9 @@
                :plot.annual/initial-soil-moistures (map :db/id initial-sms)
                :plot.annual/initial-sm-unit :soil-moisture.unit/pFK
                :plot.annual/technology (:db/id technology)
-               :plot.annual/crop-instances (map :db/id crop-instances)}
+               :plot.annual/crop-instances (map :db/id crop-instances)
+               :plot.annual/donations (map :db/id irrigation-donations)
+               }
         plot {:db/id plot-e-id
               :plot/annuals (:db/id plot*)}]
     (try
@@ -391,11 +393,12 @@
   [in-partition plot-e-id]
   (let [year 1994
         technology {:db/id (db/new-entity-id in-partition)
+                    :technology/type :technology.type/sprinkler
                     :technology/cycle-days 1
-                    :technology/min-donation 5
-                    :technology/max-donation 30
-                    :technology/opt-donation 20
-                    :technology/donation-step-size 5}
+                    :donation/min 5
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
 
         dc-assertions (db/create-dc-assertions in-partition year
                                                [[[19 4] 31]
@@ -412,8 +415,7 @@
         crop-instances [{:db/id (db/new-entity-id in-partition)
                          :crop.instance/template [:crop/id "0101/1/0"]
                          :crop.instance/name "Winterweizen/EJ - 0101/1/0"
-                         :crop.instance/dc-assertions (map :db/id dc-assertions)
-                         :crop.instance/irrigation-donations (map :db/id irrigation-donations)}]
+                         :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
                                         :soil/upper-boundary-depth :soil/soil-moisture
                                         [30 60.74, 60 57.04, 90 50.38])
@@ -423,7 +425,8 @@
                :plot.annual/initial-soil-moistures (map :db/id initial-sms)
                :plot.annual/initial-sm-unit :soil-moisture.unit/mm
                :plot.annual/technology (:db/id technology)
-               :plot.annual/crop-instances (map :db/id crop-instances)}
+               :plot.annual/crop-instances (map :db/id crop-instances)
+               :plot.annual/donations (map :db/id irrigation-donations)}
         plot {:db/id plot-e-id
               :plot/annuals (:db/id plot*)}]
     (try
@@ -441,11 +444,12 @@
   [in-partition plot-e-id]
   (let [year 1995
         technology {:db/id (db/new-entity-id in-partition)
+                    :technology/type :technology.type/sprinkler
                     :technology/cycle-days 1
-                    :technology/min-donation 5
-                    :technology/max-donation 30
-                    :technology/opt-donation 20
-                    :technology/donation-step-size 5}
+                    :donation/min 5
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
 
         dc-assertions (db/create-dc-assertions in-partition year
                                                [[[24 4] 31]
@@ -456,8 +460,7 @@
         crop-instances [{:db/id (db/new-entity-id in-partition)
                          :crop.instance/template [:crop/id "0120/1/0"]
                          :crop.instance/name "Wintergerste/EJ - 0120/1/0"
-                         :crop.instance/dc-assertions (map :db/id dc-assertions)
-                         :crop.instance/irrigation-donations (map :db/id irrigation-donations)}]
+                         :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
                                         :soil/upper-boundary-depth :soil/soil-moisture
                                         [30 42.94, 60 37.64, 90 43.91])
@@ -467,7 +470,8 @@
                :plot.annual/initial-soil-moistures (map :db/id initial-sms)
                :plot.annual/initial-sm-unit :soil-moisture.unit/mm
                :plot.annual/technology (:db/id technology)
-               :plot.annual/crop-instances (map :db/id crop-instances)}
+               :plot.annual/crop-instances (map :db/id crop-instances)
+               :plot.annual/donations (map :db/id irrigation-donations)}
         plot {:db/id plot-e-id
               :plot/annuals (:db/id plot*)}]
     (try
@@ -485,11 +489,12 @@
   [in-partition plot-e-id]
   (let [year 1996
         technology {:db/id (db/new-entity-id in-partition)
+                    :technology/type :technology.type/sprinkler
                     :technology/cycle-days 1
-                    :technology/min-donation 5
-                    :technology/max-donation 30
-                    :technology/opt-donation 20
-                    :technology/donation-step-size 5}
+                    :donation/min 5
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
 
         dc-assertions (db/create-dc-assertions in-partition year
                                                [[[10 4] 26]
@@ -503,8 +508,7 @@
         crop-instances [{:db/id (db/new-entity-id in-partition)
                          :crop.instance/template [:crop/id "0110/1/0"]
                          :crop.instance/name "Winterroggen/EJ - 0110/1/0"
-                         :crop.instance/dc-assertions (map :db/id dc-assertions)
-                         :crop.instance/irrigation-donations (map :db/id irrigation-donations)}]
+                         :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
                                         :soil/upper-boundary-depth :soil/soil-moisture
                                         [30 80.0, 60 90.0, 90 100.0, 150 100.0])
@@ -514,7 +518,8 @@
                :plot.annual/initial-soil-moistures (map :db/id initial-sms)
                :plot.annual/initial-sm-unit :soil-moisture.unit/pFK
                :plot.annual/technology (:db/id technology)
-               :plot.annual/crop-instances (map :db/id crop-instances)}
+               :plot.annual/crop-instances (map :db/id crop-instances)
+               :plot.annual/donations (map :db/id irrigation-donations)}
         plot {:db/id plot-e-id
               :plot/annuals (:db/id plot*)}]
     (try
@@ -532,11 +537,12 @@
   [in-partition plot-e-id]
   (let [year 1997
         technology {:db/id (db/new-entity-id in-partition)
+                    :technology/type :technology.type/sprinkler
                     :technology/cycle-days 1
-                    :technology/min-donation 5
-                    :technology/max-donation 30
-                    :technology/opt-donation 20
-                    :technology/donation-step-size 5}
+                    :donation/min 5
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
 
         dc-assertions (db/create-dc-assertions in-partition year
                                                [[[3 4] 1]
@@ -557,8 +563,7 @@
         crop-instances [{:db/id (db/new-entity-id in-partition)
                          :crop.instance/template [:crop/id "0801/1/0"]
                          :crop.instance/name "Zuckerrübe - 801/1/0"
-                         :crop.instance/dc-assertions (map :db/id dc-assertions)
-                         :crop.instance/irrigation-donations (map :db/id irrigation-donations)}]
+                         :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
                                         :soil/upper-boundary-depth :soil/soil-moisture
                                         [30 80.0, 60 90.0, 90 100.0, 150 100.0])
@@ -568,7 +573,8 @@
                :plot.annual/initial-soil-moistures (map :db/id initial-sms)
                :plot.annual/initial-sm-unit :soil-moisture.unit/pFK
                :plot.annual/technology (:db/id technology)
-               :plot.annual/crop-instances (map :db/id crop-instances)}
+               :plot.annual/crop-instances (map :db/id crop-instances)
+               :plot.annual/donations (map :db/id irrigation-donations)}
         plot {:db/id plot-e-id
               :plot/annuals (:db/id plot*)}]
     (try
@@ -586,11 +592,12 @@
   [in-partition plot-e-id]
   (let [year 1998
         technology {:db/id (db/new-entity-id in-partition)
+                    :technology/type :technology.type/sprinkler
                     :technology/cycle-days 1
-                    :technology/min-donation 5
-                    :technology/max-donation 30
-                    :technology/opt-donation 20
-                    :technology/donation-step-size 5}
+                    :donation/min 5
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
 
         dc-assertions (db/create-dc-assertions in-partition year
                                                [[[25 5] 45]
@@ -605,8 +612,7 @@
         crop-instances [{:db/id (db/new-entity-id in-partition)
                          :crop.instance/template [:crop/id "0101/1/0"]
                          :crop.instance/name "Winterweizen/EJ - 0101/1/0"
-                         :crop.instance/dc-assertions (map :db/id dc-assertions)
-                         :crop.instance/irrigation-donations (map :db/id irrigation-donations)}]
+                         :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
                                         :soil/upper-boundary-depth :soil/soil-moisture
                                         [30 80.0, 60 90.0, 90 100.0, 150 100.0])
@@ -616,7 +622,8 @@
                :plot.annual/initial-soil-moistures (map :db/id initial-sms)
                :plot.annual/initial-sm-unit :soil-moisture.unit/pFK
                :plot.annual/technology (:db/id technology)
-               :plot.annual/crop-instances (map :db/id crop-instances)}
+               :plot.annual/crop-instances (map :db/id crop-instances)
+               :plot.annual/donations (map :db/id irrigation-donations)}
         plot {:db/id plot-e-id
               :plot/annuals (:db/id plot*)}]
     (try
@@ -633,7 +640,7 @@
 (defn add-zalf-test-farm [in-partition]
   @(d/transact (db/connection)
                [{:db/id (db/new-entity-id in-partition)
-                 :farm/id "zalf:test-farm"
+                 :farm/id "zalf_test-farm"
                  :farm/name "ZALF Test Betrieb"
                  :farm/addresses [{:address/street "Eberswalder Str. 84"
                                    :address/postal-code "15374"
@@ -644,7 +651,7 @@
                                    :address/state-short "BRA"
                                    :address/country "Deutschland"
                                    :address/country-short "GER"}]
-                 :farm/authorative-weather-station [:weather-station/id "zalf/zalf"]}]))
+                 :farm/authorative-weather-station [:weather-station/id "zalf_lokal"]}]))
 
 ;add plot zalf test plot
 (defn add-zalf-test-plot
@@ -657,9 +664,12 @@
                                  :soil/upper-boundary-depth :soil/permanent-wilting-point
                                  [30 3.5, 60 3.0, 90 3.7, 120 3.7, 200 3.0])
 
-        plot {:db/id (db/new-entity-id in-partition)
-              :farm/_plots [:farm/id "zalf:test-farm"]
-              :plot/id "zalf:versuchsfeld"
+        new-farm-id (db/new-entity-id in-partition)
+
+        plot {:db/id new-farm-id
+              :user/_farms new-farm-id
+              :farm/_plots [:farm/id "zalf_test-farm"]
+              :plot/id "zalf.test-farm_versuchsfeld"
               :plot/crop-area 1.0
               :plot/irrigation-area 1.0
               :plot/stt 6212
@@ -692,6 +702,9 @@
 
   (add-zalf-test-farm :zalf)
   (add-zalf-test-plot :zalf)
+
+  @(d/transact (db/connection)
+               [[:db/add [:user/id "zalf"] :user/farms [:farm/id "zalf_test-farm"]]])
 
   )
 
