@@ -48,10 +48,10 @@
 (defc session-token nil)
 (defc temp-irrigation-data [nil nil nil])
 (defc edn-result nil)
-(cell= (println "edn-result: " edn-result))
+#_(cell= (println "edn-result: " edn-result))
 
 (defc csv-result nil)
-#_(cell= (println "result: " result))
+#_(cell= (println "result: " csv-result))
 
 (defc= farms (:farms state))
 (defc= selected-farm-id (:selected-farm-id state))
@@ -152,6 +152,7 @@
 (cell= (println "selected-plot-id: " selected-plot-id))
 #_(cell= (println "temp-irrigation-data: " temp-irrigation-data))
 
+
 ;; util
 
 (defn date-str [date]
@@ -217,6 +218,7 @@
 
 (defn calculate-and-get-csv
   []
+  (reset! csv-result nil)
   (ajax/GET (str server-url "auth-api/calculate")
             {:headers (request-headers "text/tab-separated-values" #_"text/csv")
              :params {:farm-id @selected-farm-id
@@ -229,6 +231,7 @@
 
 (defn calculate-and-get-edn
   []
+  (reset! edn-result nil)
   (ajax/GET (str server-url "auth-api/calculate")
             {:headers (request-headers)
              :params {:farm-id @selected-farm-id
@@ -241,6 +244,7 @@
 
 (defn simulate-and-get-csv
   []
+  (reset! csv-result nil)
   (ajax/GET (str server-url "auth-api/simulate")
             {:headers (request-headers "text/tab-separated-values" #_"text/csv")
              :params {:farm-id @selected-farm-id
@@ -253,6 +257,7 @@
 
 (defn simulate-and-get-edn
   []
+  (reset! edn-result "")
   (ajax/GET (str server-url "auth-api/simulate")
             {:headers (request-headers)
              :params {:farm-id @selected-farm-id
