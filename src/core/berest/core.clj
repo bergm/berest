@@ -50,24 +50,41 @@
 (defn mm7x->pNFK
   "fc, pwp, mm-value [mm/x] -> [% NFK]"
   [fc pwp sm-value]
-  (/ (- sm-value pwp) (* (- fc pwp) 100)))
+  (/ (- sm-value pwp)
+     (* (- fc pwp) 100)))
 
-(defn volp->mm7dm "value [volp] -> [mm/dm] -> " [value] value)
+(defn volp->mm7dm
+  "value [volp] -> [mm/dm] -> "
+  [value]
+  value)
 
-(defn mm7dm->volp "value [mm/dm] -> [volp]" [value] value)
+(defn mm7dm->volp
+  "value [mm/dm] -> [volp]"
+  [value]
+  value)
 
-(defn mm7dm->mm7cm "value [mm/dm] -> [mm/cm]" [value] (/ value 10))
+(defn mm7dm->mm7cm
+  "value [mm/dm] -> [mm/cm]"
+  [value]
+  (/ value
+     10))
 
-(defn mm7cm->mm7dm "value [mm/cm] -> [mm/dm]" [value] (* value 10))
+(defn mm7cm->mm7dm
+  "value [mm/cm] -> [mm/dm]"
+  [value]
+  (* value 10))
 
 (def fout (ref []))
 (def out (ref ""))
 
-(defn append-out [out append-func value]
+(defn append-out
+  [out append-func value]
   (dosync
    (alter out append-func value)))
 
-(defn nFC [fc pwp] (- fc pwp))
+(defn nFC
+  [fc pwp]
+  (- fc pwp))
 
 (defn sorted-unzip-map
   "split a map into it's keys and values by sorted keys, return [[keys][values]]"
@@ -117,7 +134,8 @@
              (recur (lazy-cat res [(take size data)]) (rest sizes) (drop size data)))))
        (map (partial reduce reduce-fn) ,,,)))
 
-(defn adjacent-kv-pairs [map key]
+(defn adjacent-kv-pairs
+  [map key]
   {:lower (->> map
                (filter #(< (first %) key) ,,,)
                (into (sorted-map) ,,,)
@@ -193,9 +211,9 @@
                            %)
                         collection))
 
-(defn abs-pre-calculation-day [plot] (dec (:plot/abs-calculation-day plot)))
-
-(defn crop-id [crop] (str (:plot/number crop) "/" (:plot/cultivation-type crop) "/" (:plot/usage crop)))
+(defn crop-id
+  [crop]
+  (str (:plot/number crop) "/" (:plot/cultivation-type crop) "/" (:plot/usage crop)))
 
 (defn resulting-damage-compaction-depth-cm
   [plot]
@@ -244,6 +262,7 @@
 (defn lambda-correction
   "return the lambda correction factor for the given day of year,
   assuming right now the given day of year is without leap years"
+
   {:doc/origin "The expression part in the let is taken from:
    W. Mirschel et al./Ecological Modelling 81 (1995) 53-69, equation (13)
    while the doy* binding is taken from the BOWET source code (the last part can be taken from
@@ -257,6 +276,7 @@
    END;
    {Die letzten 6 Anweisungen nur zur Anpassung an Programm verdtur2}
    fakt:=1 + 0.77 * SIN(0.01571 * (t - 166));"}
+
   [doy]
   (let [doy* (if (> doy 304)
                (- doy 304)
@@ -302,7 +322,8 @@
 
 #_(defrecord Donation [day amount])
 
-(defn donations-at [donations abs-day]
+(defn donations-at
+  [donations abs-day]
   (reduce
     (fn [acc {abs-day* :donation/abs-day
               amount :donation/amount}]
@@ -529,7 +550,6 @@
               :plot/user-soil-data (db/get-entity-ids entities)}]
     (d/transact datomic-connection (flatten [entities plot]))))
 
-
 (defn glugla
   "Calculates the excess water in a soil-layer given the initial water content, the
   infiltration into that layer and the lambda value for the layer, by default
@@ -550,19 +570,27 @@
   (cond
    ;more water will fit into the current layer (below infiltration barrier)
    (neg? wia) (let [wie (+ (* ni* dti) wia)]
-                (if (and (>= ni* 0.) (pos? wie))
-                  (let [dsti1 (- (/ wia ni*))
+                (if (and (pos? ni*)
+                         (pos? wie))
+                  (let [dsti1 (- (/ wia
+                                    ni*))
                         ais (- (Math/exp (* -2 (Math/sqrt (* lai ni*)) (- dti dsti1))))]
-                    (/ (* (Math/sqrt (/ ni* lai)) (+ 1 ais))
+                    (/ (* (Math/sqrt (/ ni*
+                                        lai))
+                          (+ 1 ais))
                        (- 1 ais)))
                   wie))
    ;current layer already above infiltration barrier
    :else (cond
-          (zero? ni*) (/ wia (+ 1 (* lai wia dti)))
+          (zero? ni*) (/ wia
+                         (+ 1 (* lai wia dti)))
           ;Entzug
-          (neg? ni*)(let [n7l (Math/sqrt (/ (- ni*) lai))
-                          l*n (Math/sqrt (* (- ni*) lai))
-                          dti1 (/ (Math/atan (/ wia n7l))
+          (neg? ni*)(let [abs-ni* (- ni*)
+                          n7l (Math/sqrt (/ abs-ni*
+                                            lai))
+                          l*n (Math/sqrt (* abs-ni* lai))
+                          dti1 (/ (Math/atan (/ wia
+                                                n7l))
                                   l*n)]
                       (if (> dti1 dti)
                         (let [bi (Math/tan (* l*n dti))]
@@ -570,7 +598,8 @@
                              (+ n7l (* wia bi))))
                         (* ni* (- dti dti1))))
           ;(pos? ni*) // kein Entzug
-          :else (let [n7l (Math/sqrt (/ ni* lai))
+          :else (let [n7l (Math/sqrt (/ ni*
+                                        lai))
                       l*n (Math/sqrt (* lai ni*))
                       ai (* (/ (- wia n7l)
                                (+ wia n7l))
@@ -585,7 +614,8 @@
     {:final-excess-water few
      :infiltration-into-next-layer (+ initial-excess-water infiltration-from-layer-above (- few))}))
 
-(defn interception [precipitation evaporation irrigation transpiration-factor irrigation-type]
+(defn interception
+  [precipitation evaporation sprinkler-donation technology-outlet-height transpiration-factor]
   (let [null5 0.5
         null2 0.2
         tf (max 1 transpiration-factor)
@@ -597,43 +627,40 @@
                                             [0, evaporation])
 
         ;Berechnung fuer Zusatzregen/Spruehverluste
-        [interception-irrigation,
-         sprinkle-loss,
-         pet*] (if (> irrigation 1)
-                 (let [[ii, sl]
-                       (condp = irrigation-type
-                         :technology.type/sprinkler
-                         [(* 0.6 tin (+ 1 (* irrigation 0.05))),
-                          (* (+ 1 (* (- evaporation 2.5) null2)) null2 irrigation)]
-
-                         :technology.type/drip
-                         [0, 0])]
-                   (if (> precipitation 0)
-                     [ii, sl, (- evaporation (* (+ ii interception-precipitation) null5))]
-                     [ii, sl, (- evaporation (* ii 0.75))]))
-                 [0, 0, pet])]
+        [sprinkler-donation*
+         interception-irrigation
+         sprinkle-loss
+         pet*]
+        (if sprinkler-donation                                  ;;was (> sprinkler-donation 1), don't know why
+          (let [ii (* 0.6 tin (+ 1 (* sprinkler-donation 0.05)))
+                sl (* (+ 1 (* (- evaporation 2.5) null2)) null2 sprinkler-donation)]
+            (if (> precipitation 0)
+              [sprinkler-donation ii sl (- evaporation (* (+ ii interception-precipitation) null5))]
+              [sprinkler-donation ii sl (- evaporation (* ii 0.75))]))
+          [0 0 0 pet])]
     {:pet (max 0 pet*),
      :effective-precipitation (- precipitation interception-precipitation),
-     :effective-irrigation (- irrigation interception-irrigation sprinkle-loss),
-     :effective-irrigation-uncovered (- irrigation sprinkle-loss)}))
+     :effective-irrigation (- sprinkler-donation* interception-irrigation sprinkle-loss),
+     :effective-irrigation-uncovered (- sprinkler-donation* sprinkle-loss)}))
 
 (defn uncovered-water-abstraction-fraction
   "Get fraction of water-abstraction on uncovered soil for given layer i when using maximal m equal sized layers
   the function will use by default the curvature parameter z with value 0.05 which fits best the value for the
   first two layers in the original BEREST table [:0-10cm 0.625, :10-20cm 0.3, :30-60cm 0.075].
   The third layer (30-60cm) isn't matched exactly, but it's the layer with the smallest water-abstraction
-  and very close (0.08145 vs 0.075), but the integral over the all the layers is nevertheless 1 and maybe
+  and very close (0.08145 vs 0.075), but the integral over all the layers is nevertheless 1 and maybe
   the original values have been choosen to get rounded but close to the functions results values."
   [m i & {:keys [z] :or {z 0.05}}]
   {:doc/origin "R. Koitzsch, Zeitschrift für Meteorologie Band 27 Heft 5,
    Schätzung der Bodenfeuchte mit einem Mehrschichtenmodell, equation (9)"}
-  (/ (- (* (+ z 1) (Math/log (/ (+ (* m z) i)
-                                (+ (* m z) i -1))))
+  (/ (- (* (+ z 1)
+           (Math/log (/ (+ (* m z) i)
+                        (+ (* m z) i -1))))
         (/ 1 m))
-     (- (* (+ z 1) (Math/log (/ (+ z 1)
-                                z)))
+     (- (* (+ z 1)
+           (Math/log (/ (+ z 1)
+                        z)))
         1)))
-
 
 (defn covered-water-abstraction-fraction
   "Get fraction of water-abstraction on plant covered soil for given layer i when using maximal n equal sized layers."
@@ -644,19 +671,24 @@
              n))
      n))
 
-(defn complement-layers [no-of-layers with-value incomplete-layers]
+(defn complement-layers
+  [no-of-layers with-value incomplete-layers]
   (take no-of-layers (concat incomplete-layers (repeat with-value))))
 
-(defn f1-koitzsch
+(defn unreduced-water-abstractions
   "returns a sequence of soil-depth-cm layers with water-abstraction values for covered or uncovered case
   for the given maximum depth in cm"
-  [max-depth-cm covered?]
-  (let [f (if covered?
-            covered-water-abstraction-fraction
-            uncovered-water-abstraction-fraction)
-        upper-values (for [i (range 1 (inc max-depth-cm))]
-                       (f max-depth-cm i))]
-    (complement-layers (max-soil-depth) 0 upper-values)))
+  [water-abstraction-fraction-fn max-depth-cm]
+  {:doc/origin "used to be f1-koitzsch in BEREST90"}
+  (->> (for [i (range 1 (inc max-depth-cm))]
+         (water-abstraction-fraction-fn max-depth-cm i))
+       (complement-layers (max-soil-depth) 0 ,,,)))
+
+(def uncovered-unreduced-water-abstractions
+  (unreduced-water-abstractions uncovered-water-abstraction-fraction 60))
+
+(def covered-unreduced-water-abstractions
+  (partial unreduced-water-abstractions covered-water-abstraction-fraction))
 
 (defn gi-koitzsch
   "calculate water abstraction for a given maximum extraction depth and the give
@@ -668,12 +700,12 @@
   rooting (extraction) depth which can be fully used, but will only be so, if
   given the reduction factors applied to the layers gives the the largest abstraction, else
   shallower extraction depth will be used"
-  [extraction-depth-cm reduction-factors & {:keys [covered?] :or {covered true}}]
+  [extraction-depth-cm reduction-factors]
   (let [;we search within the layers above and equal to extraction-depth-cm
         search-layer-depths (take-while (partial >= extraction-depth-cm) (layer-depths))
         ;create a list of [f1-koitzsch-result] for every possible layer depth in use
         ffss (for [max-depth search-layer-depths]
-              (->> (f1-koitzsch max-depth true)
+              (->> (covered-unreduced-water-abstractions max-depth)
                    (aggregate-layers + *layer-sizes* ,,,)))
         ;calculate the gj and store the sum of all layers to find out the maximum later
         gis (map (fn [depth-cm ffs]
@@ -682,8 +714,11 @@
                      {:depth-cm depth-cm, :rij rij, :gj gj})) search-layer-depths ffss)
         ;sort gis according to ascending rij and then descending depth-cm
         gis-sorted (sort-by identity
-                            (fn [{l-rij :rij, l-depth :depth-cm} {r-rij :rij, r-depth :depth-cm}]
-                              (if (= l-rij r-rij) (> l-depth r-depth) (> l-rij r-rij)))
+                            (fn [{l-rij :rij, l-depth :depth-cm}
+                                 {r-rij :rij, r-depth :depth-cm}]
+                              (if (= l-rij r-rij)
+                                (> l-depth r-depth)
+                                (> l-rij r-rij)))
                             gis)]
     ;just use values only below 50cm, take the first one and extract the gj and complement with zeros below extraction depth
     (->> gis-sorted
@@ -694,40 +729,57 @@
 (defn capillary-rise-barrier
   "calculate capillary rise barrier for a layer with size x-dm based on the field capacity of a x-dm layer"
   [fc-xdm layer-size-dm]
-  (let [fc-1dm (/ fc-xdm layer-size-dm)]
-    (* (+ fc-1dm 40.667 (- (* fc-1dm 0.408)))
+  (let [fc-1dm (/ fc-xdm
+                  layer-size-dm)]
+    (* (+ fc-1dm 40.667 (* fc-1dm -0.408))
        layer-size-dm)))
 
-(defn infiltration-barrier [fk pwp abs-current-day layer-depth-cm]
+(defn infiltration-barrier
+  "calculates at which soil-moisture level in soil-layer infiltration into next layer will happen"
+  [fk pwp abs-current-day layer-depth-cm]
   (let [barriers (if (<= layer-depth-cm 30)
-                   (sorted-map 80 11, 140 7)
-                   (sorted-map 100 10, 200 8))
+                   (sorted-map 80 11
+                               140 7)
+                   (sorted-map 100 10
+                               200 8))
         vs (* (interpolated-value barriers abs-current-day) 0.1)
         vs* (let [pwfk (+ (/ pwp fk) -1 vs)]
-              (if (and (< vs 1.) (pos? pwfk))
+              (if (and (< vs 1.)
+                       (pos? pwfk))
                 (+ vs (/ (* (- 1 vs) pwfk 0.95)
                          (- 0.66 0.3)))
                 vs))]
-    (+ (* (nFC fk pwp) vs*) pwp)))
+    (+ (* (nFC fk pwp) vs*)
+       pwp)))
 
-(defn pwp4p [fc pwp] (- pwp (* 0.04 (nFC fc pwp))))
+(defn pwp4p
+  [fc pwp]
+  (- pwp (* 0.04 (nFC fc pwp))))
 
-(defn uncovered-reduction-factors [fcs pwps soil-moistures]
+(defn uncovered-water-abstraction-reduction-factors
+  "factors reducing the water abstraction on uncovered ground,
+  as there is no crop on soil, can only depend on soil properties"
+  [fcs pwps soil-moistures]
   (map (fn [fc pwp sm]
          (let [pwp4p* (pwp4p fc pwp)
                r (if (> sm pwp4p*)
-                   (min (/ (- sm pwp4p*) (- fc pwp4p*)) 1)
+                   (min (/ (- sm pwp4p*)
+                           (- fc pwp4p*))
+                        1)
                    0)]
            (* r r)))
        fcs pwps soil-moistures))
 
-(defn covered-reduction-factors [extraction-depth-cm fcs pwps soil-moisture pet]
+(defn covered-water-abstraction-reduction-factors
+  [extraction-depth-cm fcs pwps soil-moisture pet]
   (map (fn [layer-size-cm depth-cm fc pwp sm]
          (let [pwp4p* (pwp4p fc pwp)]
-           (if (and (<= depth-cm extraction-depth-cm) (< sm fc))
+           (if (and (<= depth-cm extraction-depth-cm)
+                    (< sm fc))
              (let [nfc (nFC fc pwp)
                    fc-dm (/ fc layer-size-cm 10)
-                   xsm (if (or (< fc-dm 10) (> fc-dm 46))
+                   xsm (if (or (< fc-dm 10)
+                               (> fc-dm 46))
                          (+ (* nfc 0.81) pwp)
                          (+ (* (+ 67.77
                                   (* 3.14 fc-dm)
@@ -754,80 +806,91 @@
              1)))
        *layer-sizes* (layer-depths) fcs pwps soil-moisture))
 
-(defn sm-1-day [extraction-depth-cm cover-degree pet abs-current-day
-                fcs pwps lambdas soil-moistures soil-moisture-prognosis?
-                evaporation ivd groundwater-level daily-precipitation-and-irrigation]
-  (let [sms+surface-water (concat [(+ daily-precipitation-and-irrigation (first soil-moistures))]
-                                  (rest soil-moistures))
+(defn calc-soil-moisture*
+  "calculate soil-moisture for one day"
+  [extraction-depth-cm cover-degree pet abs-current-day
+   fcs pwps lambdas soil-moistures soil-moisture-prognosis?
+   evaporation ivd groundwater-level
+   daily-precipitation-and-donation
+   drip-donation drip-outlet-depth]
+  (let [soil-moistures* (if drip-donation
+                          (map (fn [sm depth]
+                                 (if (<= drip-outlet-depth depth)
+                                   (+ sm drip-donation)
+                                   sm))
+                               soil-moistures (layer-depths))
+                          soil-moistures)
+
+         sms+surface-water (concat [(+ daily-precipitation-and-donation (first soil-moistures*))]
+                                  (rest soil-moistures*))
 
         ;for at least partly uncovered ground
-        water-abstractions (if (>= cover-degree 99/100)
-                             (repeat (no-of-soil-layers) 0)
-                             ;calculate same as gi-koitzsch for a depth of 60cm but uncovered soil
-                             (->> (f1-koitzsch 60 false)
-                                  (aggregate-layers + *layer-sizes* ,,,)
-                                  (bu/dot-mult (uncovered-reduction-factors fcs pwps sms+surface-water)
-                                               ,,,)
-                                  (bu/s-mult evaporation
-                                             ,,,)))
+        uncovered-water-abstractions
+        (if (>= cover-degree 99/100)
+          (repeat (no-of-soil-layers) 0)
+          ;calculate same as gi-koitzsch for a depth of 60cm but uncovered soil
+          (->> uncovered-unreduced-water-abstractions
+               (aggregate-layers + *layer-sizes* ,,,)
+               (bu/dot-mult (uncovered-water-abstraction-reduction-factors fcs pwps sms+surface-water) ,,,)
+               (bu/s-mult evaporation ,,,)))
 
         ;for at least partly covered ground
-        [aet, water-abstractions*]
+        [aet, water-abstractions]
         (if (<= cover-degree 1/100)
-          [0, water-abstractions]
+          [0, uncovered-water-abstractions]
           (let [extraction-depth-cm* (if soil-moisture-prognosis?
                                        (min extraction-depth-cm 60)
                                        extraction-depth-cm)
                 rfs (if (> cover-degree 1/100)
-                      (covered-reduction-factors extraction-depth-cm fcs pwps sms+surface-water pet)
+                      (covered-water-abstraction-reduction-factors extraction-depth-cm fcs pwps sms+surface-water pet)
                       (repeat (no-of-soil-layers) 1))
                 gi (gi-koitzsch extraction-depth-cm* rfs)]
             [(bu/sum (bu/s-mult pet gi)),
-             (bu/dot-add (bu/s-mult (- 1 cover-degree) water-abstractions)
+             (bu/dot-add (bu/s-mult (- 1 cover-degree) uncovered-water-abstractions)
                          (bu/s-mult (* pet cover-degree) gi))]))
 
         {groundwater-infiltration :infiltration-into-next-layer
          sms* :soil-moistures}
-        (->> soil-moistures
+        (->> soil-moistures*
              ;combine a few more needed inputs to infiltration calculation
-             (map vector lambdas water-abstractions* *layer-sizes* (layer-depths) fcs pwps ,,,)
+             (map vector lambdas water-abstractions *layer-sizes* (layer-depths) fcs pwps ,,,)
              ;calculate the infiltration top down layer by layer, transporting excess water down
              ;and building up the soil layers as we go down
              (reduce (fn [{infiltration-from-prev-layer :infiltration-into-next-layer
                            sms :soil-moistures}
                           [lambda water-abstraction layer-size-cm depth-cm fc pwp sm]]
-                       (let [cr-barrier (capillary-rise-barrier fc (/ layer-size-cm 10))]
-                         (if (<= depth-cm groundwater-level)
-                           (let [;above that barrier the water will start to infiltrate to the next layer
-                                 inf-barrier (infiltration-barrier fc pwp abs-current-day depth-cm)
+                       (if (<= depth-cm groundwater-level)
+                         (let [;above that barrier the water will start to infiltrate to the next layer
+                                inf-barrier (infiltration-barrier fc pwp abs-current-day depth-cm)
 
-                                 ;in the next steps we basically care just about the excess water
-                                 ;not about the layers full water content, so we calculate
-                                 ;just the difference (positive or negative) to the infiltration barrier
-                                 ;(in case of the first layer, possibly including todays precipitation)
-                                 initial-excess-water (- sm inf-barrier)
+                               ;in the next steps we basically care just about the excess water
+                               ;not about the layers full water content, so we calculate
+                               ;just the difference (positive or negative) to the infiltration barrier
+                               ;(in case of the first layer, possibly including todays precipitation)
+                                initial-excess-water (- sm inf-barrier)
 
-                                 net-infiltration-from-above-layer (- infiltration-from-prev-layer water-abstraction)
+                                net-infiltration-from-above-layer (- infiltration-from-prev-layer water-abstraction)
 
-                                 ;the excess water after calculation of the infiltration to the next layer
-                                 {:keys [final-excess-water
-                                         infiltration-into-next-layer]}
-                                 (glugla* initial-excess-water net-infiltration-from-above-layer lambda)
+                               ;the excess water after calculation of the infiltration to the next layer
+                                {:keys [final-excess-water
+                                        infiltration-into-next-layer]}
+                                (glugla* initial-excess-water net-infiltration-from-above-layer lambda)
 
-                                 ;add the (positive/negative) excess water back to the infiltration barrier
-                                 ;to obtain the actual water content now in this layer
-                                 ;(after water could infiltrate to the next layer)
-                                 sm* (max (+ inf-barrier final-excess-water) (pwp4p fc pwp))]
-                             {:infiltration-into-next-layer infiltration-into-next-layer,
-                              :soil-moistures (conj sms sm*)})
-                           {:infiltration-into-next-layer 0,
-                            :soil-moistures cr-barrier})))
-                     {:infiltration-into-next-layer daily-precipitation-and-irrigation
+                               ;add the (positive/negative) excess water back to the infiltration barrier
+                               ;to obtain the actual water content now in this layer
+                               ;(after water could infiltrate to the next layer)
+                                sm* (max (+ inf-barrier final-excess-water) (pwp4p fc pwp))]
+                           {:infiltration-into-next-layer infiltration-into-next-layer,
+                            :soil-moistures (conj sms sm*)})
+                         {:infiltration-into-next-layer 0
+                          :soil-moistures (conj sms (capillary-rise-barrier fc (/ layer-size-cm
+                                                                                  10)))}))
+                     {:infiltration-into-next-layer daily-precipitation-and-donation
                       :soil-moistures []}
                      ,,,))
 
         ;calculate the capillary rise if applicable
-        [_ soil-moistures*] (->> sms*
+        [_ soil-moistures**] (->> sms*
                                  ;combine soil-moistures with fc and *layer-sizes* for reduce function below
                                  (map vector fcs *layer-sizes* ,,,)
                                  ;reverse, to go from bottom to top layer
@@ -841,43 +904,58 @@
                                          [0 '()]
                                          ,,,))]
     {:aet aet
-     :soil-moistures soil-moistures*
+     :soil-moistures soil-moistures**
      :groundwater-infiltration groundwater-infiltration}))
 
-(defn calc-soil-moisture [{:keys [qu-sum-deficits qu-sum-targets soil-moistures]
-                           :as result-accumulator}
-                          {:keys [abs-day rel-dc-day
-                                  crop
-                                  donation-amount technology-type technology-outlet-height
-                                  evaporation precipitation
-                                  cover-degree qu-target
-                                  rounded-extraction-depth-cm
-                                  transpiration-factor
-                                  fcs pwps lambdas groundwaterlevel-cm damage-compaction-depth-cm
-                                  sm-prognosis?]
-                           :as input}]
+(defn calc-soil-moisture
+  "calculate soil-moisture for the given input"
+  [{:keys [qu-sum-deficits qu-sum-targets soil-moistures]
+    :as result-accumulator}
+   {:keys [abs-day rel-dc-day
+           crop
+           donation technology-type technology-outlet-height
+           evaporation precipitation
+           cover-degree qu-target
+           rounded-extraction-depth-cm
+           transpiration-factor
+           fcs pwps lambdas groundwaterlevel-cm damage-compaction-depth-cm
+           sm-prognosis?]
+    :as input}]
   (let [{:keys [pet
                 effective-precipitation
                 effective-irrigation
                 effective-irrigation-uncovered]}
-        (interception precipitation evaporation donation-amount
-                      transpiration-factor technology-type)
+        (interception precipitation evaporation
+                      (when (or (= technology-type :technology.type/sprinkler)
+                                ;drip irrigation outlet height shouldn't actually be larger than 0
+                                (and (= technology-type :technology.type/drip)
+                                     (>= technology-outlet-height 0)))
+                        donation)
+                      technology-outlet-height
+                      transpiration-factor)
 
         pet* (if (< cover-degree 1/1000)
                0
                (* pet transpiration-factor))
 
-        daily-precipitation-and-irrigation
-        (+ (* (+ effective-precipitation effective-irrigation) cover-degree)
-           (* (+ precipitation effective-irrigation-uncovered) (- 1 cover-degree)))
+        ;should include above ground drip irrigation and sprinkler irrigation donations
+        daily-precipitation-and-donation
+        (+ (* (+ effective-precipitation effective-irrigation)
+              cover-degree)
+           (* (+ precipitation effective-irrigation-uncovered)
+              (- 1 cover-degree)))
 
         {aet :aet
          soil-moistures* :soil-moistures
          groundwater-infiltration :groundwater-infiltration}
-        (sm-1-day rounded-extraction-depth-cm cover-degree pet*
-                  abs-day fcs pwps lambdas soil-moistures
-                  sm-prognosis? evaporation damage-compaction-depth-cm
-                  groundwaterlevel-cm daily-precipitation-and-irrigation)
+        (calc-soil-moisture* rounded-extraction-depth-cm cover-degree pet*
+                             abs-day fcs pwps lambdas soil-moistures
+                             sm-prognosis? evaporation damage-compaction-depth-cm
+                             groundwaterlevel-cm
+                             daily-precipitation-and-donation
+                             (when (= technology-type :technology.type/drip)
+                               donation)
+                             technology-outlet-height)
 
         aet7pet (cond
                  (< cover-degree 1/1000) 0
@@ -886,7 +964,7 @@
 
     {:abs-day abs-day
      :rel-dc-day rel-dc-day
-     :irrigation-amount donation-amount
+     :irrigation-amount donation
      :effective-precipitation effective-precipitation
      :effective-irrigation effective-irrigation
      :effective-irrigation-uncovered effective-irrigation-uncovered
