@@ -986,74 +986,70 @@
   "create a dc to abs+rel-dc-day map from the data given with crop-instance
   (dc-assertions and the crop template, thus the dc-to-rel-dc-day curve)"
   [crop-instance]
-  (let? [dc-assertions* (->> crop-instance
-                             :crop.instance/dc-assertions
-                             (sort-by :assertion/at-abs-day ,,,))
-         :is-not empty?
-         ;_ (println dc-assertions*)
+  (when-let [dc-assertions (->> crop-instance
+                                :crop.instance/dc-assertions
+                                (sort-by :assertion/at-abs-day ,,,)
+                                not-empty)]
+    #_(println dc-assertions)
+    (let [{dc* :assertion/assert-dc
+           abs-dc-day* :assertion/abs-assert-dc-day} (first dc-assertions)
+          ;_ (println "dc-to-rel-dc-days: " dc-to-rel-dc-days \newline)
 
-         sorted-dc-to-rel-dc-days (->> crop-instance
-                                       :crop.instance/template
-                                       :crop/dc-to-rel-dc-days
-                                       (into (sorted-map) ,,,))
-         ;_ (println sorted-dc-to-rel-dc-days)
+          sorted-dc-to-rel-dc-days (->> crop-instance
+                                        :crop.instance/template
+                                        :crop/dc-to-rel-dc-days
+                                        (into (sorted-map) ,,,))
+          ;_ (println sorted-dc-to-rel-dc-days)
 
-         {dc* :assertion/assert-dc
-          abs-dc-day* :assertion/abs-assert-dc-day} (first dc-assertions*)
-         :else nil
-         ;_ (println "dc-to-rel-dc-days: " dc-to-rel-dc-days \newline)
+          rel-dc-day* (interpolated-value sorted-dc-to-rel-dc-days dc*)
+          sorted-dc-to-rel-dc-days* (assoc sorted-dc-to-rel-dc-days dc* rel-dc-day*)
 
-         rel-dc-day* (interpolated-value sorted-dc-to-rel-dc-days dc*)
-         sorted-dc-to-rel-dc-days* (assoc sorted-dc-to-rel-dc-days dc* rel-dc-day*)
+          sorted-initial-dc-to-abs+rel-dc-day
+          (fmap (fn [rel-dc-day]
+                  {:abs-dc-day (+ abs-dc-day* (- rel-dc-day rel-dc-day*))
+                   :rel-dc-day rel-dc-day})
+                sorted-dc-to-rel-dc-days*)
+          ;_ (println "initial: ")
+          ;_ (pp/pprint sorted-initial-dc-to-abs+rel-dc-day)
+          ]
+      (reduce (fn [sorted-dc-to-days {dc* :assertion/assert-dc
+                                      abs-dc-day* :assertion/abs-assert-dc-day}]
+                (let [;get a new days pair, either from map (should be the only case) or interpolate new
+                       {:keys [abs-dc-day rel-dc-day]} (fmap (rcomp bu/round int)
+                                                             (or (get sorted-dc-to-days dc*)
+                                                                 (interpolated-value sorted-dc-to-days dc*)))
+                      ;_ (println "abs-dc-day: " abs-dc-day " rel-dc-day: " rel-dc-day)
 
-         sorted-initial-dc-to-abs+rel-dc-day
-         (fmap (fn [rel-dc-day]
-                 {:abs-dc-day (+ abs-dc-day* (- rel-dc-day rel-dc-day*))
-                  :rel-dc-day rel-dc-day})
-               sorted-dc-to-rel-dc-days*)
-         ;_ (println "initial: ")
-         ;_ (pp/pprint sorted-initial-dc-to-abs+rel-dc-day)
-         ]
+                      ;that many days the assertion shifts the reported dc state
+                       new-delta (- abs-dc-day* abs-dc-day)
+                      ;_ (println "dc*: " dc* " abs-dc-day*: " abs-dc-day* " new-delta: " new-delta)
 
-        (reduce (fn [sorted-dc-to-days {dc* :assertion/assert-dc
-                                        abs-dc-day* :assertion/abs-assert-dc-day}]
-                  (let [;get a new days pair, either from map (should be the only case) or interpolate new
-                        {:keys [abs-dc-day rel-dc-day]} (fmap (rcomp bu/round int)
-                                                              (or (get sorted-dc-to-days dc*)
-                                                                  (interpolated-value sorted-dc-to-days dc*)))
-                        ;_ (println "abs-dc-day: " abs-dc-day " rel-dc-day: " rel-dc-day)
+                      ;directly store the asserted dc state, because that's what the user reported
+                       sorted-dc-to-days* (assoc sorted-dc-to-days dc* {:abs-dc-day abs-dc-day*
+                                                                        :rel-dc-day (+ rel-dc-day new-delta)})
 
-                        ;that many days the assertion shifts the reported dc state
-                        new-delta (- abs-dc-day* abs-dc-day)
-                        ;_ (println "dc*: " dc* " abs-dc-day*: " abs-dc-day* " new-delta: " new-delta)
-
-                        ;directly store the asserted dc state, because that's what the user reported
-                        sorted-dc-to-days* (assoc sorted-dc-to-days dc* {:abs-dc-day abs-dc-day*
-                                                                         :rel-dc-day (+ rel-dc-day new-delta)})
-
-                        ;apply the new delta to all future dc-to-days pairs, because the future
-                        ;(regarding the asserted abs-day of an dc state) represents just average possible
-                        ;time ranges for the dcs
-                        ;also if a past dc (regarding the assert dc*) has due to the new delta
-                        ;a larger abs-dc-day, this mapping will be removed
-                        sorted-dc-to-days** (->> sorted-dc-to-days*
-                                                 (map (fn [[dc {:keys [abs-dc-day rel-dc-day]} :as key-value]]
-                                                        ;move everyting after assert dc* by new-delta days
-                                                        (if (> dc dc*)
-                                                          [dc {:abs-dc-day (+ abs-dc-day new-delta)
-                                                               :rel-dc-day (+ rel-dc-day new-delta)}]
-                                                          ;if there's an assertion before that has due to new-delta
-                                                          ;a larger abs-dc-day than the assert abs-dc-day*
-                                                          ;remove (skip) this assertion
-                                                          (when (<= abs-dc-day abs-dc-day*)
-                                                            key-value)))
-                                                      ,,,)
-                                                 (into (sorted-map) ,,,))
-                        ;_ (println "sorted-dc-to-days**")
-                        ;_ (pp/pprint sorted-dc-to-days**)
-                        ]
-                    sorted-dc-to-days**))
-                sorted-initial-dc-to-abs+rel-dc-day (rest dc-assertions*))))
+                      ;apply the new delta to all future dc-to-days pairs, because the future
+                      ;(regarding the asserted abs-day of an dc state) represents just average possible
+                      ;time ranges for the dcs
+                      ;also if a past dc (regarding the assert dc*) has due to the new delta
+                      ;a larger abs-dc-day, this mapping will be removed
+                       sorted-dc-to-days** (->> sorted-dc-to-days*
+                                                (map (fn [[dc {:keys [abs-dc-day rel-dc-day]} :as key-value]]
+                                                       ;move everyting after assert dc* by new-delta days
+                                                       (if (> dc dc*)
+                                                         [dc {:abs-dc-day (+ abs-dc-day new-delta)
+                                                              :rel-dc-day (+ rel-dc-day new-delta)}]
+                                                         ;if there's an assertion before that has due to new-delta
+                                                         ;a larger abs-dc-day than the assert abs-dc-day*
+                                                         ;remove (skip) this assertion
+                                                         (when (<= abs-dc-day abs-dc-day*)
+                                                           key-value))),,,)
+                                                (into (sorted-map),,,))
+                      ;_ (println "sorted-dc-to-days**")
+                      ;_ (pp/pprint sorted-dc-to-days**)
+                       ]
+                  sorted-dc-to-days**))
+              sorted-initial-dc-to-abs+rel-dc-day (rest dc-assertions)))))
 
 (defn dc-to-abs+rel-dc-day-from-plot-dc-assertions
   "create a dc to abs-dc-day map for all crops in sequence of dc-assertions"
