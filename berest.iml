@@ -22,7 +22,6 @@
     <orderEntry type="library" name="Leiningen: com.taoensso/timbre:3.1.6" level="project" />
     <orderEntry type="library" name="Leiningen: com.velisco/clj-ftp:0.3.0" level="project" />
     <orderEntry type="library" name="Leiningen: crypto-password:0.1.1" level="project" />
-    <orderEntry type="library" name="Leiningen: egamble/let-else:1.0.6" level="project" />
     <orderEntry type="library" name="Leiningen: fogus/ring-edn:0.2.0" level="project" />
     <orderEntry type="library" name="Leiningen: formative:0.3.2" level="project" />
     <orderEntry type="library" name="Leiningen: hiccup:1.0.4" level="project" />
@@ -47,6 +46,7 @@
     <orderEntry type="library" name="Leiningen: org.clojure/algo.monads:0.1.4" level="project" />
     <orderEntry type="library" name="Leiningen: org.iq80.snappy/snappy:0.3" level="project" />
     <orderEntry type="library" name="Leiningen: org.tukaani/xz:1.4" level="project" />
+    <orderEntry type="library" name="Leiningen: org.clojure/tools.macro:0.1.0" level="project" />
     <orderEntry type="library" name="Leiningen: clojurewerkz/support:0.17.0" level="project" />
     <orderEntry type="library" name="Leiningen: com.amazonaws/aws-java-sdk:1.6.6" level="project" />
     <orderEntry type="library" name="Leiningen: com.datomic/datomic-lucene-core:3.3.0" level="project" />
@@ -85,7 +85,6 @@
     <orderEntry type="library" name="Leiningen: crypto-equality:0.1.0" level="project" />
     <orderEntry type="library" name="Leiningen: crypto-random:1.1.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.mindrot/jbcrypt:0.3m" level="project" />
-    <orderEntry type="library" name="Leiningen: org.clojure/tools.macro:0.1.2" level="project" />
     <orderEntry type="library" name="Leiningen: jkkramer/verily:0.4.1" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/data.csv:0.1.2" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/data.json:0.2.1" level="project" />

@@ -14,7 +14,6 @@
 
             [berest.climate.algo :as algo]
             [berest.helper :as bh :refer [rcomp ajuxt]]
-            [let-else :as le :refer [let?]]
             [clojure.algo.generic.functor :as cagf :refer [fmap]]
             [taoensso.timbre :as timbre :refer [trace debug info warn error fatal spy]]
 

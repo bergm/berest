@@ -18,7 +18,6 @@
             [berest.web.rest.common :as common]
             [berest.web.rest.queries :as queries]
             [berest.web.rest.template :as temp]
-            [let-else :as le :refer [let?]]
             [simple-time.core :as time]))
 
 ;; page translations

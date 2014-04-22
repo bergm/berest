@@ -22,9 +22,7 @@
             [formative.core :as f]
             [formative.parse :as fp]
             [clojure-csv.core :as csv]
-            [clojure.core.match :as ccm :refer [match]]
-            [let-else :as le :refer [let?]]))
-
+            [clojure.core.match :as ccm :refer [match]]))
 
 (defn style [m]
   (reduce (fn [s [k v]]
@@ -297,7 +295,7 @@
                                        {:stroke color :fill color}))])))]]))
 
 (defn- plot-content [user-id id until]
-  (let? [db (bd/current-db user-id)
+  #_(let? [db (bd/current-db user-id)
          :else [:div#error "Fehler: Konnte keine Verbindung zur Datenbank herstellen!"]
 
          plot (bc/db-read-plot db id 2012)
@@ -686,7 +684,7 @@
                            ]
                           [csv-delimiter] :csv-delimiter
                           :as test-data}]
-  (let? [db (bd/current-db user-id)
+  #_(let? [db (bd/current-db user-id)
          :else [:div#error "Fehler: Konnte keine Verbindung zur Datenbank herstellen!"]
 
          plot (bc/db-read-plot db plot-id 2012)
@@ -764,7 +762,7 @@
               irrigation-data
               #_dc-state-data]} :data
       :as all}]
-  (let? [db (bd/current-db user-id)
+  #_(let? [db (bd/current-db user-id)
          :else [:div#error "Fehler: Konnte keine Verbindung zur Datenbank herstellen!"]
 
          weather-year* (Integer/parseInt weather-year)
@@ -836,7 +834,7 @@
               weather-year
               #_dc-state-data]} :data
       :as all}]
-  (let? [db (bd/current-db user-id)
+  #_(let? [db (bd/current-db user-id)
          :else [:div#error "Fehler: Konnte keine Verbindung zur Datenbank herstellen!"]
 
          weather-year* (Integer/parseInt weather-year)
