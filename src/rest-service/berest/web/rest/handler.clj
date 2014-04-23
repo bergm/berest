@@ -15,6 +15,8 @@
             [liberator.dev :refer [wrap-trace]]
             [berest.datomic :as db]
             [berest.web.rest.farm :as farm]
+            [berest.web.rest.crop :as crop]
+            [berest.web.rest.soil :as soil]
             [berest.web.rest.home :as home]
             [berest.web.rest.login :as login]
             [berest.web.rest.common :as common]
@@ -66,6 +68,7 @@
   [& authorized-roles]
   {:authorized? (partial default-authorized? authorized-roles)})
 
+;;----------------------------------------------------------------------------------
 
 (defresource api
   :allowed-methods [:get]
@@ -87,7 +90,7 @@
    "simulate" simulate
    "calculate" calculate})
 
-
+;;----------------------------------------------------------------------------------
 
 (defresource auth-api
   (authorized-default-resource :admin :farmer :consultant)
@@ -115,6 +118,8 @@
    "calculate" auth-calculate})
 
 
+;;----------------------------------------------------------------------------------
+
 
 (defresource users
   (authorized-default-resource :admin)
@@ -141,7 +146,7 @@
    [:id] user})
 
 
-
+;;----------------------------------------------------------------------------------
 
 (defresource
   weather-stations
@@ -164,7 +169,7 @@
 
 
 
-
+;;----------------------------------------------------------------------------------
 
 (defresource plots
   (authorized-default-resource :admin :farmer :consultant)
@@ -192,7 +197,7 @@
    [:plot-id "/"] plot})
 
 
-
+;;----------------------------------------------------------------------------------
 
 
 (defresource farms
@@ -222,9 +227,69 @@
                "/plots/" plot-subroutes}})
 
 
+;;----------------------------------------------------------------------------------
+
+(defresource crops
+  ;(authorized-default-resource :admin :consultant :farmer)
+  :allowed-methods [:get :options]
+  :available-media-types ["text/html" "application/edn"]
+  :handle-ok (fn [{request :request
+                   {media-type :media-type} :representation
+                   :as context}]
+               (condp = media-type
+                 "application/edn" (crop/get-crops-edn request)
+                 "text/html" (crop/get-crops request))))
+
+(defresource crop [id]
+  ;(authorized-default-resource :admin :consultant :farmer)
+  :allowed-methods [:get :options]
+  :available-media-types ["text/html" "application/edn"]
+  :handle-ok (fn [{request :request
+                   {media-type :media-type} :representation
+                   :as context}]
+               (condp = media-type
+                 "application/edn" (crop/get-crop-edn id request)
+                 "text/html" (crop/get-crop id request)))
+
+  #(crop/get-crop (:request %)))
+
+(def crop-subroutes
+  {"" crops
+   [:crop-id] {"/" crop}
+               ;"/dc-to-developmental-state-names/" plot-subroutes
+               ;"/dc-to-rel-dc-days/"
+               ;"/rel-dc-day-to-cover-degrees/"
+               ;"/rel-dc-day-to-extraction-depths/"
+               ;"/rel-dc-day-to-transpiration-factors/"
+               ;"/rel-dc-day-to-quotient-aet-pets/"
+               ;}
+   })
+
+;;----------------------------------------------------------------------------------
+
+(defresource soils
+  ;(authorized-default-resource :admin :consultant :farmer)
+  :allowed-methods [:get :options]
+  :available-media-types ["text/html" "application/edn"]
+  :handle-ok (fn [{request :request
+                   {media-type :media-type} :representation
+                   :as context}]
+               (condp = media-type
+                 "application/edn" (farm/get-farms-edn (-> context :identity :user/id) request)
+                 "text/html" (farm/get-farms request))))
+
+(defresource soil [id]
+  ;(authorized-default-resource :admin :consultant :farmer)
+  :allowed-methods [:get :options]
+  :available-media-types ["text/html"]
+  :handle-ok #(farm/get-farm id (:request %)))
+
+(def soil-subroutes
+  {"" soils
+   [:soil-id] {"/" soil}})
 
 
-
+;;----------------------------------------------------------------------------------
 
 (defresource data
   (authorized-default-resource :admin :consultant :farmer :guest)
@@ -236,9 +301,11 @@
   {"" data
    "users/" user-subroutes
    "weather-stations/" weather-station-subroutes
-   "farms/" farm-subroutes})
+   "farms/" farm-subroutes
+   "crops/" crop-subroutes
+   "soils/" soil-subroutes})
 
-
+;;----------------------------------------------------------------------------------
 
 
 (defresource home
@@ -277,13 +344,14 @@
                       (liberator/ring-response {:headers {"Location" location}
                                                 :session {:identity (-> request :session :identity)}})))
 
-
+;;----------------------------------------------------------------------------------
 
 (defresource logout
   :allowed-methods [:get]
   :available-media-types ["text/html"]
   :handle-ok "logout")
 
+;;----------------------------------------------------------------------------------
 
 (def bidi-service-routes
   ["/" {"" home
@@ -323,6 +391,7 @@
       (-> response
           (ring-resp/header ,,, "Access-Control-Allow-Origin" "*")
           (ring-resp/header ,,, "Access-Control-Allow-Headers" "origin, x-auth-token, x-csrf-token, content-type, accept")
+          (ring-resp/header ,,, "X-Dev-Mode" "true")
           #_(#(do (println %) %))))))
 
 

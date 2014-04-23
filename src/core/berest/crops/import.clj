@@ -169,7 +169,7 @@ Effektivitaet  =   1;          Tag
 
                :header-line (fn [crop-no cult-type & [usage-or-crop-name crop-code crop-name]]
                               [:crop {:db/id (db/new-entity-id (db/system-part))
-                                      :crop/id (str crop-no "/" cult-type (when usage-or-crop-name "/") usage-or-crop-name)
+                                      :crop/id (str crop-no "-" cult-type (when usage-or-crop-name "-") usage-or-crop-name)
                                       :crop/number (Integer/parseInt crop-no)
                                       :crop/cultivation-type cult-type
                                       :crop/usage usage-or-crop-name
