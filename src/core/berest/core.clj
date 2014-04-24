@@ -212,7 +212,7 @@
 
 (defn crop-id
   [crop]
-  (str (:plot/number crop) "/" (:plot/cultivation-type crop) "/" (:plot/usage crop)))
+  (str (:plot/number crop) "-" (:plot/cultivation-type crop) "-" (:plot/usage crop)))
 
 (defn resulting-damage-compaction-depth-cm
   [plot]
@@ -614,7 +614,7 @@
      :infiltration-into-next-layer (+ initial-excess-water infiltration-from-layer-above (- few))}))
 
 (defn interception
-  [precipitation evaporation sprinkler-donation technology-outlet-height transpiration-factor]
+  [precipitation evaporation donation sprinkle-loss-factor transpiration-factor]
   (let [null5 0.5
         null2 0.2
         tf (max 1 transpiration-factor)
@@ -626,21 +626,21 @@
                                             [0, evaporation])
 
         ;Berechnung fuer Zusatzregen/Spruehverluste
-        [sprinkler-donation*
+        [donation*
          interception-irrigation
          sprinkle-loss
          pet*]
-        (if sprinkler-donation                                  ;;was (> sprinkler-donation 1), don't know why
-          (let [ii (* 0.6 tin (+ 1 (* sprinkler-donation 0.05)))
-                sl (* (+ 1 (* (- evaporation 2.5) null2)) null2 sprinkler-donation)]
+        (if donation                                  ;;was (> sprinkler-donation 1), don't know why
+          (let [ii (* 0.6 tin (+ 1 (* donation 0.05)))
+                sl (* (+ 1 (* (- evaporation 2.5) null2)) sprinkle-loss-factor donation)]
             (if (> precipitation 0)
-              [sprinkler-donation ii sl (- evaporation (* (+ ii interception-precipitation) null5))]
-              [sprinkler-donation ii sl (- evaporation (* ii 0.75))]))
+              [donation ii sl (- evaporation (* (+ ii interception-precipitation) null5))]
+              [donation ii sl (- evaporation (* ii 0.75))]))
           [0 0 0 pet])]
     {:pet (max 0 pet*),
      :effective-precipitation (- precipitation interception-precipitation),
-     :effective-irrigation (- sprinkler-donation* interception-irrigation sprinkle-loss),
-     :effective-irrigation-uncovered (- sprinkler-donation* sprinkle-loss)}))
+     :effective-donation (- donation* interception-irrigation sprinkle-loss),
+     :effective-donation-uncovered (- donation* sprinkle-loss)}))
 
 (defn uncovered-water-abstraction-fraction
   "Get fraction of water-abstraction on uncovered soil for given layer i when using maximal m equal sized layers
@@ -912,7 +912,7 @@
     :as result-accumulator}
    {:keys [abs-day rel-dc-day
            crop
-           donation technology-type technology-outlet-height
+           donation technology-type technology-outlet-height technology-sprinkle-loss-factor
            evaporation precipitation
            cover-degree qu-target
            rounded-extraction-depth-cm
@@ -922,15 +922,15 @@
     :as input}]
   (let [{:keys [pet
                 effective-precipitation
-                effective-irrigation
-                effective-irrigation-uncovered]}
+                effective-donation
+                effective-donation-uncovered]}
         (interception precipitation evaporation
                       (when (or (= technology-type :technology.type/sprinkler)
                                 ;drip irrigation outlet height shouldn't actually be larger than 0
                                 (and (= technology-type :technology.type/drip)
                                      (>= technology-outlet-height 0)))
                         donation)
-                      technology-outlet-height
+                      technology-sprinkle-loss-factor
                       transpiration-factor)
 
         pet* (if (< cover-degree 1/1000)
@@ -939,9 +939,9 @@
 
         ;should include above ground drip irrigation and sprinkler irrigation donations
         daily-precipitation-and-donation
-        (+ (* (+ effective-precipitation effective-irrigation)
+        (+ (* (+ effective-precipitation effective-donation)
               cover-degree)
-           (* (+ precipitation effective-irrigation-uncovered)
+           (* (+ precipitation effective-donation-uncovered)
               (- 1 cover-degree)))
 
         {aet :aet
@@ -965,8 +965,8 @@
      :rel-dc-day rel-dc-day
      :irrigation-amount donation
      :effective-precipitation effective-precipitation
-     :effective-irrigation effective-irrigation
-     :effective-irrigation-uncovered effective-irrigation-uncovered
+     :effective-donation effective-donation
+     :effective-donation-uncovered effective-donation-uncovered
      :aet aet
      :pet pet*
      :aet7pet aet7pet
@@ -1212,6 +1212,7 @@
          :donation-amount (donations-at donations abs-day)
          :technology-type technology-type
          :technology-outlet-height (or (-> plot :plot.annual/technology :technology/outlet-height) 200)
+         :technology-sprinkle-loss-factor (or (-> plot :plot.annual/technology :technology/sprinkle-loss-factor) 1)
          :tavg (bu/round (:weather-data/average-temperature weather) :digits 1)
          :globrad (bu/round (:weather-data/global-radiation weather) :digits 1)
          :evaporation (bu/round (:weather-data/evaporation weather) :digits 1)
@@ -1676,8 +1677,8 @@
                      "sm 60-100cm [mm]"
                      "sm 100-150cm [mm]"
                      "effective-precipitation [mm]"
-                     "effective-irrigation [mm]"
-                     "effective-irrigation-uncovered [mm]"
+                     "effective-donation [mm]"
+                     "effective-donation-uncovered [mm]"
                      "cover-degree [%]"
                      "dc"
                      "rounded-extraction-depth [cm]"]
@@ -1728,8 +1729,8 @@
                                 (bu/sum (subvec (vec (:soil-moistures rres)) 7 11))
                                 (bu/sum (subvec (vec (:soil-moistures rres)) 11 16))
                                 (:effective-precipitation rres)
-                                (:effective-irrigation rres)
-                                (:effective-irrigation-uncovered rres)
+                                (:effective-donation rres)
+                                (:effective-donation-uncovered rres)
                                 (* (:cover-degree input) 100)
                                 (:dc input)
                                 (:rounded-extraction-depth-cm input)]))
