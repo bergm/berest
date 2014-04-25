@@ -32,9 +32,19 @@
 #_(url->link-segments "/data/plot/aaaa/")
 
 (defn standard-get-post-h3 [url]
-  [:h3 (str "GET | POST ")
+  [:h2 (str "GET | POST ")
    (for [segment (url->link-segments url)]
      segment)])
+
+(defn standard-get-layout*
+  [url title description media-type-2-content]
+  [:div
+   [:h3 (str title " (GET " url ")")]
+   [:p description]
+   (for [[media-type content] media-type-2-content]
+     [:h4 "media-type: " media-type]
+     [:hr]
+     content)])
 
 (defn standard-get-layout [{:keys [url
                                    get-title description
@@ -42,7 +52,8 @@
                                    entities sub-entity-path
                                    leaf-sub-entities?]}]
   [:div
-   [:h4 (str get-title " (GET " url ")")]
+   [:h3 (str get-title " (GET " url ")")]
+   [:h4 "media-type: text/html"]
    [:p description]
    [:hr]
    [:ul#farms
@@ -52,7 +63,7 @@
                            (get-id-fn e) (if leaf-sub-entities? "" "/"))}
             (or (get-name-fn e) (get-id-fn e))]])]
    [:hr]
-   [:h4 "application/edn"]
+   [:h4 "media-type: application/edn"]
    [:code (pr-str (map get-id-fn entities))]
    [:hr]])
 
@@ -60,7 +71,7 @@
 (defn standard-post-layout [{:keys [url
                                     post-title post-layout-fn]}]
   [:div
-   [:h4 (str post-title " (POST " url ")")]
+   [:h3 (str post-title " (POST " url ")")]
    [:form.form-horizontal {:role :form
                            :method :post
                            :action url}
