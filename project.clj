@@ -39,7 +39,7 @@
                  [com.keminglabs/c2 "0.2.3"]
                  [formative "0.3.2"]
                  [com.velisco/clj-ftp "0.3.0"]
-                 [instaparse "1.2.13"]
+                 [instaparse "1.3.2"]
                  [org.clojure/tools.logging "0.2.6"]
                  [org.clojure/tools.namespace "0.2.4"]
                  [clojurewerkz/propertied "1.1.0"]
