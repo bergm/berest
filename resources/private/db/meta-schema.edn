@@ -13,7 +13,14 @@
   :db/cardinality :db.cardinality/one
   :db.install/_attribute :db.part/db}
 
- ;rest.ui relevenat meta information
+ ;rest.ui relevant meta information
+ {:db/id #db/id[:db.part/db]
+  :db/ident :rest.ui/describe-attribute
+  :db/valueType :db.type/ref
+  :db/cardinality :db.cardinality/one
+  :db/doc "The attribute being described."
+  :db.install/_attribute :db.part/db}
+
  {:db/id #db/id[:db.part/db]
   :db/ident :rest.ui/label
   :db/valueType :db.type/ref
@@ -83,7 +90,6 @@
   :db/cardinality :db.cardinality/one
   :db/doc "References with a keyword the ui entities representing the list elements."
   :db.install/_attribute :db.part/db}
-
 
  ;; language attributes
  {:db/id #db/id[:db.part/db]

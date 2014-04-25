@@ -1,7 +1,8 @@
 [
  ;; farm
 
- {:db/id :farm/id
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/id
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "Id"
                   :lang/de "Id"}
@@ -9,7 +10,8 @@
                         :lang/de "Eindeutige Betriebs-Id"}
   :rest.ui/groups :farm}
 
- {:db/id :farm/name
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/name
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "name"
                   :lang/de "Name"}
@@ -17,33 +19,38 @@
                         :lang/de "Betriebsname"}
   :rest.ui/groups :farm}
 
- {:db/id :farm/addresses
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/addresses
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "address"
                   :lang/de "Adressen"}
   :rest.ui/groups :farm
   :rest.ui/ref-group :address}
 
- {:db/id :farm/com-connections
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/com-connections
   :rest.ui/order-no 4
   :rest.ui/label {:lang/en "communication channels"
                   :lang/de "Kommunikation"}
   :rest.ui/groups :farm}
 
- {:db/id :farm/contacts
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/contacts
   :rest.ui/order-no 5
   :rest.ui/label {:lang/en "contacts"
                   :lang/de "Kontakte"}
   :rest.ui/groups :farm}
 
- {:db/id :farm/contract
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/contract
   :rest.ui/order-no 6
   :rest.ui/label {:lang/en "contract state"
                   :lang/de "Vertragsstatus"}
   :rest.ui/groups :farm
   :rest.ui/ref-group :contract}
 
- {:db/id :farm/notes
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/notes
   :rest.ui/order-no 7
   :rest.ui/label {:lang/en "notes"
                   :lang/de "Notizen"}
@@ -52,12 +59,14 @@
   :rest.ui/type :rest.ui.type/multi-line-text
   :rest.ui/groups :farm}
 
- {:db/id :farm/plots
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/plots
   :rest.ui/order-no 8
   :rest.ui/label {:lang/en "plots"
                   :lang/de "Schläge"}}
 
- {:db/id :farm/authorative-weather-station
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/authorative-weather-station
   :rest.ui/order-no 9
   :rest.ui/label {:lang/en "DWD weather station"
                   :lang/de "DWD Wetterstation"}
@@ -65,18 +74,21 @@
   :rest.ui/type :rest.ui.type/ref-list
   :rest.ui/list-values :weather-station/id}
 
- {:db/id :farm/weather-station
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/weather-station
   :rest.ui/order-no 10
   :rest.ui/label {:lang/en "local weather station"
                   :lang/de "Lokale Wetterstation"}
   :rest.ui/groups :farm}
 
- #_{:db/id :farm/weather-data
+ #_{:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :farm/weather-data
   }
 
  ;; address
 
- {:db/id :address/street
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/street
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "street"
                   :lang/de "Strasse"}
@@ -84,55 +96,64 @@
                         :lang/de "Beispielstrasse 12"}
   :rest.ui/groups :address}
 
- {:db/id :address/postal-code
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/postal-code
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "postal code"
                   :lang/de "PLZ"}
   :rest.ui/groups :address}
 
- {:db/id :address/city
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/city
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "city"
                   :lang/de "Stadt"}
   :rest.ui/groups :address}
 
- {:db/id :address/city-part
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/city-part
   :rest.ui/order-no 4
   :rest.ui/label {:lang/en "city part"
                   :lang/de "Stadtteil"}
   :rest.ui/groups :address}
 
- {:db/id :address/municipality
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/municipality
   :rest.ui/order-no 5
   :rest.ui/label {:lang/en "municipality"
                   :lang/de "Gemeinde/Landkreis"}
   :rest.ui/groups :address}
 
-  {:db/id :address/municipality-short
+  {:db/id #db/id[:berest.part/rest-ui]
+   :rest.ui/describe-attribute :address/municipality-short
   :rest.ui/order-no 6
   :rest.ui/label {:lang/en "mun. code"
                   :lang/de "LK Zeichen"}
   :rest.ui/groups :address}
 
- {:db/id :address/state
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/state
   :rest.ui/order-no 7
   :rest.ui/label {:lang/en "state"
                   :lang/de "Bundesland"}
   :rest.ui/groups :address}
 
- {:db/id :address/state-short
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/state-short
   :rest.ui/order-no 8
   :rest.ui/label {:lang/en "state code"
                   :lang/de "BL Zeichen"}
   :rest.ui/groups :address}
 
- {:db/id :address/country
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/country
   :rest.ui/order-no 9
   :rest.ui/label {:lang/en "country"
                   :lang/de "Land"}
   :rest.ui/groups :address}
 
- {:db/id :address/country-short
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :address/country-short
   :rest.ui/order-no 10
   :rest.ui/label {:lang/en "country code"
                   :lang/de "Landeskennzeichen"}
@@ -140,7 +161,8 @@
 
  ;; contract
 
- {:db/id :contract/state
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :contract/state
   :rest.ui/type :rest.ui.type/enum-list
   :rest.ui/list-values :contract/state
   :rest.ui/order-no 1
@@ -148,13 +170,15 @@
                   :lang/de "Vertragsstatus"}
   :rest.ui/groups :contract}
 
- {:db/id :contract/start
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :contract/start
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "contract start"
                   :lang/de "Vertragsbeginn"}
   :rest.ui/groups :contract}
 
- {:db/id :contract/end
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :contract/end
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "contract end"
                   :lang/de "Vertragsende"}
@@ -162,19 +186,22 @@
 
 ;; contract state list elements
 
- {:db/id :contract.state/contact
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :contract.state/contact
   :rest.ui/list :contract/state
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "contact"
                   :lang/de "Kontakt"}}
 
- {:db/id :contract.state/consulting
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :contract.state/consulting
   :rest.ui/list :contract/state
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "consulting"
                   :lang/de "Beratung"}}
 
- {:db/id :contract.state/repeated
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :contract.state/repeated
   :rest.ui/list :contract/state
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "repeated"
@@ -183,7 +210,8 @@
 
  ;;weather station
 
- {:db/id :weather-station/id
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :weather-station/id
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "id"
                   :lang/de "Id"}
@@ -191,7 +219,8 @@
                         :lang/de "12345"}
   :rest.ui/groups :weather-station}
 
- {:db/id :weather-station/name
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :weather-station/name
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "name"
                   :lang/de "Name"}
@@ -199,7 +228,8 @@
                         :lang/de "Wetterwarte xyz"}
   :rest.ui/groups :weather-station}
 
- {:db/id :weather-station/geo-coord
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :weather-station/geo-coord
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "geo-location"
                   :lang/de "Geo-Position"}
@@ -208,7 +238,8 @@
 
  ;;geo coord
 
- {:db/id :geo-coord/latitude
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :geo-coord/latitude
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "lat"
                   :lang/de "lat"}
@@ -216,7 +247,8 @@
                         :lang/de "Breitengrad/Latitude"}
   :rest.ui/groups :geo-coord}
 
- {:db/id :geo-coord/longitude
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :geo-coord/longitude
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "long"
                   :lang/de "long"}
@@ -224,7 +256,8 @@
                         :lang/de "Längengrad/Longitude"}
   :rest.ui/groups :geo-coord}
 
-  #_{:db/id :geo-coord/gk5-r
+  #_{:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :geo-coord/gk5-r
    :rest.ui/order-no 3
    :rest.ui/label {:lang/en "GK5-right"
                    :lang/de "GK5-rechts"}
@@ -232,7 +265,8 @@
                          :lang/de "GK5 Rechtswert"}
    :rest.ui/groups :geo-coord}
 
- #_{:db/id :geo-coord/gk5-h
+ #_{:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :geo-coord/gk5-h
   :rest.ui/order-no 4
   :rest.ui/label {:lang/en "GK5-height"
                   :lang/de "GK5-Höhe"}
@@ -244,7 +278,8 @@
 
  ;; user
 
- {:db/id :user/id
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user/id
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "id"
                   :lang/de "Id"}
@@ -252,7 +287,8 @@
                         :lang/de "Nutzer Id"}
   :rest.ui/groups :user}
 
- {:db/id :user/password
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user/password
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "password"
                   :lang/de "Passwort"}
@@ -260,7 +296,8 @@
                         :lang/de "ein gutes Passwort"}
   :rest.ui/groups :user}
 
- {:db/id :user/full-name
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user/full-name
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "full name"
                   :lang/de "voller Name"}
@@ -268,7 +305,8 @@
                         :lang/de "Max Mustermann"}
   :rest.ui/groups :user}
 
- {:db/id :user/roles
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user/roles
   :rest.ui/order-no 4
   :rest.ui/label {:lang/en "role"
                   :lang/de "Rolle"}
@@ -278,25 +316,29 @@
 
  ;; user roles list elements
 
- {:db/id :user.role/admin
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user.role/admin
   :rest.ui/list :user/roles
   :rest.ui/order-no 1
   :rest.ui/label {:lang/en "Admininstrator"
                   :lang/de "Administrator"}}
 
- {:db/id :user.role/consultant
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user.role/consultant
   :rest.ui/list :user/roles
   :rest.ui/order-no 2
   :rest.ui/label {:lang/en "Consultant"
                   :lang/de "Berater"}}
 
- {:db/id :user.role/farmer
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user.role/farmer
   :rest.ui/list :user/roles
   :rest.ui/order-no 3
   :rest.ui/label {:lang/en "Farmer"
                   :lang/de "Landwirt"}}
 
- {:db/id :user.role/guest
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :user.role/guest
   :rest.ui/list :user/roles
   :rest.ui/order-no 4
   :rest.ui/label {:lang/en "Guest"

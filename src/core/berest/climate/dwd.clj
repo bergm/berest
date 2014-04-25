@@ -226,7 +226,7 @@
   (import-dwd-data-into-datomic (ctc/date-time 2014 2 3))
 
   (bulk-import-dwd-data-into-datomic (ctc/date-time 2014 2 3)
-                                     (ctc/date-time 2014 4 17))
+                                     (ctc/date-time 2014 4 25))
 
   )
 

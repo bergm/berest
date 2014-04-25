@@ -3,7 +3,8 @@
   (:require [clojure.string :as cs]
             [clojure.edn :as edn]
             [datomic.api :as d]
-            [berest.datomic :as db]))
+            [berest.datomic :as db]
+            [berest.helper :as bh :refer [rcomp]]))
 
 (defmulti string->value* (fn [db-type _] db-type))
 
@@ -63,19 +64,23 @@
 
 (defn get-ui-entities [db attr & [value]]
   (let [result (if value
-                 (d/q '[:find ?ui-e
+                 (d/q '[:find ?ui-e ?d-attr-e
                         :in $ ?attr ?value
                         :where
-                        [?ui-e ?attr ?value]]
-                      db attr value)
-                 (d/q '[:find ?ui-e
+                        [?ui-e ?attr ?value]
+                        [?ui-e :rest.ui/describe-attribute ?d-attr-e]]
+                      db (d/entid db attr) value)
+                 (d/q '[:find ?ui-e ?d-attr-e
                         :in $ ?attr
                         :where
-                        [?ui-e ?attr]]
-                      db attr))]
+                        [?ui-e ?attr]
+                        [?ui-e :rest.ui/describe-attribute ?d-attr-e]]
+                      db (d/entid db attr)))]
     (->> result
-         (map first ,,,)
-         (map (partial d/entity db) ,,,)
+         (map #(merge {}
+                      (d/entity db (first %))
+                      (d/entity db (second %)))
+           ,,,)
          (sort-by :rest.ui/order-no ,,,)
          #_(map d/touch ,,,))))
 

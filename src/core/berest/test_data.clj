@@ -343,6 +343,7 @@
   (let [year 1993
         technology {:db/id (db/new-entity-id in-partition)
                     :technology/type :technology.type/sprinkler
+                    :technology/sprinkle-loss-factor 0.2
                     :technology/cycle-days 1
                     :donation/min 5
                     :donation/max 30
@@ -361,7 +362,7 @@
                                                               [[26 8] 15.0]
                                                               [[27 8] 15.0]])
         crop-instances [{:db/id (db/new-entity-id in-partition)
-                         :crop.instance/template [:crop/id "0801/1/0"]
+                         :crop.instance/template [:crop/id "0801-1-0"]
                          :crop.instance/name "Zuckerrübe - 801/1/0"
                          :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
@@ -394,6 +395,7 @@
   (let [year 1994
         technology {:db/id (db/new-entity-id in-partition)
                     :technology/type :technology.type/sprinkler
+                    :technology/sprinkle-loss-factor 0.2
                     :technology/cycle-days 1
                     :donation/min 5
                     :donation/max 30
@@ -413,7 +415,7 @@
                                                               [[1 7] 10.0]
                                                               [[5 7] 11.0]])
         crop-instances [{:db/id (db/new-entity-id in-partition)
-                         :crop.instance/template [:crop/id "0101/1/0"]
+                         :crop.instance/template [:crop/id "0101-1-0"]
                          :crop.instance/name "Winterweizen/EJ - 0101/1/0"
                          :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
@@ -445,6 +447,7 @@
   (let [year 1995
         technology {:db/id (db/new-entity-id in-partition)
                     :technology/type :technology.type/sprinkler
+                    :technology/sprinkle-loss-factor 0.2
                     :technology/cycle-days 1
                     :donation/min 5
                     :donation/max 30
@@ -458,7 +461,7 @@
         irrigation-donations (db/create-irrigation-donations in-partition year
                                                              [[[30 6] 10.0]])
         crop-instances [{:db/id (db/new-entity-id in-partition)
-                         :crop.instance/template [:crop/id "0120/1/0"]
+                         :crop.instance/template [:crop/id "0120-1-0"]
                          :crop.instance/name "Wintergerste/EJ - 0120/1/0"
                          :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
@@ -490,6 +493,7 @@
   (let [year 1996
         technology {:db/id (db/new-entity-id in-partition)
                     :technology/type :technology.type/sprinkler
+                    :technology/sprinkle-loss-factor 0.2
                     :technology/cycle-days 1
                     :donation/min 5
                     :donation/max 30
@@ -506,7 +510,7 @@
                                                               [[25 6] 10.0]
                                                               [[27 6] 10.0]])
         crop-instances [{:db/id (db/new-entity-id in-partition)
-                         :crop.instance/template [:crop/id "0110/1/0"]
+                         :crop.instance/template [:crop/id "0110-1-0"]
                          :crop.instance/name "Winterroggen/EJ - 0110/1/0"
                          :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
@@ -538,6 +542,7 @@
   (let [year 1997
         technology {:db/id (db/new-entity-id in-partition)
                     :technology/type :technology.type/sprinkler
+                    :technology/sprinkle-loss-factor 0.2
                     :technology/cycle-days 1
                     :donation/min 5
                     :donation/max 30
@@ -561,7 +566,7 @@
                                                               [[22 8] 40.0]
                                                               [[28 8] 25.0]])
         crop-instances [{:db/id (db/new-entity-id in-partition)
-                         :crop.instance/template [:crop/id "0801/1/0"]
+                         :crop.instance/template [:crop/id "0801-1-0"]
                          :crop.instance/name "Zuckerrübe - 801/1/0"
                          :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition
@@ -593,6 +598,7 @@
   (let [year 1998
         technology {:db/id (db/new-entity-id in-partition)
                     :technology/type :technology.type/sprinkler
+                    :technology/sprinkle-loss-factor 0.2
                     :technology/cycle-days 1
                     :donation/min 5
                     :donation/max 30
@@ -610,7 +616,7 @@
                                                               [[24 6] 20.0]
                                                               [[3 7] 20.0]])
         crop-instances [{:db/id (db/new-entity-id in-partition)
-                         :crop.instance/template [:crop/id "0101/1/0"]
+                         :crop.instance/template [:crop/id "0101-1-0"]
                          :crop.instance/name "Winterweizen/EJ - 0101/1/0"
                          :crop.instance/dc-assertions (map :db/id dc-assertions)}]
         initial-sms (db/create-entities in-partition

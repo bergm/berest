@@ -1212,7 +1212,7 @@
          :donation-amount (donations-at donations abs-day)
          :technology-type technology-type
          :technology-outlet-height (or (-> plot :plot.annual/technology :technology/outlet-height) 200)
-         :technology-sprinkle-loss-factor (or (-> plot :plot.annual/technology :technology/sprinkle-loss-factor) 1)
+         :technology-sprinkle-loss-factor (or (-> plot :plot.annual/technology :technology/sprinkle-loss-factor) 0)
          :tavg (bu/round (:weather-data/average-temperature weather) :digits 1)
          :globrad (bu/round (:weather-data/global-radiation weather) :digits 1)
          :evaporation (bu/round (:weather-data/evaporation weather) :digits 1)

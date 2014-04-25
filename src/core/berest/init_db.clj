@@ -4,7 +4,8 @@
             [berest.datomic :as db]
             [berest.climate.import :as climate-import]
             [berest.climate.dwd :as dwd]
-            [berest.crops.import :as crop-import]))
+            [berest.crops.import :as crop-import]
+            [berest.test-data :as test-data]))
 
 (defn delete-db
   []
@@ -30,6 +31,11 @@
 
   ;add crop data
   (crop-import/import-bbfastdx-crop-files-into-datomic (db/connection))
+
+  ;add some test data
+  (test-data/add-zalf-test-farm :zalf)
+  (test-data/add-zalf-test-plot :zalf)
+
 
   )
 
