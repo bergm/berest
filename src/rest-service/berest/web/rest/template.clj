@@ -42,9 +42,16 @@
    [:h3 (str title " (GET " url ")")]
    [:p description]
    (for [[media-type content] media-type-2-content]
-     [:h4 "media-type: " media-type]
-     [:hr]
-     content)])
+     [:div
+      [:h4 "media-type: " media-type]
+      [:hr]
+      content])])
+
+(defn entities->link-list
+  [entities]
+  [:ul#farms
+   (for [{:keys [url name]} entities]
+     [:li [:a {:href url} name]])])
 
 (defn standard-get-layout [{:keys [url
                                    get-title description

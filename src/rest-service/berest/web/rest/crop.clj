@@ -21,9 +21,9 @@
   [element & [lang]]
   (get-in {:crops {:lang/de "Feldfrüchte"
                    :lang/en "crops"}
-           :show {:lang/de "Hier werden alle in der Datenbank
+           :description {:lang/de "Hier werden alle in der Datenbank
                   gespeicherten Feldfrüchte angezeigt."
-                  :lang/en "Here will be displayed all crops
+                         :lang/en "Here will be displayed all crops
                   stored in the database."}
            #_:create #_{:lang/de "Neuen Betrieb erstellen:"
                     :lang/en "Create new farm:"}
@@ -40,33 +40,43 @@
 
    #_[:button.btn.btn-primary {:type :submit} (vocab :create-button)]])
 
-(defn crops-layout [db url]
-  [:div.container
-   (temp/standard-get-post-h3 url)
+(defn all-crops
+  [db url]
+  (->> (d/q '[:find ?crop-e
+              :in $
+              :where
+              [?crop-e :crop/id _]]
+            db)
+       (map (rcomp first (partial d/entity db)) ,,,)
 
-   (temp/standard-get-layout {:url url
-                              :get-title (vocab :crops)
-                              :description (vocab :show)
-                              :get-id-fn :crop/id
-                              :get-name-fn :crop/name
-                              :entities (db/query-entities db :crop/id)
-                              :sub-entity-path ["crops"]})
+       (map #(assoc % :url (str url (:crop/id %) "/")) ,,,)))
 
-   #_(temp/standard-post-layout {:url url
-                               :post-title (vocab :create)
-                               :post-layout-fn (partial create-farms-layout db)})])
+(defn get-crops-edn*
+  [db url]
+  (map #(select-keys % [:crop/name :crop/symbol :url])
+       (all-crops db url)))
 
 (defn get-crops-edn
   [{:keys [uri] :as request}]
   (let [db (db/current-db)]
-    (->> (d/q '[:find ?crop-e
-                :in $
-                :where
-                [?crop-e :crop/id _]]
-              db)
-         (map (rcomp first (partial d/entity db)) ,,,)
-         (map #(select-keys % [:crop/id :crop/name :crop/symbol]) ,,,)
-         (map #(assoc % :url (str uri (:crop/id %) "/")) ,,,))))
+    (get-crops-edn* db uri)))
+
+(defn crops-layout
+  [db url]
+  (let [crops (all-crops db url)]
+    [:div.container
+     (temp/standard-get-post-h3 url)
+
+     (temp/standard-get-layout*
+       url (vocab :crops) (vocab :description)
+       "text/html" [:ul#farms
+                    (for [{url :url
+                           name :crop/name
+                           symbol :crop/symbol} crops]
+                      [:li [:a {:href url} (str symbol " | " name)]])]
+
+       "application/edn" [:code {:style "width:100%"}
+                          (pr-str (get-crops-edn* db url))])]))
 
 (defn get-crops
   [request]
