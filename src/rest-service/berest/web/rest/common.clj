@@ -23,6 +23,14 @@
 
 ;; html5 inputs
 
+(defn input-field* [& {:keys [type id label placeholder]}]
+  [:div.form-group
+   [:label.col-sm-3.control-label {:for id} label]
+   [:div.col-sm-9
+    [:input.form-control {:type        type
+                          :id          id :name id
+                          :placeholder placeholder}]]])
+
 (defn input-field [type* ui-entity]
   (let [id (-> ui-entity :db/ident ns-attr->id)
         label (-> ui-entity :rest.ui/label *lang*)
@@ -288,11 +296,12 @@
 
 
 (defn standard-get
-  [layout-fn {:keys [uri params] :as request}]
-  (->> (layout-fn uri)
-       (body nil #_(auth/get-identity request) ,,,)
-       (hp/html5 (head (str "GET | POST " uri)) ,,,)))
-
+  [{:keys [uri params] :as request} layout]
+  (hp/html5
+    (head (str "GET | POST " uri))
+    (body
+      nil #_(auth/get-identity request)
+      layout)))
 
 
 (hd/defhtml layout [title & content]

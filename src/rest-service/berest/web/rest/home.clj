@@ -4,6 +4,7 @@
             [berest.datomic :as db]
             [datomic.api :as d]
             [ring.util.response :as rur]
+            [ring.util.request :as req]
             [hiccup.element :as he]
             [hiccup.def :as hd]
             [hiccup.form :as hf]
@@ -37,21 +38,37 @@
 
 
 (defn home-layout
-  [url]
+  [url-path]
   [:div.container
    [:h2 "Berest REST service"]
    [:p (vocab :title :lang/en)]
    [:hr]
    [:ul#berestElements
-    [:li [:a {:href (str url "api/")} "API"]
-     [:li [:a {:href (str url "data/")} "Data"]]
-     ]]])
+    [:li [:a {:href (str url-path "login")} "Login"]]
+    [:li [:a {:href (str url-path "logout")} "Logout"]]
+    [:li [:a {:href (str url-path "api/")} "API"]]
+    [:li [:a {:href (str url-path "auth-api/")} "Authenticated API"]]
+    [:li [:a {:href (str url-path "data/")} "Data"]]]])
 
 (defn get-home
-  [{:keys [uri] :as request}]
-  (->> (home-layout uri)
-       (common/body nil #_(auth/get-identity request) ,,,)
-       (hp/html5 (common/head "Berest REST service") ,,,)))
+  [{url-path :uri :as request}]
+  (hp/html5
+    (common/head "Berest REST service")
+    (common/body nil #_(auth/get-identity request)
+                 (home-layout url-path))))
 
+(defn get-home-edn
+  [request]
+  (let [full-url (req/request-url request)]
+    {:login  {:url (str full-url "login")
+              :description "POST to this service login url for authentication to BEREST REST service."}
+     :logout {:url (str full-url "logout")
+              :description "POST to this service logout url to logout of BEREST REST service."}
+     :api {:url (str full-url "api/")
+           :description "Unauthenticated API resources of BEREST REST service."}
+     :auth-api {:url (str full-url "auth-api/")
+                :description "Authenticated API resources of BEREST REST service. POST to service-login/ required first."}
+     :data   {:url (str full-url "data/")
+              :description "GET data resources of BEREST REST service."}}))
 
 

@@ -43,7 +43,7 @@
 
 (defn api-layout [db url]
   [:div.container
-   (temp/standard-get-post-h3 url)
+   (temp/standard-header url)
 
    #_[:div
     [:h4 (str (vocab :farms) " (GET " url ")")]

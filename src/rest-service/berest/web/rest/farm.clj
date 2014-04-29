@@ -42,7 +42,7 @@
 
 (defn farms-layout [db url]
   [:div.container
-   (temp/standard-get-post-h3 url)
+   (temp/standard-header url)
 
    (temp/standard-get-layout {:url url
                               :get-title (vocab :farms)

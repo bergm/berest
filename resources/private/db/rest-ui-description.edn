@@ -344,6 +344,80 @@
   :rest.ui/label {:lang/en "Guest"
                   :lang/de "Gast"}}
 
+ ;; crop
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/id
+  :rest.ui/order-no 1
+  :rest.ui/label {:lang/en "Id"
+                  :lang/de "Id"}
+  :rest.ui/placeholder {:lang/en "unique id"
+                        :lang/de "Eindeutige Fruchtart-Id"}
+  :rest.ui/groups :crop}
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/name
+  :rest.ui/order-no 2
+  :rest.ui/label {:lang/en "name"
+                  :lang/de "Name"}
+  :rest.ui/placeholder {:lang/en "crop name"
+                        :lang/de "Name der Fruchtart"}
+  :rest.ui/groups :crop}
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/description
+  :rest.ui/order-no 3
+  :rest.ui/label {:lang/en "description"
+                  :lang/de "Beschreibung"}
+  :rest.ui/placeholder {:lang/en "crop description"
+                        :lang/de "Beschreibung der Fruchtart"}
+  :rest.ui/groups :crop}
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/number
+  :rest.ui/order-no 4
+  :rest.ui/label {:lang/en "BEREST number"
+                  :lang/de "BEREST-Nummer"}
+  :rest.ui/placeholder {:lang/en "BEREST crop number"
+                        :lang/de "BEREST Nummer der Fruchtart"}
+  :rest.ui/groups :crop}
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/cultivation-type
+  :rest.ui/order-no 5
+  :rest.ui/label {:lang/en "BEREST cultivation type"
+                  :lang/de "BEREST Anbauform"}
+  :rest.ui/placeholder {:lang/en "BEREST cultivation type (1-8)"
+                        :lang/de "BEREST Anbauform (1-8)"}
+  :rest.ui/groups :crop}
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/usage
+  :rest.ui/order-no 6
+  :rest.ui/label {:lang/en "BEREST usage"
+                  :lang/de "BEREST Verwendungszweck"}
+  :rest.ui/placeholder {:lang/en "BEREST usage (0-9)"
+                        :lang/de "Name der Fruchtart (0-9)"}
+  :rest.ui/groups :crop}
+
+ {:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/symbol
+  :rest.ui/order-no 7
+  :rest.ui/label {:lang/en "crop symbol"
+                  :lang/de "Fruchtart Symbol"}
+  :rest.ui/placeholder {:lang/en "crop symbol"
+                        :lang/de "Fruchtart Symbol"}
+  :rest.ui/groups :crop}
+
+ #_{:db/id #db/id[:berest.part/rest-ui]
+  :rest.ui/describe-attribute :crop/dc-to-rel-dc-days
+  :rest.ui/order-no 8
+  :rest.ui/label {:lang/en "name"
+                  :lang/de "Name"}
+  :rest.ui/placeholder {:lang/en "crop name"
+                        :lang/de "Name der Fruchtart"}
+  :rest.ui/groups :crop}
+
 
  ]
 

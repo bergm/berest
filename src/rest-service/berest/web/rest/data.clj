@@ -2,6 +2,7 @@
   (:require [clojure.string :as cs]
             [datomic.api :as d]
             [ring.util.response :as rur]
+            [ring.util.request :as req]
             [hiccup.element :as he]
             [hiccup.def :as hd]
             [hiccup.form :as hf]
@@ -20,35 +21,44 @@
 (defn vocab
   "translatable vocabulary for this page"
   [element & [lang]]
-  (get-in {:wstations {:lang/de "Wetterstationen"
-                       :lang/en "Weatherstations"}
-           :farms {:lang/de "Landwirtschaftliche Betriebe"
-                   :lang/en "Farms"}
-           :show {:lang/de "Hier werden alle in der Datenbank
-                  gespeicherten Wetterstationen angezeigt."
-                  :lang/en "Here will be displayed all weather stations
-                  stored in the database."}
-           :create {:lang/de "Neue Wetterstation erstellen:"
-                    :lang/en "Create new weather station:"}
-           :create-button {:lang/de "Erstellen"
-                           :lang/en "Create"}
-
+  (get-in {:crops {:lang/de "Fruchtarten"
+                       :lang/en "crops"}
+           :soils {:lang/de "Böden"
+                   :lang/en "soils"}
+           :users {:lang/de "Liste aller Nutzer (nur ADMIN Rolle)"
+                   :lang/en "List of all users (only admin role)"}
+           :user {:lang/de "Nutzer-Daten"
+                  :lang/en "user-data"}
            }
           [element (or lang common/*lang*)] "UNKNOWN element"))
 
 ;; page layouts
 
-(defn data-layout [db url]
-  [:div.container
-   (temp/standard-get-post-h3 url)
+(defn data-layout
+  [request]
+  (let [url-path (:uri request)
+        {user-id :user/id
+         user-roles :user/roles} (-> request :session :identity)]
+    [:div.container
+     (temp/standard-header url-path)
 
-   [:div [:a {:href (str url "weather-stations/")} (vocab :wstations)]]
-   [:div [:a {:href (str url "farms/")} (vocab :farms)]]])
+     (when (:admin user-roles)
+       [:div [:a {:href (str url-path "users/")} (vocab :users)]])
+     (when user-id
+       [:div [:a {:href (str url-path "users/" user-id "/")} (str (vocab :user) " " user-id)]])
+     [:div [:a {:href (str url-path "crops/")} (vocab :crops)]]
+     [:div [:a {:href (str url-path "soils/")} (vocab :soils)]]]))
 
 (defn get-data
   [request]
-  (let [db (db/current-db)]
-    (common/standard-get (partial data-layout db)
-                         request)))
+  (common/standard-get request (data-layout request)))
+
+(defn get-data-edn
+  [request]
+  (let [full-url (req/request-url request)]
+    {:crops  {:url         (str full-url "data/crops/")
+              :description "GET all available crops from this url"}
+     :soils  {:url         (str full-url "data/soils/")
+              :description "GET all available soils from this url"}}))
 
 

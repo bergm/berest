@@ -10,6 +10,7 @@
             [ring.middleware.resource :refer [wrap-resource]]
             [ring.middleware.session :refer [wrap-session]]
             [ring.util.response :as ring-resp]
+            [ring.util.request :as ring-req]
             [liberator.core :refer [resource defresource]]
             [liberator.representation :as liberator]
             [liberator.dev :refer [wrap-trace]]
@@ -118,32 +119,6 @@
    "calculate" auth-calculate})
 
 
-;;----------------------------------------------------------------------------------
-
-
-(defresource users
-  (authorized-default-resource :admin)
-  :allowed-methods [:post :get]
-  :available-media-types ["text/html"]
-  :handle-ok #(user/get-users (:request %))
-  :post! #(user/create-user (:request %))
-  :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
-
-(defresource user
-  ;authorize right now just the :admin role and the user itself for a path with the users-id
-  :authorized? #(default-authorized? [:admin] %
-                                     :single-user? true
-                                     :single-user-id-route-params-key :id)
-
-  :allowed-methods [:put :get]
-  :available-media-types ["text/html"]
-  :handle-ok #(user/get-user (:request %))
-  :put! #(user/update-user (:request %))
-  :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
-
-(def user-subroutes
-  {"" users
-   [:id] user})
 
 
 ;;----------------------------------------------------------------------------------
@@ -158,6 +133,7 @@
   :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
 
 (defresource weather-station [id]
+  (authorized-default-resource :admin :consultant :farmer :guest)
   :allowed-methods [:put :get]
   :available-media-types ["text/html"]
   :handle-ok #(wstation/get-weather-station id (:request %))
@@ -226,6 +202,41 @@
    [:farm-id] {"/" farm
                "/plots/" plot-subroutes}})
 
+;;----------------------------------------------------------------------------------
+
+
+(defresource users
+  (authorized-default-resource :admin)
+  :allowed-methods [:options :post :get]
+  :available-media-types ["text/html" "application/edn"]
+  :handle-ok (fn [{request :request
+                   {media-type :media-type} :representation
+                   :as context}]
+               (condp = media-type
+                 "application/edn" (user/get-users-edn request)
+                 "text/html" (user/get-users request)))
+
+  :post! #(user/create-user (:request %))
+  :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
+
+(defresource user
+  ;authorize right now just the :admin role and the user itself for a path with the users-id
+  :authorized? #(default-authorized? [:admin] %
+                                     :single-user? true
+                                     :single-user-id-route-params-key :user-id)
+
+  :allowed-methods [:put :get]
+  :available-media-types ["text/html"]
+  :handle-ok #(user/get-user (:request %))
+  :put! #(user/update-user (:request %))
+  :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
+
+(def user-subroutes
+  {"" users
+   [:user-id] {"/" user
+               "/weather-stations/" weather-station-subroutes
+               "/farms/" farm-subroutes}})
+
 
 ;;----------------------------------------------------------------------------------
 
@@ -240,18 +251,17 @@
                  "application/edn" (crop/get-crops-edn request)
                  "text/html" (crop/get-crops request))))
 
-(defresource crop [id]
+(defresource crop
   ;(authorized-default-resource :admin :consultant :farmer)
   :allowed-methods [:get :options]
   :available-media-types ["text/html" "application/edn"]
   :handle-ok (fn [{request :request
                    {media-type :media-type} :representation
                    :as context}]
-               (condp = media-type
-                 "application/edn" (crop/get-crop-edn id request)
-                 "text/html" (crop/get-crop id request)))
-
-  #(crop/get-crop (:request %)))
+               (let [id (-> request :route-params :crop-id)]
+                 (condp = media-type
+                   "application/edn" (crop/get-crop-edn id request)
+                   "text/html" (crop/get-crop id request)))))
 
 (def crop-subroutes
   {"" crops
@@ -275,14 +285,14 @@
                    {media-type :media-type} :representation
                    :as context}]
                (condp = media-type
-                 "application/edn" (farm/get-farms-edn (-> context :identity :user/id) request)
-                 "text/html" (farm/get-farms request))))
+                 "application/edn" {:error "not implemented yet"}
+                 "text/html" "not implemented yet")))
 
 (defresource soil [id]
   ;(authorized-default-resource :admin :consultant :farmer)
   :allowed-methods [:get :options]
   :available-media-types ["text/html"]
-  :handle-ok #(farm/get-farm id (:request %)))
+  :handle-ok "not implemented yet")
 
 (def soil-subroutes
   {"" soils
@@ -292,7 +302,7 @@
 ;;----------------------------------------------------------------------------------
 
 (defresource data
-  (authorized-default-resource :admin :consultant :farmer :guest)
+  #_(authorized-default-resource :admin :consultant :farmer :guest)
   :allowed-methods [:get]
   :available-media-types ["text/html"]
   :handle-ok #(data/get-data (:request %)))
@@ -300,8 +310,7 @@
 (def data-subroutes
   {"" data
    "users/" user-subroutes
-   "weather-stations/" weather-station-subroutes
-   "farms/" farm-subroutes
+   ;"weather-stations/" weather-station-subroutes
    "crops/" crop-subroutes
    "soils/" soil-subroutes})
 
@@ -309,9 +318,13 @@
 
 
 (defresource home
-  :allowed-methods [:get]
-  :available-media-types ["text/html"]
-  :handle-ok #(home/get-home (:request %)))
+  :allowed-methods [:get :options]
+  :available-media-types ["text/html" "application/edn"]
+  :handle-ok (fn [{request :request
+                   {media-type :media-type} :representation}]
+               (condp = media-type
+                 "application/edn" (home/get-home-edn request)
+                 "text/html" (home/get-home request))))
 
 (defresource login
   :allowed-methods [:options :post :get]
@@ -322,9 +335,15 @@
 
   :handle-ok (fn [{request :request
                    {media-type :media-type} :representation}]
-               (let [user-id (some-> request :session :identity :user/id)]
+               (let [user-id (some-> request :session :identity :user/id)
+                     ;full-url (ring-req/request-url request)
+                     base-url (str (-> request :scheme name)
+                                   "://"
+                                   (get-in request [:headers "host"])
+                                   "/")]
                  (condp = media-type
-                   "application/edn" {:session-token (db/create-session-token user-id)}
+                   "application/edn" {:session-token (db/create-session-token user-id)
+                                      :user-home {:url (str base-url "data/users/" user-id "/")}}
                    "text/html" (login/get-login request))))
 
   :post! (fn [{{{user-id :username
@@ -347,7 +366,7 @@
 ;;----------------------------------------------------------------------------------
 
 (defresource logout
-  :allowed-methods [:get]
+  :allowed-methods [:post]
   :available-media-types ["text/html"]
   :handle-ok "logout")
 
