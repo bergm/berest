@@ -33,48 +33,6 @@
           [element (or lang common/*lang*)] "UNKNOWN element"))
 
 
-(defn create-farms-layout [db]
-  [:div.container
-   (for [e (queries/get-ui-entities db :rest.ui/groups :farm)]
-     (common/create-form-element db e))
-
-   [:button.btn.btn-primary {:type :submit} (vocab :create-button)]])
-
-(defn farms-layout [db url]
-  [:div.container
-   (temp/standard-header url)
-
-   (temp/standard-get-layout {:url url
-                              :get-title (vocab :farms)
-                              :description (vocab :show)
-                              :get-id-fn :farm/id
-                              :get-name-fn :farm/name
-                              :entities (db/query-entities db :farm/id)
-                              :sub-entity-path ["farms"]})
-
-   (temp/standard-post-layout {:url url
-                               :post-title (vocab :create)
-                               :post-layout-fn (partial create-farms-layout db)})])
-
-(defn get-farms-edn
-  [user-id request]
-  (let [db (db/current-db)]
-    (->> (d/q '[:find ?farm-e
-                :in $ ?user-id
-                :where
-                [?user-e :user/id ?user-id]
-                [?user-e :user/farms ?farm-e]]
-              db user-id)
-         (map (rcomp first (partial d/entity db)),,,)
-         (map #(select-keys % [:farm/id :farm/name]),,,))))
-
-(defn get-farms
-  [request]
-  (let [db (db/current-db)]
-    (common/standard-get (partial farms-layout db)
-                         request)))
-
-
 (defn create-farm
   [request]
   "post to create a new farm")

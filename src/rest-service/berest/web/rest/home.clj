@@ -27,10 +27,7 @@
                    The embedded documentation is designed to assist you in using
                    the service API, but is not a reference nor tutorial for BEREST
                    itself. Please consult the BEREST documentation."}
-           :farms {:lang/de "Betriebe"
-                   :lang/en "farms"}
-           :weather-stations {:lang/de "Wetter Stationen"
-                              :lang/en "weather stations"}
+
 
            }
           [element (or lang common/*lang*)] "UNKNOWN element"))

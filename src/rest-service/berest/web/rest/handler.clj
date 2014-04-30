@@ -16,7 +16,9 @@
             [liberator.dev :refer [wrap-trace]]
             [berest.datomic :as db]
             [berest.web.rest.farm :as farm]
+            [berest.web.rest.farms :as farms]
             [berest.web.rest.crop :as crop]
+            [berest.web.rest.crops :as crops]
             [berest.web.rest.soil :as soil]
             [berest.web.rest.home :as home]
             [berest.web.rest.login :as login]
@@ -26,6 +28,7 @@
             [berest.web.rest.data :as data]
             [berest.web.rest.plot :as plot]
             [berest.web.rest.user :as user]
+            [berest.web.rest.users :as users]
             [bidi.bidi :as bidi]
             [buddy.auth :refer [authenticated? throw-unauthorized]]
             [buddy.auth.backends.session :refer [session-backend]]
@@ -184,8 +187,8 @@
                    {media-type :media-type} :representation
                    :as context}]
                (condp = media-type
-                 "application/edn" (farm/get-farms-edn (-> context :identity :user/id) request)
-                 "text/html" (farm/get-farms request)))
+                 "application/edn" (farms/get-farms-edn (-> context :identity :user/id) request)
+                 "text/html" (farms/get-farms request)))
 
   :post! #(farm/create-farm (:request %))
   :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
@@ -213,8 +216,8 @@
                    {media-type :media-type} :representation
                    :as context}]
                (condp = media-type
-                 "application/edn" (user/get-users-edn request)
-                 "text/html" (user/get-users request)))
+                 "application/edn" (users/get-users-edn request)
+                 "text/html" (users/get-users request)))
 
   :post! #(user/create-user (:request %))
   :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
@@ -227,7 +230,14 @@
 
   :allowed-methods [:put :get]
   :available-media-types ["text/html"]
-  :handle-ok #(user/get-user (:request %))
+  :handle-ok (fn [{request :request
+                   {media-type :media-type} :representation
+                   :as context}]
+               (let [user-id (-> request :route-params :user-id)]
+                 (condp = media-type
+                   "application/edn" (user/get-user-edn user-id request)
+                   "text/html" (user/get-user user-id request))))
+
   :put! #(user/update-user (:request %))
   :post-redirect? (fn [ctx] nil #_{:location (format "/postbox/%s" (::id ctx))}))
 
@@ -248,8 +258,8 @@
                    {media-type :media-type} :representation
                    :as context}]
                (condp = media-type
-                 "application/edn" (crop/get-crops-edn request)
-                 "text/html" (crop/get-crops request))))
+                 "application/edn" (crops/get-crops-edn request)
+                 "text/html" (crops/get-crops request))))
 
 (defresource crop
   ;(authorized-default-resource :admin :consultant :farmer)
