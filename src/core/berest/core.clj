@@ -809,7 +809,7 @@
   "calculate soil-moisture for one day"
   [extraction-depth-cm cover-degree pet abs-current-day
    fcs pwps lambdas soil-moistures soil-moisture-prognosis?
-   evaporation ivd groundwater-level
+   evaporation ivd groundwater-level-cm
    daily-precipitation-and-donation
    drip-donation drip-outlet-depth]
   (let [soil-moistures* (if drip-donation
@@ -858,7 +858,7 @@
              (reduce (fn [{infiltration-from-prev-layer :infiltration-into-next-layer
                            sms :soil-moistures}
                           [lambda water-abstraction layer-size-cm depth-cm fc pwp sm]]
-                       (if (<= depth-cm groundwater-level)
+                       (if (<= depth-cm groundwater-level-cm)
                          (let [;above that barrier the water will start to infiltrate to the next layer
                                 inf-barrier (infiltration-barrier fc pwp abs-current-day depth-cm)
 
@@ -888,7 +888,7 @@
                       :soil-moistures []}
                      ,,,))
 
-        ;calculate the capillary rise if applicable
+        ; VERTIKALER AUSGLEICH BEI UEBERFEUCHTUNG
         [_ soil-moistures**] (->> sms*
                                  ;combine soil-moistures with fc and *layer-sizes* for reduce function below
                                  (map vector fcs *layer-sizes* ,,,)
@@ -901,7 +901,59 @@
                                                  excess-water* (max 0 (- sm* cr-barrier))]
                                              [excess-water* (cons (- sm* excess-water*) sms)]))
                                          [0 '()]
-                                         ,,,))]
+                                         ,,,))
+
+        ;calculate the capillary rise if groundwater table is high enough
+
+        vc_RootingDepth extraction-depth-cm
+        vm_GroundwaterDistance (max 1 (- groundwater-level-cm extraction-depth-cm))
+
+        ; Capillary rise rates in table defined only until 2.70 m
+        _ (when (<= vm_GroundwaterDistance 2.70)
+            (let [vm_CapillaryWater70 (map (fn [fc pwp] (* (- fc pwp) 0.7)) fcs pwps)
+                  vm_AvailableWater (map (fn [sm pwp] (max 0 (- sm pwp))) soil-moistures** pwps)
+
+                  vm_CapillaryRiseRate 0.01 ; [m d-1]
+                  pm_CapillaryRiseRate 0.01 ; [m d-1]
+                                            ;Find first layer above groundwater with 70% available water
+
+                  data (take-while (fn [[depth-cm _ _]] (<= depth-cm groundwater-level-cm))
+                                   (map vector (layer-depths) vm_AvailableWater vm_CapillaryWater70))
+
+                  rdata (reverse data)
+
+                  rdata* (drop-while (fn [[_ available-water capillary-water-70]]
+                                       (>= available-water capillary-water-70))
+                                     rdata)
+
+
+
+                                            ;int vm_StartLayer = min(vm_GroundwaterTable,(vs_NumberOfLayers - 1));
+                                            ;for
+                                            ;
+                  ;(int i_Layer = vm_StartLayer ; i_Layer >= 0; i_Layer--) {
+
+                   ;    std::string vs_SoilTexture = soilColumn [i_Layer] .vs_SoilTexture ;
+                    ;   pm_CapillaryRiseRate = centralParameterProvider.capillaryRiseRates.getRate (vs_SoilTexture, vm_GroundwaterDistance) ;
+
+                     ;  if (pm_CapillaryRiseRate < vm_CapillaryRiseRate) {
+                      ;                                                    vm_CapillaryRiseRate = pm_CapillaryRiseRate ;
+                      ;                                                    }
+
+                      ; if (vm_AvailableWater [i_Layer] < vm_CapillaryWater70 [i_Layer]) {
+
+                       ;                                                                   vm_WaterAddedFromCapillaryRise = vm_CapillaryRiseRate ; //[m3 m-2 d-1]
+
+                        ;                                                                  vm_SoilMoisture [i_Layer] += vm_WaterAddedFromCapillaryRise ;
+
+                         ;                                                                 for (int j_Layer = vm_StartLayer ; j_Layer >= i_Layer; j_Layer--) {
+                          ;                                                                         vm_WaterFlux [j_Layer] -= vm_WaterAddedFromCapillaryRise ;
+                          ;                                                                }
+                     ;  :break ;
+
+                  ]
+              ))]
+
     {:aet aet
      :soil-moistures soil-moistures**
      :groundwater-infiltration groundwater-infiltration}))
