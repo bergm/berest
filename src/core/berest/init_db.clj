@@ -2,10 +2,10 @@
   (:require [datomic.api :as d]
             [clj-time.core :as date]
             [berest.datomic :as db]
-            [berest.climate.import :as climate-import]
-            [berest.climate.dwd :as dwd]
-            [berest.crops.import :as crop-import]
-            [berest.test-data :as test-data]))
+            [berest.import.zalf-climate-data :as climate-import]
+            [berest.import.dwd-data :as dwd]
+            [berest.import.berest-90-crops :as crop-import]
+            [berest.import.test-data :as test-data]))
 
 (defn delete-db
   []

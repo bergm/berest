@@ -49,9 +49,12 @@
                                    :username "michael.berg@zalf.de"
                                    :password "dfe713b3-62f0-469d-8ac9-07d6b02b0175"}}
 
+  :profiles {:dev {:dependencies [[org.immutant/immutant-web "1.1.1"]
+                                  [org.immutant/immutant-jobs "1.1.1"]]}}
+
   :min-lein-version "2.0.0"
 
-  :source-paths ["src/core" "src/rest-service" #_"src/immutant"]
+  :source-paths ["src/core" "src/rest-service" "src/immutant"]
   :resource-paths ["config", "resources"]
 
   :immutant {:context-path "/"}

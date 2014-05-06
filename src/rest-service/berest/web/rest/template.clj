@@ -9,11 +9,13 @@
             [berest.datomic :as bd]
             [berest.web.rest.queries :as rq]
             [berest.web.rest.util :as util]
-            [ring.util.response :as rur]))
+            [ring.util.response :as rur]
+            [berest.web.rest.common :as common]))
 
 
 (defn url->link-segments
-  [url-like & [base]]
+  [url-like & [{:keys [base sub-path-accessible?]
+               :or   {sub-path-accessible? (constantly true)}}]]
   (when url-like
     (let [dir? (= (last url-like) \/)
           url-like* (str/split url-like #"/")
@@ -24,7 +26,9 @@
                    (let [url (str/join "/" fst)
                          url* (str (if (empty? url) (or base "") url) "/")
                          display (str (last fst) "/")]
-                     [:a {:href url*} display]))
+                     (if (sub-path-accessible? url*)
+                       [:a {:href url*} display]
+                       [:span display])))
                  _)
             (drop-last _ )
             (concat _ [(str (last url-like*) (if dir? "/" ""))])))))

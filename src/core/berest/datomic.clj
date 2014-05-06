@@ -273,7 +273,7 @@
 
 ;;transaction functions
 
-(comment "moved the only transaction function to dwd.clj as it is actually pretty domain specific")
+(comment "moved the only transaction function to dwd_data.clj as it is actually pretty domain specific")
 
 
 ;; user management and credential functions

@@ -1,4 +1,4 @@
-(ns berest.climate.dwd
+(ns berest.import.dwd-data
   (:require [clojure.java.io :as cjio]
             [clojure.string :as str]
             [clj-time.core :as ctc]

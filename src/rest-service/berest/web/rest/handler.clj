@@ -358,7 +358,8 @@
 
   :post! (fn [{{{user-id :username
                  pwd :password} :params} :request}]
-           (assoc-in {} [:request :session :identity] (db/credentials user-id pwd)))
+           (let [ident (db/credentials user-id pwd)]
+             (assoc-in {} [:request :session :identity] ident)))
 
   :post-redirect? (fn [{:keys [request rest-client?]}]
                     (when-not rest-client?

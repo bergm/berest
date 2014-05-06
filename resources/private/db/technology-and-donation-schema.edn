@@ -6,7 +6,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :technology/cycle-days
    :db/valueType :db.type/long
-   :meta/unit :day
+   :meta/unit "day"
    :db/cardinality :db.cardinality/one
    :db/doc "A technologys cycle parameter"
    :db.install/_attribute :db.part/db}
@@ -14,7 +14,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :technology/outlet-height
    :db/valueType :db.type/long
-   :meta/unit :cm
+   :meta/unit "cm"
    :db/cardinality :db.cardinality/one
    :db/doc "Height where water application will be done from,
           positive values mean overhead irrigation and negative values drip irrigation"
@@ -43,7 +43,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/min
    :db/valueType :db.type/long
-   :meta/unit :mm
+   :meta/unit "mm"
    :db/cardinality :db.cardinality/one
    :db/doc "Minimal donation a technology can give"
    :db.install/_attribute :db.part/db}
@@ -51,7 +51,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/max
    :db/valueType :db.type/long
-   :meta/unit :mm
+   :meta/unit "mm"
    :db/cardinality :db.cardinality/one
    :db/doc "Maximal donation a technology can give"
    :db.install/_attribute :db.part/db}
@@ -59,7 +59,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/opt
    :db/valueType :db.type/long
-   :meta/unit :mm
+   :meta/unit "mm"
    :db/cardinality :db.cardinality/one
    :db/doc "optimal donation a technology can give"
    :db.install/_attribute :db.part/db}
@@ -67,7 +67,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/step-size
    :db/valueType :db.type/long
-   :meta/unit :mm
+   :meta/unit "mm"
    :db/cardinality :db.cardinality/one
    :db/doc "Step size in which donations can be increased or decreased"
    :db.install/_attribute :db.part/db}
@@ -78,7 +78,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/abs-day
    :db/valueType :db.type/long
-   :meta/unit :day
+   :meta/unit "day"
    :db/cardinality :db.cardinality/one
    :db/doc "Absolute start day of an donation"
    :db.install/_attribute :db.part/db}
@@ -86,7 +86,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/amount
    :db/valueType :db.type/double
-   :meta/unit :mm
+   :meta/unit "mm"
    :db/cardinality :db.cardinality/one
    :db/doc "Amount of water for donation"
    :db.install/_attribute :db.part/db}
@@ -94,7 +94,7 @@
   {:db/id #db/id[:db.part/db]
    :db/ident :donation/area
    :db/valueType :db.type/double
-   :meta/unit :m2
+   :meta/unit "m2"
    :db/cardinality :db.cardinality/one
    :db/doc "Area which has already been irrigated"
    :db.install/_attribute :db.part/db}

@@ -1,4 +1,4 @@
-(ns berest.crops.import
+(ns berest.import.berest-90-crops
   (:require [datomic.api :as d]
             [berest.datomic :as db]
             [instaparse.core :as insta]

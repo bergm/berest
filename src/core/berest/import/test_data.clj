@@ -1,4 +1,4 @@
-(ns berest.test-data
+(ns berest.import.test-data
 	(:require [datomic.api :as d]
             [clj-time.core :as ctc]
             [berest.datomic :as db]

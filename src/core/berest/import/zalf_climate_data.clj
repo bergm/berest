@@ -1,4 +1,4 @@
-(ns berest.climate.import
+(ns berest.import.zalf-climate-data
   (:require [clojure.java.io :as cjio]
             [clojure.string :as str]
             [clj-time.core :as ctc]
