@@ -832,11 +832,8 @@
   with free available water below 70% of field-capacity - permanent wilting point"
   [groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures]
   (let [capillary-rise-rates* (map (partial min 10.0) capillary-rise-rates)
-        _ (println "rates: " capillary-rise-rates*)
         capillary-water-70 (map (fn [fc pwp] (* (- fc pwp) 0.7)) fcs pwps)
-        _ (println "70: " capillary-water-70)
         available-water (map (fn [sm pwp] (max 0 (- sm pwp))) soil-moistures pwps)
-        _ (println "avail: " available-water)
 
         data (map vector (layer-depths) available-water capillary-water-70
                   capillary-rise-rates* soil-moistures)]
