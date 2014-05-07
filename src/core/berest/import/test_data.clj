@@ -670,6 +670,10 @@
                                  :soil/upper-boundary-depth :soil/permanent-wilting-point
                                  [30 3.5, 60 3.0, 90 3.7, 120 3.7, 200 3.0])
 
+        #_ka5-sts #_(db/create-entities in-partition
+                                    :soil/upper-boundary-depth :soil./ka5-soil-type
+                                    [30 "Ss", 60 "Ss", 90 "Ss", 120 "Ss", 200 "Ss"])
+
         new-farm-id (db/new-entity-id in-partition)
 
         plot {:db/id new-farm-id
@@ -684,11 +688,12 @@
               :plot/fc-unit :soil-moisture.unit/volP
               :plot/permanent-wilting-points (map :db/id pwps)
               :plot/pwp-unit :soil-moisture.unit/volP
+              ;:plot/ka5-soil-types (map :db/id ka5-sts)
               :plot/groundwaterlevel 300
               :plot/damage-compaction-depth 300
               :plot/damage-compaction-area 0.0}
 
-        {:keys [db-after tempids] :as tx} (->> [fcs pwps plot]
+        {:keys [db-after tempids] :as tx} (->> [fcs pwps #_ka5-sts plot]
                                                flatten
                                                (d/transact (db/connection) ,,,)
                                                .get)

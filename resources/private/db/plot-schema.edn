@@ -79,7 +79,7 @@
    :db/isComponent true
    :meta/unit "volp"
    :db/cardinality :db.cardinality/many
-   :db/doc "A plots original user input soil data"
+   :db/doc "A plots original user input field capacities."
    :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
@@ -95,7 +95,7 @@
    :db/isComponent true
    :meta/unit "volp"
    :db/cardinality :db.cardinality/many
-   :db/doc "A plots original user input soil data"
+   :db/doc "A plots original user input permanent wilting points."
    :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]
@@ -103,6 +103,14 @@
    :db/valueType :db.type/ref
    :db/cardinality :db.cardinality/one
    :db/doc "The unit of the soil-moisture"
+   :db.install/_attribute :db.part/db}
+
+  {:db/id #db/id[:db.part/db]
+   :db/ident :plot/ka5-soil-types
+   :db/valueType :db.type/ref
+   :db/isComponent true
+   :db/cardinality :db.cardinality/many
+   :db/doc "A plots original user input KA5 soil types."
    :db.install/_attribute :db.part/db}
 
   {:db/id #db/id[:db.part/db]

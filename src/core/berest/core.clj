@@ -425,6 +425,14 @@
          expand-layers*
          (map x->mm7cm* fcs-cm pwps-cm ,,,))))
 
+(defn user-input-ka5-soil-types-to-cm-layers
+  "convert the user input KA5 soil types into the internally defined layer structure
+  e.g. {30 'Ss', 60 'Hn', 150 'Ss'}"
+  [user-input-ka5-soil-types]
+  (->> user-input-ka5-soil-types
+       sorted-unzip-map
+       (expand-layers (max-soil-depth),,,)))
+
 (defn db-crop-data-map->crop
   "transform the crop data from datomic to crop map"
   [db-crop-data-map]
@@ -473,7 +481,8 @@
   (map first (d/q '[:find ?plot-no :in $ :where [? :plot/number ?plot-no]] db)))
 
 (defn db-read-plot
-  "read a plot with id 'plot-id' completely given the db-value 'db' with associated data from year 'year'"
+  "read a plot with id 'plot-id' completely given the db-value 'db'
+  with associated data from year 'year'"
   [db plot-id year]
   (when-let [[plot-e-id annual-values-e-id]
              (first (d/q '[:find ?plot-e-id ?yv-e-id
@@ -500,6 +509,17 @@
                        user-input-fc-or-pwp-to-cm-layers)
           pwps (->> pwps-cm
                     (aggregate-layers + *layer-sizes* ,,,))
+
+          ka5-sts-cm (some->> (:plot/ka5-soil-types plot)
+                              (db/create-map-from-entities :soil/upper-boundary-depth
+                                                           :soil/ka5-soil-type ,,,)
+                              user-input-ka5-soil-types-to-cm-layers)
+          ka5-sts (some->> ka5-sts-cm
+                           (aggregate-layers #(conj (if (vector? %1) %1 [%1]) %2) *layer-sizes* ,,,)
+                           (map #(->> %
+                                      frequencies
+                                      (into (sorted-map),,,)
+                                      ffirst),,,))
 
           sms (->> (:plot.annual/initial-soil-moistures plot-av)
                    (db/create-map-from-entities :soil/upper-boundary-depth
@@ -534,6 +554,7 @@
           (assoc ,,, :plot.annual/initial-soil-moistures sms
                      :plot/field-capacities fcs
                      :plot/permanent-wilting-points pwps
+                     :plot/ka5-soil-types ka5-sts
                      :lambda-without-correction lwc
                      :fallow fallow)))))
 
@@ -805,14 +826,46 @@
              1)))
        *layer-sizes* (layer-depths) fcs pwps soil-moisture))
 
+(defn capillary-rise
+  "calculate capillary rise according to a simple algorithm taken from MONICA
+  -> only one layer per day will be filled and only the closest one to the groundwater table
+  with free available water below 70% of field-capacity - permanent wilting point"
+  [groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures]
+  (let [capillary-rise-rates* (map (partial min 10.0) capillary-rise-rates)
+        _ (println "rates: " capillary-rise-rates*)
+        capillary-water-70 (map (fn [fc pwp] (* (- fc pwp) 0.7)) fcs pwps)
+        _ (println "70: " capillary-water-70)
+        available-water (map (fn [sm pwp] (max 0 (- sm pwp))) soil-moistures pwps)
+        _ (println "avail: " available-water)
+
+        data (map vector (layer-depths) available-water capillary-water-70
+                  capillary-rise-rates* soil-moistures)]
+    (->> data
+         reverse
+         (reduce (fn [{:keys [sms applied-water-to-closest-matching-layer?] :as acc}
+                      [depth-cm available-water capillary-water-70 rate sm]]
+                   (if (and (not applied-water-to-closest-matching-layer?)
+                            (<= depth-cm groundwater-level-cm)
+                            (< available-water capillary-water-70))
+                     {:sms (cons (+ sm rate) sms) :applied-water-to-closest-matching-layer? true}
+                     (update-in acc [:sms] conj sm)))
+                 {:sms '() :applied-water-to-closest-matching-layer? false}
+                 ,,,)
+         :sms)))
+
 (defn calc-soil-moisture*
   "calculate soil-moisture for one day"
-  [extraction-depth-cm cover-degree pet abs-current-day
-   fcs pwps lambdas soil-moistures soil-moisture-prognosis?
-   evaporation ivd groundwater-level-cm
-   daily-precipitation-and-donation
-   drip-donation drip-outlet-depth]
-  (let [soil-moistures* (if drip-donation
+  [{:keys [extraction-depth-cm cover-degree abs-current-day
+           fcs pwps lambdas capillary-rise-rates
+           soil-moisture-prognosis?
+           evaporation groundwater-level-cm
+           technology-type
+           donation drip-outlet-depth]
+    :as input}
+   pet soil-moistures daily-precipitation-and-donation]
+  (let [drip-donation (when (= technology-type :technology.type/drip)
+                        donation)
+         soil-moistures* (if drip-donation
                           (map (fn [sm depth]
                                  (if (<= drip-outlet-depth depth)
                                    (+ sm drip-donation)
@@ -904,58 +957,11 @@
                                          ,,,))
 
         ;calculate the capillary rise if groundwater table is high enough
-
-        vc_RootingDepth extraction-depth-cm
-        vm_GroundwaterDistance (max 1 (- groundwater-level-cm extraction-depth-cm))
-
-        ; Capillary rise rates in table defined only until 2.70 m
-        _ (when (<= vm_GroundwaterDistance 2.70)
-            (let [vm_CapillaryWater70 (map (fn [fc pwp] (* (- fc pwp) 0.7)) fcs pwps)
-                  vm_AvailableWater (map (fn [sm pwp] (max 0 (- sm pwp))) soil-moistures** pwps)
-
-                  vm_CapillaryRiseRate 0.01 ; [m d-1]
-                  pm_CapillaryRiseRate 0.01 ; [m d-1]
-                                            ;Find first layer above groundwater with 70% available water
-
-                  data (take-while (fn [[depth-cm _ _]] (<= depth-cm groundwater-level-cm))
-                                   (map vector (layer-depths) vm_AvailableWater vm_CapillaryWater70))
-
-                  rdata (reverse data)
-
-                  rdata* (drop-while (fn [[_ available-water capillary-water-70]]
-                                       (>= available-water capillary-water-70))
-                                     rdata)
-
-
-
-                                            ;int vm_StartLayer = min(vm_GroundwaterTable,(vs_NumberOfLayers - 1));
-                                            ;for
-                                            ;
-                  ;(int i_Layer = vm_StartLayer ; i_Layer >= 0; i_Layer--) {
-
-                   ;    std::string vs_SoilTexture = soilColumn [i_Layer] .vs_SoilTexture ;
-                    ;   pm_CapillaryRiseRate = centralParameterProvider.capillaryRiseRates.getRate (vs_SoilTexture, vm_GroundwaterDistance) ;
-
-                     ;  if (pm_CapillaryRiseRate < vm_CapillaryRiseRate) {
-                      ;                                                    vm_CapillaryRiseRate = pm_CapillaryRiseRate ;
-                      ;                                                    }
-
-                      ; if (vm_AvailableWater [i_Layer] < vm_CapillaryWater70 [i_Layer]) {
-
-                       ;                                                                   vm_WaterAddedFromCapillaryRise = vm_CapillaryRiseRate ; //[m3 m-2 d-1]
-
-                        ;                                                                  vm_SoilMoisture [i_Layer] += vm_WaterAddedFromCapillaryRise ;
-
-                         ;                                                                 for (int j_Layer = vm_StartLayer ; j_Layer >= i_Layer; j_Layer--) {
-                          ;                                                                         vm_WaterFlux [j_Layer] -= vm_WaterAddedFromCapillaryRise ;
-                          ;                                                                }
-                     ;  :break ;
-
-                  ]
-              ))]
-
+        soil-moistures*** (if capillary-rise-rates
+                            (capillary-rise groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures**)
+                            soil-moistures**)]
     {:aet aet
-     :soil-moistures soil-moistures**
+     :soil-moistures soil-moistures***
      :groundwater-infiltration groundwater-infiltration}))
 
 (defn calc-soil-moisture
@@ -963,14 +969,10 @@
   [{:keys [qu-sum-deficits qu-sum-targets soil-moistures]
     :as result-accumulator}
    {:keys [abs-day rel-dc-day
-           crop
            donation technology-type technology-outlet-height technology-sprinkle-loss-factor
            evaporation precipitation
            cover-degree qu-target
-           rounded-extraction-depth-cm
-           transpiration-factor
-           fcs pwps lambdas groundwaterlevel-cm damage-compaction-depth-cm
-           sm-prognosis?]
+           transpiration-factor]
     :as input}]
   (let [{:keys [pet
                 effective-precipitation
@@ -999,14 +1001,7 @@
         {aet :aet
          soil-moistures* :soil-moistures
          groundwater-infiltration :groundwater-infiltration}
-        (calc-soil-moisture* rounded-extraction-depth-cm cover-degree pet*
-                             abs-day fcs pwps lambdas soil-moistures
-                             sm-prognosis? evaporation damage-compaction-depth-cm
-                             groundwaterlevel-cm
-                             daily-precipitation-and-donation
-                             (when (= technology-type :technology.type/drip)
-                               donation)
-                             technology-outlet-height)
+        (calc-soil-moisture* input pet* soil-moistures daily-precipitation-and-donation)
 
         aet7pet (cond
                  (< cover-degree 1/1000) 0
@@ -1235,6 +1230,19 @@
                              fallow*)
          :else nil)))))
 
+(defn capillary-rise-rates
+  [ka5-soil-types rooting-depth-cm]
+  (when ka5-soil-types
+    (->> (d/q '[:find ?soil-type ?rate
+                :in $ [?soil-type ...] ?distance-dm
+                :where
+                [?e :soil.type.ka5/name ?soil-type]
+                [?e :soil.type.ka5/capillary-rise-rates ?rates]
+                [?rates :soil.type.ka5/distance-to-groundwater-table ?distance-dm]
+                [?rates :soil.type.ka5/capillary-rise-rate ?rate]]
+              (db/current-db) ka5-soil-types (int (* 10 rooting-depth-cm)))
+         (into {} ,,,))))
+
 (defn base-input-seq
   "create a input sequence for soil-moisture calculations
   - takes into account dc assertions which are available in plot map
@@ -1255,8 +1263,15 @@
             prev-day-cover-degree (interpolated-value (:crop/rel-dc-day-to-cover-degrees crop)
                                                       (dec rel-dc-day))
 
-            cover-degree (interpolated-value (:crop/rel-dc-day-to-cover-degrees crop) rel-dc-day)]
-
+            cover-degree (interpolated-value (:crop/rel-dc-day-to-cover-degrees crop) rel-dc-day)
+            rounded-extraction-depth-cm (->> (if (<= cover-degree 1/1000)
+                                               0
+                                               (interpolated-value (:crop/rel-dc-day-to-extraction-depths crop) rel-dc-day))
+                                             (+ 1 ,,,)
+                                             (bh/swap / 10 ,,,)
+                                             (#(Math/round (double %)) ,,,)
+                                             (* 10 ,,,))
+            groundwater-level-cm (:plot/groundwaterlevel plot)]
         {:dc dc
          :abs-day abs-day
          :rel-dc-day rel-dc-day
@@ -1275,18 +1290,15 @@
                        0
                        (interpolated-value (:crop/rel-dc-day-to-quotient-aet-pets crop) rel-dc-day))
                      :digits 3)
-         :rounded-extraction-depth-cm (->> (if (<= cover-degree 1/1000)
-                                             0
-                                             (interpolated-value (:crop/rel-dc-day-to-extraction-depths crop) rel-dc-day))
-                                           (+ 1 ,,,)
-                                           (bh/swap / 10 ,,,)
-                                           (#(Math/round (double %)) ,,,)
-                                           (* 10 ,,,))
+         :rounded-extraction-depth-cm rounded-extraction-depth-cm
          :transpiration-factor (interpolated-value (:crop/rel-dc-day-to-transpiration-factors crop) rel-dc-day)
          :fcs (:plot/field-capacities plot)
          :pwps (:plot/permanent-wilting-points plot)
          :lambdas (lambda (:lambda-without-correction plot) abs-day)
-         :groundwaterlevel-cm (:plot/groundwaterlevel plot)
+         ;database values allow capillary rise rates only up to 2.7m from groundwater table to rooting zone
+         :capillary-rise-rates (when (<= (- groundwater-level-cm rounded-extraction-depth-cm) 270)
+                                 (capillary-rise-rates (:plot/ka5-soil-types plot) rounded-extraction-depth-cm))
+         :groundwater-level-cm groundwater-level-cm
          :damage-compaction-depth-cm (resulting-damage-compaction-depth-cm plot)
          :sm-prognosis? false}))))
 
