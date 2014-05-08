@@ -899,7 +899,7 @@
                          (bu/s-mult (* pet cover-degree) gi))]))
 
         {groundwater-infiltration :infiltration-into-next-layer
-         sms* :soil-moistures}
+         soil-moistures** :soil-moistures}
         (->> soil-moistures*
              ;combine a few more needed inputs to infiltration calculation
              (map vector lambdas water-abstractions *layer-sizes* (layer-depths) fcs pwps ,,,)
@@ -909,26 +909,26 @@
                            sms :soil-moistures}
                           [lambda water-abstraction layer-size-cm depth-cm fc pwp sm]]
                        (if (<= depth-cm groundwater-level-cm)
-                         (let [;above that barrier the water will start to infiltrate to the next layer
-                                inf-barrier (infiltration-barrier fc pwp abs-current-day depth-cm)
+                         ;above that barrier the water will start to infiltrate to the next layer
+                         (let [inf-barrier (infiltration-barrier fc pwp abs-current-day depth-cm)
 
                                ;in the next steps we basically care just about the excess water
                                ;not about the layers full water content, so we calculate
                                ;just the difference (positive or negative) to the infiltration barrier
                                ;(in case of the first layer, possibly including todays precipitation)
-                                initial-excess-water (- sm inf-barrier)
+                               initial-excess-water (- sm inf-barrier)
 
-                                net-infiltration-from-above-layer (- infiltration-from-prev-layer water-abstraction)
+                               net-infiltration-from-above-layer (- infiltration-from-prev-layer water-abstraction)
 
                                ;the excess water after calculation of the infiltration to the next layer
-                                {:keys [final-excess-water
-                                        infiltration-into-next-layer]}
-                                (glugla* initial-excess-water net-infiltration-from-above-layer lambda)
+                               {:keys [final-excess-water
+                                       infiltration-into-next-layer]}
+                               (glugla* initial-excess-water net-infiltration-from-above-layer lambda)
 
                                ;add the (positive/negative) excess water back to the infiltration barrier
                                ;to obtain the actual water content now in this layer
                                ;(after water could infiltrate to the next layer)
-                                sm* (max (+ inf-barrier final-excess-water) (pwp4p fc pwp))]
+                               sm* (max (+ inf-barrier final-excess-water) (pwp4p fc pwp))]
                            {:infiltration-into-next-layer infiltration-into-next-layer,
                             :soil-moistures (conj sms sm*)})
                          {:infiltration-into-next-layer 0
@@ -938,27 +938,27 @@
                       :soil-moistures []}
                      ,,,))
 
-        ; VERTIKALER AUSGLEICH BEI UEBERFEUCHTUNG
-        [_ soil-moistures**] (->> sms*
-                                 ;combine soil-moistures with fc and *layer-sizes* for reduce function below
-                                 (map vector fcs *layer-sizes* ,,,)
-                                 ;reverse, to go from bottom to top layer
-                                 reverse
-                                 ;transport excess water from lower layers to top layers
-                                 (reduce (fn [[excess-water sms] [fc layer-size-cm sm]]
-                                           (let [cr-barrier (capillary-rise-barrier fc (/ layer-size-cm 10))
-                                                 sm* (+ sm excess-water)
-                                                 excess-water* (max 0 (- sm* cr-barrier))]
-                                             [excess-water* (cons (- sm* excess-water*) sms)]))
-                                         [0 '()]
-                                         ,,,))
-
         ;calculate the capillary rise if groundwater table is high enough
         soil-moistures*** (if capillary-rise-rates
-                            (capillary-rise groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures**)
-                            soil-moistures**)]
+                           (capillary-rise groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures**)
+                           soil-moistures**)
+
+        ; VERTIKALER AUSGLEICH BEI UEBERFEUCHTUNG
+        [_ soil-moistures****] (->> soil-moistures***
+                                   ;combine soil-moistures with fc and *layer-sizes* for reduce function below
+                                   (map vector fcs *layer-sizes* ,,,)
+                                   ;reverse, to go from bottom to top layer
+                                   reverse
+                                   ;transport excess water from lower layers to top layers
+                                   (reduce (fn [[excess-water sms] [fc layer-size-cm sm]]
+                                             (let [cr-barrier (capillary-rise-barrier fc (/ layer-size-cm 10))
+                                                   sm* (+ sm excess-water)
+                                                   excess-water* (max 0 (- sm* cr-barrier))]
+                                               [excess-water* (cons (- sm* excess-water*) sms)]))
+                                           [0 '()]
+                                     ,,,))]
     {:aet aet
-     :soil-moistures soil-moistures***
+     :soil-moistures soil-moistures****
      :groundwater-infiltration groundwater-infiltration}))
 
 (defn calc-soil-moisture
