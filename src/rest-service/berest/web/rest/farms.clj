@@ -1,6 +1,7 @@
 (ns berest.web.rest.farms
   (:require [berest.core :as bc]
             [berest.datomic :as db]
+            [berest.data :as data]
             [berest.helper :as bh :refer [rcomp]]
             [berest.web.rest.common :as common]
             [berest.web.rest.queries :as queries]
@@ -33,32 +34,24 @@
            }
           [element (or lang common/*lang*)] "UNKNOWN element"))
 
-(defn- db->farms
-  [db full-url]
-  (->> (d/q '[:find ?farm-e
-              :in $
-              :where
-              [?farm-e :farm/id]]
-            db)
-       (map (rcomp first (partial d/entity db)) ,,,)
-       (map #(select-keys % [:farm/id :farm/name]) ,,,)
-       (map #(assoc % :url (str full-url (:farm/id %) "/")) ,,,)))
-
 (defn get-farms-edn*
-  [db full-url]
-  (map #(select-keys % [:farm/id :farm/name :url]) (db->farms db full-url)))
+  [db user-id full-url]
+  (map #(select-keys % [:farm/id :farm/name :url]) (data/db->farms db user-id full-url)))
 
 (defn get-farms-edn
   [request]
   (let [full-url (req/request-url request)
-        db (db/current-db)]
-    (get-farms-edn* db full-url)))
+        db (db/current-db)
+        user-id (some-> request :session :identity :user/id)]
+    (when user-id
+      (get-farms-edn* db user-id full-url))))
 
 (defn farms-layout
   [db request]
   (let [full-url (req/request-url request)
         url-path (:uri request)
-        farms (db->farms db full-url)]
+        user-id (some-> request :session :identity :user/id)
+        farms (data/db->farms db user-id full-url)]
     [:div.container
      (temp/standard-header url-path)
 

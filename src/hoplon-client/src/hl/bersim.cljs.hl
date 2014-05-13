@@ -3,13 +3,15 @@
       (:require #_[ui.tabs :as tabs]
                 [ajax.core :as ajax]
                 [berest.helper :as bh :refer [rcomp partial-kw]]
+                [berest.client.hoplon.rpc :as rpc]
                 [clojure.string :as str]
                 [berest.client.hoplon.variance-charts :as vc]
                 [berest.client.hoplon.apogee-charts :as ac]
                 [apogee.charts :as acharts]
                 [apogee.svg :as svg]
                 [tailrecursion.hoplon.svg :as hsvg]
-                [tailrecursion.hoplon.reload :refer [reload-all]]))
+                [tailrecursion.hoplon.reload :refer [reload-all]]
+                ))
 
 #_(ns hoplon.index
   (:require-macros [tailrecursion.javelin :refer :all]
@@ -367,6 +369,7 @@
     (ac/chart-axis :place :left)
     (ac/chart-axis :place :bottom)))
 
+(rpc/init)
 
 (html ;:ng-app "myApp"
   (head
@@ -385,6 +388,9 @@
 
 
   (body
+
+    (h1 (text "Hello, Hoplon and Castra! ~{rpc/random-number}"))
+    (p (text "Look! It's a counter: ~{rpc/counter}"))
 
     #_(x :c 3 :d 4 (span "hello"))
 

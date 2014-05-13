@@ -1,4 +1,4 @@
-(ns berest.client.hoplon.state
+(ns berest.client.hoplon.berest-state
   (:require-macros
     [tailrecursion.javelin :refer [defc defc= cell=]])
   (:require [clojure.set :as set]
@@ -8,36 +8,26 @@
 
 (enable-console-print!)
 
+(defc state {})
+(cell= (println "state: " (pr-str state)))
 (defc error         nil)
 (defc loading       [])
-
-(defc crops [])
-(defc selected-crop nil)
-
-
-
-
-
-
-(defc state         {})
-(defc active-chat   nil)
 
 (defc= loaded?      (not= {} state))
 (defc= loading?     (seq loading))
 (defc= logged-in?   (not (or (nil? state) (= {} state))))
-(defc= show-chat?   (and loaded? logged-in?))
 (defc= show-login?  (and loaded? (not logged-in?)))
-
 
 (def clear-error!   #(reset! error nil))
 
-(def get-crops (mkremote 'berest.web.castra.api/get-crops crops error (cell nil)))
-#_(def register!      (mkremote 'berest-client.castra-api/register       state error loading))
 (def login! (mkremote 'berest.web.castra.api/login state error loading))
 (def logout! (mkremote 'berest.web.castra.api/logout state error loading))
+(def get-state (mkremote 'berest.web.castra.api/get-berest-state state error loading))
+(def test (mkremote 'berest.web.castra.api/test state error loading))
 
 (defn init []
-  (get-crops)
+  #_(get-state)
+  (test)
   #_(js/setInterval #(if @logged-in? (get-state)) 100))
 
 

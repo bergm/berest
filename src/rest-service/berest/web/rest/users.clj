@@ -1,6 +1,7 @@
 (ns berest.web.rest.users
   (:require [berest.core :as bc]
             [berest.datomic :as db]
+            [berest.data :as data]
             [berest.helper :as bh :refer [rcomp]]
             [berest.web.rest.common :as common]
             [berest.web.rest.queries :as queries]
@@ -42,20 +43,9 @@
 
 ;;all users
 
-(defn- db->users
-  [db full-url]
-  (->> (d/q '[:find ?user-e
-              :in $
-              :where
-              [?user-e :user/id]]
-            db)
-       (map (rcomp first (partial d/entity db)) ,,,)
-       (map #(select-keys % [:user/id :user/full-name]) ,,,)
-       (map #(assoc % :url (str full-url (:user/id %) "/")) ,,,)))
-
 (defn get-users-edn*
   [db full-url]
-  (map #(select-keys % [:user/id :user/full-name :url]) (db->users db full-url)))
+  (map #(select-keys % [:user/id :user/full-name :url]) (data/db->users db full-url)))
 
 (defn get-users-edn
   [request]
@@ -67,7 +57,7 @@
   [db request]
   (let [full-url (req/request-url request)
         url-path (:uri request)
-        users (db->users db full-url)]
+        users (data/db->users db full-url)]
     [:div.container
      (temp/standard-header url-path)
 

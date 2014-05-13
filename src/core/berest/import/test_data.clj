@@ -680,6 +680,7 @@
               :user/_farms new-farm-id
               :farm/_plots [:farm/id "zalf_test-farm"]
               :plot/id "zalf.test-farm_versuchsfeld"
+              :plot/name "Versuchsfeld"
               :plot/crop-area 1.0
               :plot/irrigation-area 1.0
               :plot/stt 6212

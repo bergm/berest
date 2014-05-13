@@ -5,10 +5,10 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
 
-                 [tailrecursion/hoplon "5.5.1"]
+                 [tailrecursion/hoplon "5.8.3"]
 
                  #_[org.infinispan/infinispan-client-hotrod "6.0.0.CR1"]
-                 [com.datomic/datomic-pro "0.9.4755"]
+                 [com.datomic/datomic-pro "0.9.4766"]
                  #_[com.datomic/datomic-free "0.8.4218"]
 
                  [buddy "0.1.0-beta4"]
@@ -54,8 +54,8 @@
 
   :min-lein-version "2.0.0"
 
-  :source-paths ["src/core" "src/rest-service" "src/immutant"]
-  :resource-paths ["config", "resources"]
+  :source-paths ["src/core" "src/castra-service" "src/rest-service" "src/immutant"]
+  :resource-paths ["config" "resources" "private-resources"]
 
   :immutant {:context-path "/"}
 

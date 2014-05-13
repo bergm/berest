@@ -310,7 +310,7 @@
 (defn create-partition
   "partition-name should be either a string or keyword"
   [db-connection partition-name]
-  (let [tx-data {:db/id #db/id[:db.part/db]
+  (let [tx-data {:db/id (d/tempid :db.part/db) ;#db/id[:db.part/db]
                  :db/ident (part partition-name)
                  :db.install/_partition :db.part/db}]
     (try

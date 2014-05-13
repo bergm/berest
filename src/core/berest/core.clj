@@ -940,8 +940,8 @@
 
         ;calculate the capillary rise if groundwater table is high enough
         soil-moistures*** (if capillary-rise-rates
-                           (capillary-rise groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures**)
-                           soil-moistures**)
+                            (capillary-rise groundwater-level-cm fcs pwps capillary-rise-rates soil-moistures**)
+                            soil-moistures**)
 
         ; VERTIKALER AUSGLEICH BEI UEBERFEUCHTUNG
         [_ soil-moistures****] (->> soil-moistures***
@@ -1853,4 +1853,3 @@
         weather+prognosis weather
         irrigation-type :sprinkle-losses]
     (run plot weather irrigation-donations-map (bu/date-to-doy 29 5) irrigation-type)))
-
