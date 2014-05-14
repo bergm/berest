@@ -852,7 +852,7 @@
 
 (defn calc-soil-moisture*
   "calculate soil-moisture for one day"
-  [{:keys [extraction-depth-cm cover-degree abs-current-day
+  [{:keys [extraction-depth-cm cover-degree abs-day
            fcs pwps lambdas capillary-rise-rates
            soil-moisture-prognosis?
            evaporation groundwater-level-cm
@@ -910,7 +910,7 @@
                           [lambda water-abstraction layer-size-cm depth-cm fc pwp sm]]
                        (if (<= depth-cm groundwater-level-cm)
                          ;above that barrier the water will start to infiltrate to the next layer
-                         (let [inf-barrier (infiltration-barrier fc pwp abs-current-day depth-cm)
+                         (let [inf-barrier (infiltration-barrier fc pwp abs-day depth-cm)
 
                                ;in the next steps we basically care just about the excess water
                                ;not about the layers full water content, so we calculate
