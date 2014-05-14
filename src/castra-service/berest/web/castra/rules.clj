@@ -35,7 +35,7 @@
                  (assoc-in % [:users user] {:pass pwd1})))
   (do-login! user))
 
-(defn login! [db user pwd]
-  (let [cred (db/credentials* db user pwd)]
+(defn login! [user pwd]
+  (let [cred (db/credentials* (db/current-db) user pwd)]
     (assert (not (nil? cred)) "Bad username/password.")
     (do-login! cred)))

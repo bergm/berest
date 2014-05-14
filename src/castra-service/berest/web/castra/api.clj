@@ -2,8 +2,14 @@
   (:require [tailrecursion.castra :refer [defrpc  ex error *session*]]
             [berest.web.castra.rules :as rules]
             [berest.data :as data]
+            [berest.util :as util]
+            [berest.api :as api]
             [berest.datomic :as db]
-            [datomic.api :as d]))
+            [datomic.api :as d]
+            [simple-time.core :as time]
+            [clj-time.core :as ctc]
+            [clj-time.format :as ctf]
+            [clj-time.coerce :as ctcoe]))
 
 (def counter (atom 0))
 
@@ -60,20 +66,19 @@
        :selected-farm-id (-> farms-with-plots first first)
        :selected-plot-id (-> farms-with-plots first second :plots first)
        :until-date #inst "1993-09-30"
-       :irrigation-data [[1 4 22] [2 5 10] [11 7 30]]
+       :donations [{:day 1 :month 4 :amount 22}
+                   {:day 2 :month 5 :amount 10}
+                   {:day 11 :month 7 :amount 30}]
        :user cred})))
 
 #_(defrpc register [user pass1 pass2]
   {:rpc/pre [(register! db user pass1 pass2)]}
         (get-state user))
 
-(defrpc test []
-  {:test 1})
-
 (defrpc login
   [user-id pwd]
   {:rpc/pre [(rules/login! user-id pwd)]}
-  (println "login in with user-id: " user-id " pwd: " pwd)
+  #_(println "login in with user-id: " user-id " pwd: " pwd)
   (get-berest-state))
 
 (defrpc logout
@@ -81,8 +86,26 @@
   {:rpc/pre [(rules/logout!)]}
   nil)
 
-#_(defrpc send-message [from conv text]
-        {:rpc/pre [(logged-in?)]}
-        (swap! db add-message from conv text)
-        (get-state from))
+(defrpc simulate-csv
+  []
 
+  )
+
+(defrpc calculate-csv
+  [plot-id until-date donations]
+  {:rpc/pre [(rules/logged-in?)]}
+  (let [db (db/current-db)
+        ud (ctcoe/from-date until-date)
+        until-julian-day (.getDayOfYear ud)
+        year (ctc/year ud)
+        donations (for [{:keys [day month amount]} donations]
+                    {:donation/abs-day (util/date-to-doy day month year)
+                     :donation/amount amount})
+        {:keys [inputs soil-moistures-7 prognosis] :as result}
+        (api/calculate-plot-from-db db plot-id until-julian-day year donations [])]
+
+    )
+
+
+
+  )

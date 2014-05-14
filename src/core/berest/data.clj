@@ -31,7 +31,7 @@
 (defn db->plots
   [db farm-id & [full-url]]
   (->> (d/q '[:find ?plot-e
-              :in $ ?user-id ?farm-id
+              :in $ ?farm-id
               :where
               [?farm-e :farm/id ?farm-id]
               [?farm-e :farm/plots ?plot-e]]

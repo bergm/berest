@@ -10,8 +10,12 @@
 
 (defc state {})
 (cell= (println "state: " (pr-str state)))
-(defc error         nil)
-(defc loading       [])
+(defc error nil)
+(defc loading [])
+
+(defc csv-result nil)
+(defc calc-error nil)
+(defc calculating [])
 
 (defc= loaded?      (not= {} state))
 (defc= loading?     (seq loading))
@@ -23,14 +27,15 @@
 (def login! (mkremote 'berest.web.castra.api/login state error loading))
 (def logout! (mkremote 'berest.web.castra.api/logout state error loading))
 (def get-state (mkremote 'berest.web.castra.api/get-berest-state state error loading))
-(def test (mkremote 'berest.web.castra.api/test state error loading))
+(def calculate-csv (mkremote 'berest.web.castra.api/calculate-csv csv-result calc-error calculating))
+
+(defn start-calculate-csv []
+  (let [{:keys [selected-plot-id until-date donations]} @state]
+    (calculate-csv selected-plot-id until-date donations)))
 
 (defn init []
-  #_(get-state)
-  (test)
+  (get-state)
   #_(js/setInterval #(if @logged-in? (get-state)) 100))
-
-
 
 
 

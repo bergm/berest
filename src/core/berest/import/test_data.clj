@@ -643,11 +643,13 @@
       (catch Exception e
         (println "Couldn't transact year " year " Exception: " e)))))
 
-(defn add-zalf-test-farm [in-partition]
+(defn add-zalf-test-farm [in-partition user-id]
+(let [new-farm-e-id (db/new-entity-id in-partition)]
   @(d/transact (db/connection)
-               [{:db/id (db/new-entity-id in-partition)
+               [{:db/id new-farm-e-id
                  :farm/id "zalf_test-farm"
                  :farm/name "ZALF Test Betrieb"
+                 :user/_farms new-farm-e-id
                  :farm/addresses [{:address/street "Eberswalder Str. 84"
                                    :address/postal-code "15374"
                                    :address/city "Müncheberg"
@@ -657,7 +659,7 @@
                                    :address/state-short "BRA"
                                    :address/country "Deutschland"
                                    :address/country-short "GER"}]
-                 :farm/authorative-weather-station [:weather-station/id "zalf_lokal"]}]))
+                 :farm/authorative-weather-station [:weather-station/id "zalf_lokal"]}])))
 
 ;add plot zalf test plot
 (defn add-zalf-test-plot
@@ -674,10 +676,9 @@
                                     :soil/upper-boundary-depth :soil./ka5-soil-type
                                     [30 "Ss", 60 "Ss", 90 "Ss", 120 "Ss", 200 "Ss"])
 
-        new-farm-id (db/new-entity-id in-partition)
+        new-plot-e-id (db/new-entity-id in-partition)
 
-        plot {:db/id new-farm-id
-              :user/_farms new-farm-id
+        plot {:db/id new-plot-e-id
               :farm/_plots [:farm/id "zalf_test-farm"]
               :plot/id "zalf.test-farm_versuchsfeld"
               :plot/name "Versuchsfeld"
