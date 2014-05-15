@@ -43,9 +43,6 @@
 (defc edn-result nil)
 #_(cell= (println "edn-result: " edn-result))
 
-(defc csv-result nil)
-#_(cell= (println "result: " csv-result))
-
 (defc= farms (:farms state/state))
 (defc= selected-farm (get farms (:selected-farm-id state/state)))
 (defc= plots (:plots selected-farm))
@@ -462,14 +459,13 @@
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
-              :on-click state/start-calculate-csv
-              ;:on-click calculate-and-get-csv
+              :on-click #(apply state/calculate-csv ((juxt :selected-plot-id :until-date :donations) @state/state))
               :value "Berechnen & CSV")
             (div :css {:height "5px"})
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
-              ;:on-click simulate-and-get-csv
+              :on-click #(apply state/simulate-csv ((juxt :selected-plot-id :until-date :donations) @state/state))
               :value "Simulieren & CSV")
             (div :css {:height "5px"})
             (a
@@ -483,7 +479,7 @@
               :class "form-control"
               :rows "20" ;:cols "150"
               :placeholder "Berechnungsergebnis wird hier angezeigt werden ..."
-              :value (cell= csv-result)))))
+              :value (cell= state/csv-result)))))
 
       (hr)
 

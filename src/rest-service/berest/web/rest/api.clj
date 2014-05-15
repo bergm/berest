@@ -10,6 +10,7 @@
             [clojure.edn :as edn]
             [clojure.tools.logging :as log]
             [berest.core :as bc]
+            [berest.api :as api]
             [berest.plot :as plot]
             [berest.datomic :as db]
             [berest.util :as bu]
@@ -168,7 +169,7 @@
                                 donations [])
         soil-moistures (concat soil-moistures-7 prognosis)
         csv-sms (->> soil-moistures
-                     (bc/create-csv-output inputs ,,,)
+                     (api/create-csv-output inputs ,,,)
                      create-liberator-csv-output)]
     (case media-type
       "text/html" csv-sms
@@ -244,7 +245,7 @@
         (simulate-plot-from-db db farm-id plot-id until-julian-day year
                                irrigation-donations [])
         csv-sms (->> soil-moistures
-                     (bc/create-csv-output inputs ,,,)
+                     (api/create-csv-output inputs ,,,)
                      create-liberator-csv-output)]
     (case media-type
           "text/html" csv-sms

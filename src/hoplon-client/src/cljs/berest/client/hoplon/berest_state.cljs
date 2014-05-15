@@ -9,11 +9,12 @@
 (enable-console-print!)
 
 (defc state {})
-(cell= (println "state: " (pr-str state)))
+#_(cell= (println "state: " (pr-str state)))
 (defc error nil)
 (defc loading [])
 
 (defc csv-result nil)
+(cell= (println "csv-result: " (pr-str csv-result)))
 (defc calc-error nil)
 (defc calculating [])
 
@@ -28,8 +29,13 @@
 (def logout! (mkremote 'berest.web.castra.api/logout state error loading))
 (def get-state (mkremote 'berest.web.castra.api/get-berest-state state error loading))
 (def calculate-csv (mkremote 'berest.web.castra.api/calculate-csv csv-result calc-error calculating))
+(def simulate-csv (mkremote 'berest.web.castra.api/simulate-csv csv-result calc-error calculating))
 
 (defn start-calculate-csv []
+  (let [{:keys [selected-plot-id until-date donations]} @state]
+    (calculate-csv selected-plot-id until-date donations)))
+
+(defn start-simulate-csv []
   (let [{:keys [selected-plot-id until-date donations]} @state]
     (calculate-csv selected-plot-id until-date donations)))
 

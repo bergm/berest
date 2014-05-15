@@ -9,14 +9,8 @@
             [simple-time.core :as time]
             [clj-time.core :as ctc]
             [clj-time.format :as ctf]
-            [clj-time.coerce :as ctcoe]))
-
-(def counter (atom 0))
-
-(defrpc get-state []
-  {:rpc/query [{:random (rand-int 100)
-                :counter @counter}]}
-  (swap! counter inc))
+            [clj-time.coerce :as ctcoe]
+            [clojure-csv.core :as csv]))
 
 
 ;;; utility ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,10 +24,10 @@
 
 ;;; internal ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn new-message [db-val from conv text]
+#_(defn new-message [db-val from conv text]
   {:from from, :conv conv, :text text})
 
-(defn add-message [db-val from conv text]
+#_(defn add-message [db-val from conv text]
   (let [cons* #(cons %2 (or %1 '()))]
     (update-in db-val [:messages conv] cons* (new-message db-val from conv text))))
 
@@ -64,7 +58,7 @@
     (when cred
       {:farms farms-with-plots
        :selected-farm-id (-> farms-with-plots first first)
-       :selected-plot-id (-> farms-with-plots first second :plots first)
+       :selected-plot-id (-> farms-with-plots first second :plots first first)
        :until-date #inst "1993-09-30"
        :donations [{:day 1 :month 4 :amount 22}
                    {:day 2 :month 5 :amount 10}
@@ -78,7 +72,6 @@
 (defrpc login
   [user-id pwd]
   {:rpc/pre [(rules/login! user-id pwd)]}
-  #_(println "login in with user-id: " user-id " pwd: " pwd)
   (get-berest-state))
 
 (defrpc logout
@@ -86,14 +79,8 @@
   {:rpc/pre [(rules/logout!)]}
   nil)
 
-(defrpc simulate-csv
-  []
-
-  )
-
-(defrpc calculate-csv
-  [plot-id until-date donations]
-  {:rpc/pre [(rules/logged-in?)]}
+(defn calc-or-sim-csv
+  [f plot-id until-date donations]
   (let [db (db/current-db)
         ud (ctcoe/from-date until-date)
         until-julian-day (.getDayOfYear ud)
@@ -101,11 +88,17 @@
         donations (for [{:keys [day month amount]} donations]
                     {:donation/abs-day (util/date-to-doy day month year)
                      :donation/amount amount})
-        {:keys [inputs soil-moistures-7 prognosis] :as result}
-        (api/calculate-plot-from-db db plot-id until-julian-day year donations [])]
+        {:keys [inputs soil-moistures]} (f db plot-id until-julian-day year donations [])]
+    (->> soil-moistures
+         (api/create-csv-output inputs ,,,)
+         (#(csv/write-csv % :delimiter \tab) ,,,))))
 
-    )
+(defrpc simulate-csv
+  [plot-id until-date donations]
+  {:rpc/pre [(rules/logged-in?)]}
+  (calc-or-sim-csv api/simulate-plot-from-db plot-id until-date donations))
 
-
-
-  )
+(defrpc calculate-csv
+  [plot-id until-date donations]
+  {:rpc/pre [(rules/logged-in?)]}
+  (calc-or-sim-csv api/calculate-plot-from-db plot-id until-date donations))

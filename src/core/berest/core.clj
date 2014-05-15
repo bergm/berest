@@ -1007,7 +1007,7 @@
 
     {:abs-day abs-day
      :rel-dc-day rel-dc-day
-     :irrigation-amount donation
+     :donation donation
      :effective-precipitation effective-precipitation
      :effective-donation effective-donation
      :effective-donation-uncovered effective-donation-uncovered
@@ -1273,7 +1273,7 @@
          :abs-day abs-day
          :rel-dc-day rel-dc-day
          :crop crop
-         :donation-amount (donations-at donations abs-day)
+         :donation (donations-at donations abs-day)
          :technology-type technology-type
          :technology-outlet-height (or (-> plot :plot.annual/technology :technology/outlet-height) 200)
          :technology-sprinkle-loss-factor (or (-> plot :plot.annual/technology :technology/sprinkle-loss-factor) 0)
@@ -1287,7 +1287,7 @@
                        0
                        (interpolated-value (:crop/rel-dc-day-to-quotient-aet-pets crop) rel-dc-day))
                      :digits 3)
-         :rounded-extraction-depth-cm rounded-extraction-depth-cm
+         :extraction-depth-cm rounded-extraction-depth-cm
          :transpiration-factor (interpolated-value (:crop/rel-dc-day-to-transpiration-factors crop) rel-dc-day)
          :fcs (:plot/field-capacities plot)
          :pwps (:plot/permanent-wilting-points plot)
@@ -1384,7 +1384,7 @@
    :below-technological-minimum {:action :dont-irrigate
                                  :text-de "Tech.min"}})
 
-(defn calc-donation-amount
+(defn calc-donation
   "calculate the irrigation amount to be given and the according recommendation text"
   [qu-prognosis-target
    {:keys [min-boundary-donation opt-boundary-donation max-boundary-donation
@@ -1405,11 +1405,11 @@
 
         ;function to calculate the soil-moistures by applying donation amount x at the first day
         ;of a period of length irrigation-prognosis-days
-        calc-sms-with-donation (fn [irrigation-amount]
+        calc-sms-with-donation (fn [donation]
                                  (->> inputs
                                       (take irrigation-prognosis-days ,,,)
                                       ;set irrigation amount just for first day (of all the irrigation days)
-                                      ((fn [[f-input & rest-input]] (cons (assoc f-input :donation-amount irrigation-amount) rest-input)) ,,,)
+                                      ((fn [[f-input & rest-input]] (cons (assoc f-input :donation donation) rest-input)) ,,,)
                                       ;set sm-prognosis true for all inputs
                                       (map #(assoc % :sm-prognosis? true) ,,,)
                                       ;calculate soil-moisture for the irrigation days
@@ -1601,7 +1601,7 @@
       (do
         (debug "qu-prognosis-avg-current: " qu-prognosis-avg-current " < qu-prognosis-avg-target: " qu-prognosis-avg-target )
         (debug technology+boundaries)
-        (calc-donation-amount qu-prognosis-avg-target technology+boundaries inputs soil-moistures)
+        (calc-donation qu-prognosis-avg-target technology+boundaries inputs soil-moistures)
         )
 
       :else
@@ -1648,7 +1648,7 @@
                   _ (debug "days-to-go*: " (dec days-to-go*) " final donation to apply: " donation)
                   ]
               {:days-to-go (dec days-to-go*)
-               :current-sm (calc-soil-moisture current-sm (assoc f-input :donation-amount donation))}))
+               :current-sm (calc-soil-moisture current-sm (assoc f-input :donation donation))}))
           {:days-to-go 0
            :current-sm {:qu-sum-deficits 0
                         :qu-sum-targets 0
@@ -1685,171 +1685,3 @@
   [inputs initial-soil-moistures]
   (calc-soil-moistures* inputs initial-soil-moistures :red-fn reduce))
 
-
-(defn create-csv-output [inputs full-reductions-results]
-  (let [value->german-string
-        (fn [value]
-          (if (nil? value)
-            ""
-            (if (instance? String value)
-              value
-              (.. java.text.NumberFormat (getInstance java.util.Locale/GERMAN) (format value)))))
-
-        header-line ["doy"
-                     "date"
-                     "rel DC day"
-                     "precip [mm]"
-                     "tavg [°]"
-                     "globrad [Jpcm2]"
-                     "evap [mm]"
-                     "irrWater [mm]"
-                     "pet [mm]"
-                     "aet [mm]"
-                     "aet/pet"
-                     "aet/pet soll"
-                     "infil 200cm [mm]"
-                     "sm 0-30cm [mm]"
-                     "sm 30-60cm [mm]"
-                     "sm 60-90cm [mm]"
-                     "sm 5cm [mm]"
-                     "sm 10cm [mm]"
-                     "sm 20cm [mm]"
-                     "sm 30cm [mm]"
-                     "sm 40cm [mm]"
-                     "sm 50cm [mm]"
-                     "sm 60cm [mm]"
-                     "sm 70cm [mm]"
-                     "sm 80cm [mm]"
-                     "sm 90cm [mm]"
-                     "sm 100cm [mm]"
-                     "sm 110cm [mm]"
-                     "sm 120cm [mm]"
-                     "sm 130cm [mm]"
-                     "sm 140cm [mm]"
-                     "sm 150cm [mm]"
-                     "sm 160cm [mm]"
-                     "sm 170cm [mm]"
-                     "sm 180cm [mm]"
-                     "sm 190cm [mm]"
-                     "sm 200cm [mm]"
-                     "sm 0-10cm [mm]"
-                     "sm 10-20cm [mm]"
-                     "sm 30-60cm [mm]"
-                     "sm 60-100cm [mm]"
-                     "sm 100-150cm [mm]"
-                     "effective-precipitation [mm]"
-                     "effective-donation [mm]"
-                     "effective-donation-uncovered [mm]"
-                     "cover-degree [%]"
-                     "dc"
-                     "rounded-extraction-depth [cm]"]
-
-        body-lines (map (fn [input rres]
-                          (map value->german-string
-                               [(:abs-day input)
-                                (ctf/unparse (ctf/formatter "dd.MM.")
-                                             (bu/doy-to-date (:abs-day input)))
-                                (:rel-dc-day input)
-                                (:precipitation input)
-                                (:tavg input)
-                                (:globrad input)
-                                (- (:evaporation input))
-                                (:donation-amount rres #_input)
-                                (:pet rres)
-                                (:aet rres)
-                                (:aet7pet rres)
-                                (:qu-target rres)
-                                (:groundwater-infiltration rres)
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 0 4))
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 4 7))
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 7 10))
-                                (nth (:soil-moistures rres) 0)
-                                (nth (:soil-moistures rres) 1)
-                                (nth (:soil-moistures rres) 2)
-                                (nth (:soil-moistures rres) 3)
-                                (nth (:soil-moistures rres) 4)
-                                (nth (:soil-moistures rres) 5)
-                                (nth (:soil-moistures rres) 6)
-                                (nth (:soil-moistures rres) 7)
-                                (nth (:soil-moistures rres) 8)
-                                (nth (:soil-moistures rres) 9)
-                                (nth (:soil-moistures rres) 10)
-                                (nth (:soil-moistures rres) 11)
-                                (nth (:soil-moistures rres) 12)
-                                (nth (:soil-moistures rres) 13)
-                                (nth (:soil-moistures rres) 14)
-                                (nth (:soil-moistures rres) 15)
-                                (nth (:soil-moistures rres) 16)
-                                (nth (:soil-moistures rres) 17)
-                                (nth (:soil-moistures rres) 18)
-                                (nth (:soil-moistures rres) 19)
-                                (nth (:soil-moistures rres) 20)
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 0 2))
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 2 4))
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 4 7))
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 7 11))
-                                (bu/sum (subvec (vec (:soil-moistures rres)) 11 16))
-                                (:effective-precipitation rres)
-                                (:effective-donation rres)
-                                (:effective-donation-uncovered rres)
-                                (* (:cover-degree input) 100)
-                                (:dc input)
-                                (:rounded-extraction-depth-cm input)]))
-                        inputs full-reductions-results)]
-    (cons header-line body-lines)))
-
-(defn run [db plot sorted-weather-map irrigation-donations-map until-abs-day irrigation-type]
-  (append-out out str (str (-> plot :plot/number str (subs ,,, 0 3)) "-"
-                           (-> plot :plot/number str (subs ,,, 3 4)) " "
-                           (-> plot :assertion/dc-assertions first :assertion/crop crop-id) " "
-                           (-> plot :assertion/dc-assertions first :assertion/crop :symbol) "      "))
-
-  (let [inputs (create-input-seq plot sorted-weather-map (+ until-abs-day 7)
-                                 irrigation-donations-map irrigation-type)
-        _ (println "inputs:" \newline "----------------------")
-        _ (pp/pprint inputs)
-        _ (println "----------------------")
-
-        inputs-7 (drop-last 7 inputs)
-        prognosis-inputs (take-last 7 inputs)
-
-        sms-7* (calc-soil-moistures* inputs-7 (:plot.annual/initial-soil-moistures plot))
-        _ (println "soil-moistures-7:" \newline "----------------------")
-        _ (pp/pprint sms-7*)
-        _ (println "----------------------")
-        {soil-moistures-7 :soil-moistures
-         :as sms-7} (last sms-7*)
-        #_(calc-soil-moistures inputs-7 (:plot.annual/initial-soil-moistures plot))
-
-        prognosis* (calc-soil-moisture-prognosis* 7 prognosis-inputs soil-moistures-7)
-        _ (println "prognosis:" \newline "----------------------")
-        _ (pp/pprint prognosis*)
-        _ (println "----------------------")
-        prognosis (last prognosis*)
-        #_(calc-soil-moisture-prognosis 7 prognosis-inputs soil-moistures-7)
-
-        {:keys [recommendation-text recommended-donation-amount]
-         :as rec} (calc-recommendation (:plot/slope plot) (:plot.annual/technology plot)
-                                       prognosis-inputs soil-moistures-7)
-        _ (println "recommendation:" \newline "----------------------")
-        _ (pp/pprint rec)
-        _ (println "----------------------")
-        ]
-    (spit "out.csv" (csv/write-csv (create-csv-output inputs (concat sms-7* prognosis*))))))
-
-#_(defn -main
-  "main function for commandline use"
-  [& args]
-
-  (let [db (->> "berest"
-                (str db/datomic-base-uri ,,,)
-                d/connect
-                d/db)
-        plot (db-read-plot db "0400" 2012)
-        weather weather-map
-        irrigation-donations-map (read-irrigation-donations db
-                                                            (:plot/number plot)
-                                                            (:plot/irrigation-area plot))
-        weather+prognosis weather
-        irrigation-type :sprinkle-losses]
-    (run plot weather irrigation-donations-map (bu/date-to-doy 29 5) irrigation-type)))
