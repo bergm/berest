@@ -237,3 +237,10 @@
         _ (println "----------------------")
         ]
     (spit "out.csv" (csv/write-csv (create-csv-output inputs (concat sms-7* prognosis*))))))
+
+
+
+
+
+
+

@@ -54,7 +54,8 @@
 
   :min-lein-version "2.0.0"
 
-  :source-paths ["src/core" "src/castra-service" "src/rest-service" "src/immutant"]
+  :source-paths ["src/core" "src/castra-service" "src/rest-service" "src/immutant"
+                 "src/hoplon-client/src/hl"]
   :resource-paths ["config" "resources" "private-resources"]
 
   :immutant {:context-path "/"}

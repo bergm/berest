@@ -65,6 +65,48 @@
                    {:day 11 :month 7 :amount 30}]
        :user cred})))
 
+(defrpc get-bersim-state [& [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))
+
+        crops (map #(select-keys % [:crop/id :crop/name :crop/symbol]) (data/db->crops db))
+        ]
+    (when cred
+      {:crops crops
+       :weather {} #_{:weather-data/prognosis-data? true
+                    :weather-data/date date*
+                    :weather-data/precipitation (parse-german-double rr-s)
+                    :weather-data/evaporation (parse-german-double vp-t)
+                    :weather-data/average-temperature (parse-german-double tm)
+                    :weather-data/global-radiation (parse-german-double gs)}
+       :selected-crop-id (-> crops first :crop/id)
+       :until-date #inst "1993-09-30"
+       :donations [{:day 1 :month 4 :amount 22}
+                   {:day 2 :month 5 :amount 10}
+                   {:day 11 :month 7 :amount 30}]
+       :technology {:technology/cycle-days 1
+                    :technology/outlet-height 200
+                    :technology/sprinkle-loss-factor 0.4
+                    :technology/type :technology.type/drip ;:technology.type/sprinkler
+                    :donation/min 1
+                    :donation/max 30
+                    :donation/opt 20
+                    :donation/step-size 5}
+       :plot {:plot/stt 6212
+              :plot/slope 1
+              :plot/field-capacities []
+              :plot/fc-unit :soil-moisture.unit/volP
+              :plot/permanent-wilting-points []
+              :plot/pwp-unit :soil-moisture.unit/volP
+              :plot/ka5-soil-types []
+              :plot/groundwaterlevel 300}
+       :user cred})))
+
+
 #_(defrpc register [user pass1 pass2]
   {:rpc/pre [(register! db user pass1 pass2)]}
         (get-state user))

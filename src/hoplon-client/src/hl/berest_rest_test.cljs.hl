@@ -1,4 +1,4 @@
-(page "zalf-test.html"
+(page "berest-rest-test.html"
       #_(:refer-clojure :exclude [repeat])
       (:require #_[ui.tabs :as tabs]
                 [ajax.core :as ajax]

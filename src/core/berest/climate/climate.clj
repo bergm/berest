@@ -2,7 +2,6 @@
   (:import (java.util Date))
   (:require [clojure.java.io :as cjio]
             [clojure.string :as str]
-            #_[simple-time.core :as time]
             [clj-time.core :as ctc]
             [clj-time.format :as ctf]
             [clj-time.coerce :as ctcoe]
@@ -54,7 +53,6 @@
         data-as-sorted-map (fn [weather-data-result]
                              (->> weather-data-result
                                   :data
-
                                   (map #(vector (bu/date-to-doy (:weather-data/date %)) %) ,,,)
                                   (map (fn [[k v]] [k (d/touch v)]) ,,,)
                                   (into (sorted-map) ,,,)))

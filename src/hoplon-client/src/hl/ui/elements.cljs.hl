@@ -1,0 +1,208 @@
+(ns ui.elements
+  (:require-macros [tailrecursion.javelin :refer :all]
+                   [tailrecursion.hoplon :refer :all])
+  (:require [tailrecursion.javelin :refer :all]
+            [tailrecursion.hoplon :refer :all]
+            #_[berest.client.hoplon.bersim.state :as s]))
+
+(defmethod tailrecursion.hoplon/do! :selected
+  [elem key value]
+  (let [e (js/jQuery elem)
+        k (name key)]
+    (cond
+      (= false value) (.removeAttr e k)
+      (= true value) (.attr e k k)
+      :else (.attr e k (str value)))))
+
+(defn create-option
+  [value selected-value & [display-value]]
+  (option :value value
+          :selected (cell= (= value selected-value))
+          (text "~(or display-value value)")))
+
+(defn technology
+  [{:keys [cycle-days set-cycle-days-fn
+           technology-type set-technology-type-fn
+           min set-min-fn
+           max set-max-fn
+           opt set-opt-fn
+           step-size set-step-size-fn
+           sprinkle-loss-factor set-sprinkle-loss-factor
+           outlet-height set-outlet-height-fn]}]
+    (let [[tt-id cd-id
+           min-id max-id opt-id
+           ss-id slf-id oh-id] (repeatedly gensym)]
+      (div
+        (div
+          :class "col-xs-3"
+          (select
+            :id tt-id
+            :class "form-control"
+            :on-change #(set-technology-type-fn (val-id tt-id))
+            (create-option :technology.type/drip @technology-type "Tropfenbewässerungsverfahren")
+            (create-option :technology.type/sprinkler @technology-type "Standardbewässerungsverfahren")))
+
+        (div
+          :class "col-xs-2"
+          (input
+            :id cd-id
+            :class "form-control"
+            :type "range"
+            :value cycle-days
+            :on-change #(set-cycle-days-fn (js/parseInt (val-id cd-id))))
+          (span (text "~{cycle-days}")))
+
+        (div
+          :class "col-xs-8"
+          (input
+            :id min-id
+            :class "form-control"
+            :type "number"
+            :placeholder "min"
+            :value min
+            :on-change #(set-min-fn (js/parseInt (val-id min-id))))
+
+          (input
+            :id opt-id
+            :class "form-control"
+            :type "number"
+            :placeholder "opt"
+            :value opt
+            :on-change #(set-opt-fn (js/parseInt (val-id opt-id))))
+
+          (input
+            :id max-id
+            :class "form-control"
+            :type "number"
+            :placeholder "max"
+            :value max
+            :on-change #(set-max-fn (js/parseInt (val-id max-id))))
+
+          (input
+            :id ss-id
+            :class "form-control"
+            :type "number"
+            :placeholder "+x"
+            :value step-size
+            :on-change #(set-step-size-fn (js/parseInt (val-id ss-id)))))
+
+        (div
+          :class "col-xs-2"
+          (input
+            :id slf-id
+            :class "form-control"
+            :type "number"
+            :placeholder "Sprühverluste"
+            :value sprinkle-loss-factor
+            :on-change #(set-sprinkle-loss-factor-fn (js/parseInt (val-id slf-id)))))
+
+        (div
+          :class "col-xs-2"
+          (input
+            :id oh-id
+            :class "form-control"
+            :type "number"
+            :placeholder "Ausbringhöhe"
+            :value outlet-height
+            :on-change #(set-outlet-height-fn (js/parseInt (val-id oh-id)))))
+
+        )))
+
+
+
+
+
+
+(defn create-irrigation-inputs
+  [row-no day month amount]
+  (let [template? (nil? row-no)]
+    (div
+      (div
+        :class "col-xs-2"
+        (input
+          :class "form-control"
+          :type "number"
+          :placeholder "Tag"
+          :value day
+          :data-id "day"
+          :on-change #(if template?
+                       (swap! temp-donations assoc :day (js/parseInt (val-event %)))
+                       (swap! s/state assoc-in [:donations @row-no :day] (val-event %)))))
+      (div
+        :class "col-xs-2"
+        (input
+          :class "form-control"
+          :type "number"
+          :placeholder "Monat"
+          :value month
+          :data-id "month"
+          :on-change #(if template?
+                       (swap! temp-donations assoc :month (js/parseInt (val-event %)))
+                       (swap! s/state assoc-in [:donations @row-no :month] (val-event %)))))
+      (div
+        :class "col-xs-2"
+        (input
+          :class "form-control"
+          :type "number"
+          :placeholder "Menge [mm]"
+          :value amount
+          :data-id "amount"
+          :on-change #(if template?
+                       (swap! temp-donations assoc :amount (js/parseInt (val-event %)))
+                       (swap! s/state assoc-in [:donations @row-no :amount] (val-event %)))))
+      (input
+        :class "btn btn-default"
+        :type "button"
+        :value (if template? "Zeile hinzufügen" "Zeile entfernen")
+        :on-click (if template? add-donation-row (partial remove-donation-row @row-no))))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(defelem active
+         [{:keys [state]} [elem]]
+         (elem :do-class (cell= {:active state})))
+
+(defelem trigger
+         [{:keys [state tab]} [elem]]
+         (active :state (cell= (= state tab))
+                 (elem :on-click #(reset! state tab))))
+
+(defelem content
+         [{:keys [state tab]} [elem]]
+         (active :state (cell= (= state tab)) elem))
+
+(defelem tabs
+         [{:keys [state] :as attr :or {state (cell 0)}} kids]
+         (let [ctnr (div (dissoc attr :state))
+               [trigs conts] (->> kids (partition 2) (apply map list))
+               a-void #(a :href "javascript:void(0)" %)
+               mktrig #(trigger :state state :tab %1 (li (a-void %2)))
+               mkcont #(content :state state :tab %1 (%2 :class "tab-pane"))]
+           (div (dissoc attr :state)
+                (ul :class "nav nav-tabs" (map-indexed mktrig trigs))
+                (div :class "tab-content" (map-indexed mkcont conts)))))

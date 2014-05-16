@@ -11,6 +11,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/castra-service" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/rest-service" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/immutant" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/hoplon-client/src/hl" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="1.7" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />

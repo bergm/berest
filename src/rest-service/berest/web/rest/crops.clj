@@ -1,6 +1,7 @@
 (ns berest.web.rest.crops
   (:require [berest.core :as bc]
             [berest.datomic :as db]
+            [berest.data :as data]
             [berest.helper :as bh :refer [rcomp]]
             [berest.web.rest.common :as common]
             [berest.web.rest.queries :as queries]
@@ -41,21 +42,10 @@
 
    #_[:button.btn.btn-primary {:type :submit} (vocab :create-button)]])
 
-(defn- all-crops
-  [db full-url]
-  (->> (d/q '[:find ?crop-e
-              :in $
-              :where
-              [?crop-e :crop/id]]
-            db)
-       (map (rcomp first (partial d/entity db)) ,,,)
-       (map #(select-keys % [:crop/id :crop/name :crop/symbol]) ,,,)
-       (map #(assoc % :url (str full-url (:crop/id %) "/")) ,,,)))
-
 (defn get-crops-edn*
   [db full-url]
   (map #(select-keys % [:crop/id :crop/name :crop/symbol :url])
-       (all-crops db full-url)))
+       (data/db->crops db full-url)))
 
 (defn get-crops-edn
   [request]
@@ -67,7 +57,7 @@
   [db request]
   (let [full-url (req/request-url request)
         url-path (:uri request)
-        crops (all-crops db full-url)]
+        crops (data/db->crops db full-url)]
     [:div.container
      (temp/standard-header url-path)
 

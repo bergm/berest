@@ -1,4 +1,4 @@
-(ns berest.client.hoplon.berest-state
+(ns berest.client.hoplon.bersim.state
   (:require-macros
     [tailrecursion.javelin :refer [defc defc= cell=]])
   (:require [clojure.set :as set]
@@ -10,6 +10,48 @@
 
 (defc state {})
 #_(cell= (println "state: " (pr-str state)))
+#_{:crops crops
+ :weather {} #_{:weather-data/prognosis-data? true
+                    :weather-data/date date*
+                    :weather-data/precipitation (parse-german-double rr-s)
+                    :weather-data/evaporation (parse-german-double vp-t)
+                    :weather-data/average-temperature (parse-german-double tm)
+                    :weather-data/global-radiation (parse-german-double gs)}
+ :selected-crop-id (-> crops first :crop/id)
+ :until-date #inst "1993-09-30"
+ :donations [{:day 1 :month 4 :amount 22}
+             {:day 2 :month 5 :amount 10}
+             {:day 11 :month 7 :amount 30}]
+ :technology {:technology/cycle-days 1
+              :technology/outlet-height 200
+              :technology/sprinkle-loss-factor 0.4
+              :technology/type :technology.type/drip ;:technology.type/sprinkler
+              :donation/min 1
+              :donation/max 30
+              :donation/opt 20
+              :donation/step-size 5}
+ :plot {:plot/stt 6212
+        :plot/slope 1
+        :plot/field-capacities []
+        :plot/fc-unit :soil-moisture.unit/volP
+        :plot/permanent-wilting-points []
+        :plot/pwp-unit :soil-moisture.unit/volP
+        :plot/ka5-soil-types []
+        :plot/groundwaterlevel 300}
+ :user cred}
+
+(defc= technology-cycle-days (-> state :technology :technology/cycle-days))
+(defn set-technology-cycle-days
+  [value]
+  (swap! state update-in [:technology :technology/cycle-days] value))
+
+(defc= technology-outlet-height (-> state :technology :technology/outlet-height))
+(defn set-technology-cycle-days
+  [value]
+  (swap! state update-in [:technology :technology/cycle-days] value))
+
+
+
 (defc error nil)
 (defc loading [])
 
@@ -27,17 +69,9 @@
 
 (def login! (mkremote 'berest.web.castra.api/login state error loading))
 (def logout! (mkremote 'berest.web.castra.api/logout state error loading))
-(def get-state (mkremote 'berest.web.castra.api/get-berest-state state error loading))
+(def get-state (mkremote 'berest.web.castra.api/get-bersim-state state error loading))
 (def calculate-csv (mkremote 'berest.web.castra.api/calculate-csv csv-result calc-error calculating))
 (def simulate-csv (mkremote 'berest.web.castra.api/simulate-csv csv-result calc-error calculating))
-
-(defn start-calculate-csv []
-  (let [{:keys [selected-plot-id until-date donations]} @state]
-    (calculate-csv selected-plot-id until-date donations)))
-
-(defn start-simulate-csv []
-  (let [{:keys [selected-plot-id until-date donations]} @state]
-    (calculate-csv selected-plot-id until-date donations)))
 
 (defn init []
   (get-state)

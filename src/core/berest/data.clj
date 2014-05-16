@@ -6,7 +6,7 @@
 
 
 (defn db->users
-  [db & [full-url]]
+  [db & [parent-url]]
   (->> (d/q '[:find ?user-e
               :in $
               :where
@@ -14,10 +14,10 @@
             db)
        (map (rcomp first (partial d/entity db)) ,,,)
        (map #(select-keys % [:user/id :user/full-name]) ,,,)
-       (map #(assoc % :url (str full-url (:user/id %) "/")) ,,,)))
+       (map #(assoc % :url (str parent-url (:user/id %) "/")) ,,,)))
 
 (defn db->farms
-  [db user-id & [full-url]]
+  [db user-id & [parent-url]]
   (->> (d/q '[:find ?farm-e
               :in $ ?user-id
               :where
@@ -26,10 +26,10 @@
             db user-id)
        (map (rcomp first (partial d/entity db)) ,,,)
        (map #(select-keys % [:farm/id :farm/name]) ,,,)
-       (map #(assoc % :url (str full-url (:farm/id %) "/")) ,,,)))
+       (map #(assoc % :url (str parent-url (:farm/id %) "/")) ,,,)))
 
 (defn db->plots
-  [db farm-id & [full-url]]
+  [db farm-id & [parent-url]]
   (->> (d/q '[:find ?plot-e
               :in $ ?farm-id
               :where
@@ -37,6 +37,16 @@
               [?farm-e :farm/plots ?plot-e]]
             db farm-id)
        (map (rcomp first (partial d/entity db)),,,)
-       (map #(select-keys % [:plot/id :plot/name]),,,)))
+       (map #(select-keys % [:plot/id :plot/name]),,,)
+       (map #(assoc % :url (str parent-url (:plot/id %) "/")) ,,,)))
 
-
+(defn db->crops
+  [db & [parent-url]]
+  (->> (d/q '[:find ?crop-e
+              :in $
+              :where
+              [?crop-e :crop/id]]
+            db)
+       (map (rcomp first (partial d/entity db)) ,,,)
+       (map #(select-keys % [:crop/id :crop/name :crop/symbol]) ,,,)
+       (map #(assoc % :url (str parent-url (:crop/id %) "/")) ,,,)))

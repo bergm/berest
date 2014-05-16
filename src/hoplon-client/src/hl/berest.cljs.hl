@@ -4,7 +4,7 @@
                 [ajax.core :as ajax]
                 [berest.helper :as bh :refer [rcomp partial-kw]]
                 [berest.client.hoplon.rpc :as rpc]
-                [berest.client.hoplon.berest-state :as state]
+                [berest.client.hoplon.berest.state :as state]
                 [clojure.string :as str]
                 [berest.client.hoplon.variance-charts :as vc]
                 [berest.client.hoplon.apogee-charts :as ac]
