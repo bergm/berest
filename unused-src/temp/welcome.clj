@@ -1,5 +1,5 @@
-(ns berest.web.views.welcome
-  (:require [berest.web.views.common :as common]
+(ns de.zalf.berest.web.views.welcome
+  (:require [de.zalf.berest.web.views.common :as common]
             #_[noir.content.getting-started]
             #_[net.cgrand.enlive-html :as html])
   (:use [noir.core :only [defpage]]))

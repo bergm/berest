@@ -1,10 +1,10 @@
-(ns berest.experiment
+(ns de.zalf.berest.experiment
   #_(:use clojure.test
         clojure.pprint ; Amotoen doesn't require this, just the sample code below
         com.lithinos.amotoen.grammars.csv)
   (:refer-clojure :exclude [char])
   (:use [the.parsatron])
-  (:require [berest.helper :as h]))
+  (:require [de.zalf.berest.helper :as h]))
 
 #_(deftest use-amotoen
   (pprint (to-clj "a,b,c")))

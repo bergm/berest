@@ -1,0 +1,845 @@
+(ns de.zalf.berest.client.hoplon.apogee-charts
+  (:require-macros [cljs.core.match.macros :as ccmm :refer [match]])
+  (:require [clojure.string :as str]
+            [clojure.set :as set]
+            [apogee.charts :as acharts]
+            [apogee.svg :as asvg]
+            [apogee.util :as autil]
+            [tailrecursion.hoplon.svg :as hsvg]
+
+            [clojure.walk :as cw]
+            [de.zalf.berest.helper :as bh :refer [ajuxt rcomp]]
+            )
+
+  )
+
+#_(comment
+
+  (defelem point-circle
+    [{:keys [chart x y] :as attr} _]
+    (let [coord (cell= (rel-coord chart x y))]
+      ((svg/circle
+         :cx (cell= (first coord))
+         :cy (cell= (second coord)))
+       (dissoc attr :chart :x :y)
+       (svg/title (text "[~{x}, ~{y}]")))))
+
+  (defelem point-rect
+    [{:keys [chart x y width height] :as attr} _]
+    (let [coord (cell= (rel-coord chart x y))]
+      ((svg/rect
+         :x (cell= (- (first coord) (/ width 2)))
+         :y (cell= (- (second coord) (/ height 2))))
+       (dissoc attr :chart :x :y)
+       (svg/title (text "[~{x}, ~{y}]")))))
+
+  (defelem points-rect
+    [{:keys [chart data width height] :as attr} _]
+    (hsvg/g
+      (loop-tpl :bindings [[x y] data]
+                ((point-rect :chart chart :x x :y y :width width :height height)
+                 (dissoc attr :chart :data :width :height)))))
+
+  (defelem points-circle
+    [{:keys [chart data] :as attr} _]
+    (hsvg/g
+      (loop-tpl :bindings [[x y] data]
+                ((point-circle :chart chart :x x :y y) (dissoc attr :chart :data)))))
+
+  (defelem polygon
+    [{:keys [chart data] :as attr} _]
+    (let [start (cell= (str "0," (:height chart)))
+          end (cell= (str (:width chart) "," (:height chart)))
+          rels (cell= (for [[x y] data]
+                        (let [[x' y'] (rel-coord chart x y)]
+                          (str x' "," y'))))
+          points (cell= (str start " " (str/join " " rels) " " end))]
+      ((svg/polygon :points points) (dissoc attr :chart :data))))
+
+  )
+
+(defn merge-str-attrs
+  [old new]
+  (str/join " " (-> old (str/split ,,, #" ")
+                set
+                (into ,,, (str/split new #" ")))))
+
+(defn rgb
+  [r g b]
+  (str "rgb(" r "," g "," b ")"))
+
+(defn translate-value
+  [v from-min from-max to-min to-max]
+  (let [scale (/ (- to-max to-min)
+                 (- from-max from-min))
+        trans (- to-min (* from-min scale))]
+    (+ (* v scale) trans)))
+
+(defn translate
+  ([x] (str "translate(" x ")"))
+  ([x y] (str "translate(" x "," y ")")))
+
+
+
+
+
+
+
+
+
+(defrecord XY-Chart-Config [width height min-x max-x min-left-y max-left-y min-right-y max-right-y])
+
+(defn xy-config [& {:keys [width height]
+                    [min-x max-x] :domain-x
+                    [min-y max-y] :domain-y
+                    [min-left-y max-left-y] :domain-left-y
+                    [min-right-y max-right-y] :domain-right-y}]
+  (XY-Chart-Config. width height
+                    (or min-x 0) (or max-x 10)
+                    (or min-y min-left-y 0) (or max-y max-left-y 10)
+                    min-right-y max-right-y))
+
+(defn rel-coord
+  [{:keys [width height min-x max-x min-left-y max-left-y min-right-y max-right-y]} y-domain x y]
+  (let [[min-y max-y] (case y-domain
+                            :left [min-left-y max-left-y]
+                            :right [min-right-y max-right-y])
+        w (- max-x min-x)
+        h (- max-y min-y)
+        dw (- x min-x)
+        dh (- y min-y)]
+    [(* width (/ dw w)) (* height (- 1 (/ dh h)))]))
+
+(defelem container
+  [{:keys [config] :as attr} children]
+  (cell-let [{:keys [width height]} config]
+            (hsvg/svg (assoc (dissoc attr :config) :width width :height height)
+                      children)))
+
+(defelem polyline
+  [{:keys [chart data]
+    y-domain :y-domain
+    :or {y-domain :left}
+    :as attr} children]
+  (let [rels (cell= (for [[x y] data]
+                      (let [[x' y'] (rel-coord chart y-domain x y)]
+                        (str x' "," y'))))
+        points (cell= (str/join " " rels))]
+    ((hsvg/polyline :points points) (dissoc attr :chart :data))))
+
+
+(defn scale-linear
+  [& {:keys [domain range]
+      :or {domain [0 1]
+           range [0 1]}}]
+  (fn [x]
+    (let [domain-length (- (last domain) (first domain))
+          range-length (- (last range) (first range))]
+      (+ (first range)
+         (* range-length
+            (/ (- x (first domain))
+               domain-length))))))
+
+
+(def ^:dynamic *default-chart-background-attrs*
+  {:width 750
+   :height 500
+   :background-color (rgb 225 225 225)
+   :border-color (rgb 255 255 255)
+   :border-width 2})
+
+(defelem chart-background
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-chart-background-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "chart-background")})
+        k->css {:background-color :fill
+                :border-color :stroke
+                :border-width :stroke-width}
+
+        this (hsvg/rect :x 0 :y 0)]
+    ;; Implement appendChild/setAttribute.
+    (on-append! this
+                (fn [attrs children]
+                  ;set custom attributes as css style attributes
+                  (doseq [[k v] (select-keys attrs [:background-color :border-color :border-width])]
+                    (add-attributes! this {:css (cell= {(k->css k) v})}))
+                  (add-attributes! this (dissoc attrs :background-color :border-color :border-width))
+                  (add-children! this children)))
+    ;; Initialize element.
+    (apply this attrs* children)))
+
+
+(defn- used-defaults
+  [default-attrs-map attrs-map]
+  (set/difference (into #{} (keys default-attrs-map)) (into #{} (keys attrs-map))))
+
+(defn- set-cells
+  [attr-2-cell-map attrs-map]
+  (doseq [[attr cell] (select-keys attr-2-cell-map (keys attrs-map))]
+    (let [attr-value (attr attrs-map)]
+      (set-cell!= cell attr-value))))
+
+(defn- make-cell=s
+  [attrs-map]
+  (into {} (for [[k v] attrs-map]
+             [k (cell= v)])))
+
+(def ^:dynamic *default-chart-grid-attrs*
+  {:orientation :horizontal #_:vertical
+   :width 750,
+   :height 300
+   :grid-lines 10
+   :major-grid-color (rgb 255 255 255)
+   :minor-grid-color (rgb 245 245 245)
+   :major-grid-width 2
+   :minor-grid-width 1})
+
+(defelem chart-grid
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-chart-grid-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "chart-grid")})
+
+        used-defs (used-defaults *default-chart-grid-attrs* attrs)
+
+        cell-attr-keys #{:height :width
+                         :grid-lines
+                         :major-grid-color :minor-grid-color
+                         :major-grid-width :minor-grid-width}
+
+        cell-attrs (make-cell=s (select-keys attrs* cell-attr-keys))
+
+        orientation (:orientation attrs*)
+        {:keys [height width
+                grid-lines
+                major-grid-color minor-grid-color
+                major-grid-width minor-grid-width]} cell-attrs
+
+        spacing (cell= (/ (case orientation
+                                 :horizontal height
+                                 :vertical width)
+                           grid-lines))
+
+        this (hsvg/g
+               (loop-tpl
+                 :bindings [i (cell= (range 1 grid-lines))]
+                 (let [step (cell= (* i spacing))
+                       line (case orientation
+                                  :horizontal (hsvg/line :x1 0 :y1 step
+                                                         :x2 width :y2 step)
+                                  :vertical (hsvg/line :x1 step :y1 0
+                                                       :x2 step :y2 height))]
+                     ((line :css (cell= {:stroke       (if (even? i)
+                                                         major-grid-color
+                                                         minor-grid-color)
+                                         :stroke-width (if (even? i)
+                                                         major-grid-width
+                                                         minor-grid-width)}))
+                    (apply dissoc attrs* (conj cell-attr-keys :orientation ))))))]
+
+    ;; Implement appendChild/setAttribute.
+    (on-append! this
+                (fn [{parent-attrs? :parent-attrs
+                      :as           attrs} _]
+                  (let [attrs* (if parent-attrs?
+                                 ;if attrs are settings from parent, only set values not already set before
+                                 ;thus just attrs which use default values will be updated
+                                 (select-keys attrs used-defs)
+                                 ;if attrs have been set directly from user on the elements all attrs can
+                                 ;be updated
+                                 (dissoc attrs :parent-attrs))]
+                    (set-cells cell-attrs attrs*)
+                    this)))
+    ;return initial set of vertical or horizontal lines
+    this))
+
+
+
+
+
+(def ^:dynamic *default-chart-axis-attrs*
+  {:place :left #_:right #_:bottom #_:top
+   :width 750,
+   :height 500
+   :min 0
+   :max 100
+   :grid-lines 10,
+   :font-family "Verdana"
+   :font-size "12px"
+   :number-format 1})
+
+(defelem chart-axis
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-chart-axis-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "chart-axis")})
+
+        used-defs (used-defaults *default-chart-axis-attrs* attrs)
+
+        cell-attr-keys #{:height :width
+                         :min :max
+                         :grid-lines}
+
+        cell-attrs (make-cell=s (select-keys attrs* cell-attr-keys))
+
+        {:keys [place
+                font-family font-size
+                number-format]} attrs*
+        {:keys [height width
+                min max
+                grid-lines]} cell-attrs
+
+        size (case place
+                   (:left :right) height
+                   (:top :bottom) width)
+
+        spacing (cell= (/ size grid-lines))
+
+        this (hsvg/g
+               (loop-tpl
+                 :bindings [i (cell= (filter even? (range (case place
+                                                                (:left :right) 1
+                                                                (:top :bottom) 0)
+                                                          (inc grid-lines))))]
+                 (let [step (cell= (* i spacing))
+                       display-value (cell= (translate-value step 0 size min max))
+                       text* (case place
+                                  (:left :right) (hsvg/text
+                                                   :x (cell= (case place
+                                                                   :left 0
+                                                                   :right width))
+                                                   :y (cell= (- height step)))
+                                  (:top :bottom) (hsvg/text
+                                                   :x (cell= step)
+                                                   :y (cell= (case place
+                                                                   :top (- 0 20)
+                                                                   :bottom (+ height 20)))))]
+                   ((text* :css (cell= {:fill        (rgb 150 150 150)
+                                        :font-family font-family
+                                        :font-size   font-size
+                                        :text-anchor (case place
+                                                           (:top :bottom) "middle"
+                                                           :left "end"
+                                                           :right "start")})
+                           (text "~(.toFixed display-value number-format)"))
+                    (apply dissoc attrs* (conj cell-attr-keys
+                                               :place
+                                               :font-family :font-size
+                                               :number-format))))))]
+
+    ;; Implement appendChild/setAttribute.
+    (on-append! this
+                (fn [{parent-attrs? :parent-attrs
+                      :as           attrs} _]
+                  (let [attrs* (if parent-attrs?
+                                 ;if attrs are settings from parent, only set values not already set before
+                                 ;thus just attrs which use default values will be updated
+                                 (select-keys attrs used-defs)
+                                 ;if attrs have been set directly from user on the elements all attrs can
+                                 ;be updated
+                                 (dissoc attrs :parent-attrs))]
+                    (set-cells cell-attrs attrs*)
+                    this)))
+    ;return initial set of axis labels
+    this))
+
+(def ^:dynamic *default-xy-chart-attrs*
+  {:x 50
+   :y 50
+   :width 750
+   :height 500})
+
+(defelem xy-chart
+  [{:keys [class] :as attrs} children]
+  (let [attrs* (merge *default-xy-chart-attrs*
+                      (dissoc attrs :class)
+                      {:class (merge-str-attrs class "xy-chart")})
+
+        used-defs (used-defaults *default-xy-chart-attrs* attrs)
+
+        cell-attr-keys #{:height :width}
+
+        {:keys [x y]} attrs*
+        cell-attrs (make-cell=s (select-keys attrs* cell-attr-keys))
+        {:keys [height width]} cell-attrs
+
+        container (hsvg/g :transform (cell= (str "translate(" x "," y ")")))
+        this (hsvg/svg :width (cell= (+ x x width))
+                       :height (cell= (+ y y height))
+                       container)]
+    ;; Implement appendChild/setAttribute.
+    (on-append!
+      this
+      (fn [attrs children]
+        (add-children! container (map #(% :parent-attrs true
+                                          :width width
+                                          :height height)
+                                      children))
+        (add-attributes! this attrs)))
+    ;; Initialize element.
+    (apply this (dissoc attrs* :x :y :width :height) children)))
+
+
+
+(defn point-label [id x y text options]
+  [:text (merge {:id id :x x :y y
+                 :label-font-family "Verdana"
+                 :label-font-size "55px"
+                 :visibility :visible
+                 :fill (rgb 100 100 150)} options)
+   text])
+
+
+
+#_(defelem polyline
+  [xs ys & options]
+  (let [points (clojure.string/join " " (map #(str %1 "," %2) xs ys))]
+    [:polyline (merge {:points points} (apply hash-map options))]))
+
+(defn line [x1 y1 x2 y2 & options]
+  [:line (merge {:x1 x1 :y1 y1 :x2 x2 :y2 y2} (apply hash-map options))])
+
+(defelem add-points
+  [{:keys [data display-data] :as attrs} _]
+  (let [attrs* (dissoc attrs :data :display-data)]
+    (map (fn [[x y] [dx dy]]
+           ((hsvg/circle :cx x :cy y :r 2 :data-x dx :data-y dy)
+            attrs*))
+         data display-data)))
+
+(defn insert-into [chart hi-elements]
+  (assoc chart :svg (concat (:svg chart) hi-elements)))
+
+(defn add-margins [low high & {:keys [percentage] :or {percentage 10}}]
+  (let [abs #(if (< 0 %1) %1 (- %1))
+        range (- high low)
+        fraction (* range (/ percentage 100))]
+    [(- low (abs fraction)) (+ high (abs fraction))]))
+
+#_(defn graph-javascript []
+  (he/javascript-tag
+    " function enlargeCircle(evt, id, label, unit){
+        var ct = evt.currentTarget;
+        ct.prevSize = ct.r.baseVal.value;
+        ct.r.baseVal.value = ct.prevSize * 3;
+
+        var vd = document.getElementById('valueDisplay_'+id);
+        vd.setAttribute('x', ct.getAttribute('cx'));
+        vd.setAttribute('y', ct.getAttribute('cy'));
+        vd.style.visibility = 'visible';
+
+        vd.setAttribute('fill', ct.getAttribute('fill'));
+        vd.textContent =  'Tag: '+ct.getAttribute('data-x')
+                          +' | '+label+': '+ct.getAttribute('data-y')+unit;
+      };
+      function shrinkCircle(evt, id){
+        var ct = evt.currentTarget;
+        ct.r.baseVal.value = ct.prevSize;
+
+        var vd = document.getElementById('valueDisplay_'+id);
+        vd.setAttribute('style', 'visibility:hidden');
+      };"))
+
+(def default-graph-properties
+  {:min-day 80
+   :x-margin {:left 40 :right 40}
+   :y-margin {:top 30 :bottom 30}
+   :height 200
+   :plot-area-margin-percentage 5
+   :curve-properties {:color :black
+                      :color-f nil
+                      :label ""
+                      :unit ""
+                      :f identity
+                      :type :line
+                      :assoc-y :left
+                      :assoc-x :bottom}})
+
+(defelem graph
+  [{:keys [id data
+           xmin xmax
+           x-margin y-margin
+           height
+           margin-percentage
+           default-props
+           force-const-lines-display
+           align-zero]
+    :or {xmin (:min-day default-graph-properties)
+         x-margin (:x-margin default-graph-properties)
+         y-margin (:y-margin default-graph-properties)
+         height (:height default-graph-properties)
+         margin-percentage (:plot-area-margin-percentage default-graph-properties)
+         default-props (:curve-properties default-graph-properties)
+         force-const-lines-display false
+         align-zero false}
+    :as attrs} children]
+  (let [;get x and y values of const lines into for x/y/min/max calculations
+        ;if forced, else these should only appear if other data being displayed
+        ;use that range
+         {:keys [hs vs]} (if force-const-lines-display
+                           (reduce (fn [{:keys [hs vs] :as acc}
+                                        {:keys [const horizontal vertical]}]
+                                     (cond
+                                       (and const horizontal)
+                                       {:hs (conj hs horizontal)
+                                        :vs vs}
+
+                                       (and const vertical)
+                                       {:hs hs
+                                        :vs (conj vs vertical)}
+
+                                       :else
+                                       acc))
+                                   {:hs [] :vs []} data)
+                           {:hs [] :vs []})
+
+         data* (map (partial merge default-props) data)
+
+         dayss (map :days data*)
+         max-days (apply max (apply concat vs dayss))
+         xmax (or xmax (* (+ (quot max-days 10) 1) 10))
+         [xmin* xmax*] (add-margins xmin xmax :percentage margin-percentage)
+        ;width is being constructed dynamically to use browser scrolling and
+        ;zooming in svg graphs
+         width (* 9 (int (- xmax xmin)))
+
+         m|m (fn [min|max l] (when (seq l) (apply min|max l)))
+         calc-y-min-max (fn [side]
+                          (some->> data*
+                                   (filter #(= (:assoc-y %1) side) ,,,)
+                                   (map :values ,,,)
+                                   (apply concat hs ,,,)
+                                   (#(when (seq %) %) ,,,)
+                                   (ajuxt (partial m|m min) (partial m|m max) ,,,)
+                                   (apply add-margins ,,,)))
+
+         colors (map :color data*)
+         y-min-max* {:left (calc-y-min-max :left)
+                     :right (calc-y-min-max :right)}
+
+        ;align two sided graphs to a zero line if possible
+         y-min-max (if (and  align-zero
+                             (some (partial > 0) (:left y-min-max*))
+                             (not-any? nil? (ajuxt :left :right y-min-max*)))
+                     (let [[[yll ylh] [yrl yrh]]
+                           (ajuxt :left :right y-min-max*)
+
+                           left-ratio (/ ylh yll)
+                           upper-factor (.abs js/Math (/ (* yrl left-ratio)
+                                                         yrh))
+                           yrh+ (- (* upper-factor yrh) yrh)]
+                       {:left [yll ylh]
+                        :right [yrl (+ yrh yrh+)]})
+                     y-min-max*)
+
+        ;create chart which is used as background
+         chart (xy-config :width width :height height
+                       :domain-x [xmin xmax]
+                       :domain-left-y (:left y-min-max)
+                       :domain-right-y (:right y-min-max))
+
+         container (container :chart chart
+                              (xy-chart :width width :height height
+                                       :x (:left x-margin) :y (:top y-margin)
+                                       :xmin xmin :xmax xmax
+                                       :y-range-left (:left y-min-max)
+                                       :y-range-right (:right y-min-max)
+                                       :grid-lines (/ (- xmax xmin) 10)))
+
+        #_scale-x #_(scale-linear :domain [xmin xmax] :range [0. width])
+        #_scale-y #_{:left (scale-linear :domain (:left y-min-max)
+                                      :range [height 0.])
+                  :right (scale-linear :domain (:right y-min-max)
+                                       :range [height 0.])}
+
+        ;transform data to include possible const lines vertically and horizontally
+         data** (map (fn [{:keys [const horizontal vertical assoc-y] :as m}]
+                       (merge  default-props m
+                               (when (and const (or horizontal vertical))
+                                 (merge {:no-points true}
+                                        (cond
+                                          horizontal {:days [xmin xmax]
+                                                      :assoc-x :bottom
+                                                      :values [horizontal horizontal]}
+                                          vertical {:days [vertical vertical]
+                                                    :assoc-y assoc-y
+                                                    :values (assoc-y y-min-max)})))))
+                     data)]
+    (div
+      :class "bars"
+      :css {:background-color :gray
+            :height (+ height (+ (:top y-margin)
+                                 (:bottom y-margin)))
+            :width (+ width (+ (:left x-margin)
+                               (:right x-margin)))}
+      (container
+        (for [{:keys [days values color color-f
+                      type assoc-y label unit f no-points]} data**
+              :let [[_ zero] (rel-coord chart assoc-y 0 0)]]
+          (hsvg/g
+            :data-label label
+            :data-unit unit
+            (match type
+                   :line (polyline :chart chart
+                                   :data (map vec days values)
+                                   :stroke color :fill :none)
+                   :bar (map (fn [day value]
+                               (let [[day* value*] (rel-coord chart assoc-y day value)]
+                                 (hsvg/line :x1 day* :y1 zero :x2 day* :y2 value*
+                                            :stroke (if color-f
+                                                      (color-f value)
+                                                      color)
+                                            :fill :none)))
+                             days values))
+            (when-not no-points
+              (add-points (map #(rel-coord chart assoc-y %1 %2) days values)
+                          (map vec days (map f values))
+                          :stroke color :fill color)))))
+      children)))
+
+(defelem line
+  [{:keys [chart data]
+    y-domain :y-domain
+    :or {y-domain :left}
+    :as attr} children]
+  (let [rels (cell= (for [[x y] data]
+                      (let [[x' y'] (rel-coord chart y-domain x y)]
+                        (str x' "," y'))))
+        points (cell= (str/join " " rels))]
+    ((hsvg/polyline :points points) (dissoc attr :chart :data))))
+
+#_[:div
+ [:div#baseData
+  [:span#plotId "Nr.: " (:plot/number plot)] " "
+  [:span#plotArea "Fläche: " (:plot/crop-area plot)] " "
+  [:span#plotIrrArea "beregnete Fläche: " (:plot/irrigation-area plot)]
+  #_(print-str plot)]
+
+ [:div#graphs
+  [:span  [:span {:style "color:green"} "AET/PET Soll"] " / "
+   [:span {:style "color:goldenrod"} "AET/PET"] " / "
+   [:span
+    [:span {:style "color:blue"} "N"] "-"
+    [:span {:style "color:red"} "V"] " [mm]"] " / "
+   [:span {:style "color:darkblue"} "Gabe [mm]"]]
+  (graph :d2Plot [
+                   {:const true
+                    :horizontal 0
+                    :assoc-y :left
+                    :color :black}
+
+                   {:days (->> inputs
+                               (filter (rcomp :qu-target
+                                              (partial < 0))
+                                 ,,,)
+                               (map :abs-day ,,,))
+                    :values (->> inputs
+                                 (map :qu-target ,,,)
+                                 (filter (partial < 0) ,,,)
+                                 (map  (rcomp  (partial * 100)
+                                               (partial-kw bu/round :digits 1))
+                                   ,,,))
+                    :color :green
+                    :assoc-y :left
+                    :label "AET/PET S."
+                    :unit "%"}
+
+                   { :days (->> (rest sms-7*)
+                                (filter (rcomp :aet7pet
+                                               (partial < 0))
+                                  ,,,)
+                                (map :abs-day ,,,))
+                     :values (->> (rest sms-7*)
+                                  (map :aet7pet ,,,)
+                                  (filter (partial < 0) ,,,)
+                                  (map  (rcomp  (partial * 100)
+                                                (partial-kw bu/round :digits 1))
+                                    ,,,))
+                     :color :goldenrod
+                     :assoc-y :left
+                     :label "AET/PET"
+                     :unit "%"}
+
+                   { :days days
+                     :values (map  (rcomp  (juxt :precipitation :evaporation)
+                                           (partial apply -)
+                                           (partial-kw bu/round :digits 1))
+                                   inputs)
+                     :color-f #(if (< % 0) :red :blue)
+                     :type :bar
+                     :assoc-y :right
+                     :label "N-V"
+                     :unit "mm"}
+
+                   { :days days
+                     :values (->> inputs
+                                  (map :irrigation-amount ,,,)
+                                  (filter (partial < 0) ,,,)
+                                  (map  (partial-kw bu/round :digits 1)
+                                    ,,,))
+                     :color :darkblue
+                     :type :bar
+                     :assoc-y :right
+                     :label "Gabe" :unit "mm"}
+                   ]
+         :align-zero true)]
+
+ [:div
+  [:span  [:span {:style "color:green"} "AET/PET Soll"] " / "
+   [:span {:style "color:goldenrod"} "AET/PET"] " / "
+   [:span
+    [:span {:style "color:blue"} "N"] "-"
+    [:span {:style "color:red"} "V"] " [mm]"] " / "
+   [:span {:style "color:darkblue"} "Gabe [mm]"]]
+  (graph :d1Plot [
+                   { :const true
+                     :horizontal 0
+                     :assoc-y :left
+                     :color :black}
+
+                   { :days (->> (rest sms-7*)
+                                (filter (rcomp  :aet7pet
+                                                (partial < 0))
+                                  ,,,)
+                                (map :abs-day ,,,))
+                     :values (->> (rest sms-7*)
+                                  (map :aet7pet ,,,)
+                                  (filter (partial < 0) ,,,)
+                                  (map  (rcomp  (partial * 100)
+                                                (partial-kw bu/round :digits 1))
+                                    ,,,))
+                     :color :goldenrod
+                     :assoc-y :left
+                     :label "AET/PET"
+                     :unit "%"
+                     }
+
+                   { :days days
+                     :values (map  :precipitation  inputs)
+                     :color-f #(if (< % 0) :red :blue)
+                     :type :bar
+                     :assoc-y :right
+                     :label "N-V"}
+
+                   ]
+         :align-zero true
+         :force-const-lines-display true)]
+
+
+ [:div
+  [:span "DC Stadium"]
+  (graph :d1Plot [{:days days
+                   :values (map :rel-dc-day inputs)
+                   :color :black
+                   :label "DC"}])]
+
+ [:div
+  [:span  [:span {:style "color:blue"} "Niederschlag (N) [mm]"] " / "
+   [:span {:style "color:red"} "Verdunstung (V) [mm]"] " / "
+   [:span {:style "color:black"} "N-V [mm]"]]
+  (graph :d2Plot [{ :const true
+                    :horizontal 0
+                    :color :black}
+                  { :days days
+                    :values (map :precipitation inputs)
+                    :color :blue
+                    :label "Nied." :unit "mm"}
+                  { :days days
+                    :values (map :evaporation inputs)
+                    :color :red
+                    :label "Verd." :unit "mm"}
+                  { :days days
+                    :values (map  (rcomp  (juxt :precipitation :evaporation)
+                                          (partial apply -))
+                                  inputs)
+                    :color :black
+                    :type :bar
+                    :label "P-V" :unit "mm"}])]
+
+ [:div
+  [:span [:span {:style "color:darkkhaki"} "Transpirationsfaktor [0-2]"]] " / "
+  [:span [:span {:style "color:green"} "Bedeckungsgrad [0-100%]"]] " / "
+  [:span [:span {:style "color:blue"} "Durchwurzelungstiefe [0-2m]"]] " / "
+  [:span [:span {:style "color:brown"} "Soll AET/PET [0-1]"]]
+  (graph :d3Plot [{ :const true
+                    :horizontal 0
+                    :color :black}
+                  { :const true
+                    :horizontal 1
+                    :color :black}
+                  { :days days
+                    :values (map :transpiration-factor inputs)
+                    :color :darkkhaki
+                    :label "Trans."}
+                  { :days days
+                    :values (map (rcomp :rounded-extraction-depth-cm
+                                        (partial bh/swap / 100)) inputs)
+                    :color :blue
+                    :label "D.wurz.tiefe" :unit "m"}
+                  { :days days
+                    :values (map :cover-degree inputs)
+                    :color :green
+                    :label "Bed.grad" :unit "%" :f (partial * 100)}
+                  { :days days
+                    :values (map :qu-target inputs)
+                    :color :brown
+                    :label "S.AET/PET"}])]
+ #_[:div
+   [:span [:span {:style "color:blue"} "Bodenfeuchteschichten"]]
+   (concat
+     (map-indexed  (fn [i sms]
+                     (graph  (keyword (str "d4Plot" i))
+                             [ { :const true
+                                 :horizontal 0
+                                 :color :black}
+                               { :days sms-days
+                               :values sms
+                               :color :blue
+                               :unit "mm"
+                               :label (str "Bf. Schicht-" (inc i))}]
+                             :force-const-lines-display true
+                             :y-margin (cond
+                                         (= i 0)
+                                         { :top (-> default-graph-properties
+                                                 :y-margin
+                                                 :top)
+                                           :bottom 0}
+
+                                         (= (inc i) no-of-layers)
+                                         { :top 0
+                                           :bottom (-> default-graph-properties
+                                                     :y-margin
+                                                     :bottom)}
+
+                                         :else
+                                         { :top 0 :bottom 0})))
+                   sms-layers))
+
+
+   #_(graph :d4Plot (map-indexed (fn [i sms]
+                                 { :days sms-days
+                                   :values sms
+                                   :color :blue
+                                   :label (str "Bf. Schicht-" (inc i))})
+                               sms-layers))]
+
+
+ [:div#weatherTable
+  [:table
+   [:tr
+    [:th "Datum"]
+    [:th "Niederschlag [mm]"]
+    [:th "Verdunstung [mm]"]
+    [:th "Regengabe [mm]"]]
+   (for [{:keys [abs-day
+                 irrigation-amount
+                 precipitation
+                 evaporation]} (reverse inputs)]
+     [:tr
+      [:td (ctf/unparse (ctf/formatter "dd.MM.YYYY") (bu/doy-to-date abs-day))]
+      [:td precipitation]
+      [:td evaporation]
+      [:td irrigation-amount]])]]
+
+ ]

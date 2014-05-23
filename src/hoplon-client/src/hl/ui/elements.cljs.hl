@@ -3,7 +3,7 @@
                    [tailrecursion.hoplon :refer :all])
   (:require [tailrecursion.javelin :refer :all]
             [tailrecursion.hoplon :refer :all]
-            #_[berest.client.hoplon.bersim.state :as s]))
+            #_[de.zalf.berest.client.hoplon.bersim.state :as s]))
 
 (defmethod tailrecursion.hoplon/do! :selected
   [elem key value]

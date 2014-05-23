@@ -3,8 +3,8 @@
             [immutant.jobs :as jobs]
             #_[io.pedestal.service.http :as http]
             #_[berest-service.service :as service]
-            [berest.import.dwd-data :as dwd]
-            [berest.web.rest.handler :as handler]
+            [de.zalf.berest.core.import.dwd-data :as dwd]
+            [de.zalf.berest.web.rest.handler :as handler]
             #_[ring.middleware.resource :refer [wrap-resource]]
             #_[ring.util.response :refer [redirect]]))
 

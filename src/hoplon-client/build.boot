@@ -55,7 +55,7 @@
                  "src/cljs"
                  "src/apogee"
                  "../castra-service"
-                 "../../private-resources"
+                 "../../../berest-core/private-resources"
 
                  ;both will be used if castra is used for rpc, for now we use the REST service (has to work anyway)
                  #_"src/castra"

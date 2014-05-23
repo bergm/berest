@@ -1,7 +1,7 @@
-(ns berest.web.views.technology
-  (:require [berest.web.views.common :as common]
+(ns de.zalf.berest.web.views.technology
+  (:require [de.zalf.berest.web.views.common :as common]
             #_[net.cgrand.enlive-html :as html]
-            [berest.bcore :as bc]
+            [de.zalf.berest.bcore :as bc]
             [noir [core :as nc]
                   [validation :as vali]]
             [hiccup.form :as hf]))

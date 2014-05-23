@@ -52,14 +52,14 @@
                                    :password "dfe713b3-62f0-469d-8ac9-07d6b02b0175"}}
 
   :profiles {:dev {:dependencies [[org.immutant/immutant-web "1.1.1"]
-                                  [org.immutant/immutant-jobs "1.1.1"]
-                                  [com.vaadin/vaadin-server "7.2.0"]]}}
+                                  [org.immutant/immutant-jobs "1.1.1"]]}}
 
   :min-lein-version "2.0.0"
 
   :source-paths ["src/castra-service" "src/rest-service" "src/immutant"
+                 "src/hoplon-client/src/cljs"
                  "src/hoplon-client/src/hl"]
-  :resource-paths ["config" "resources" "private-resources"]
+  :resource-paths ["config" "resources"]
 
   :immutant {:context-path "/"}
 

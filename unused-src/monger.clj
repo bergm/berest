@@ -1,4 +1,4 @@
-(ns berest.monger
+(ns de.zalf.berest.monger
   (:require [clojure.math.numeric-tower :as nt])
   (:require [monger.collection :as mc])
   (:require [monger.operators :as mo])
