@@ -5,10 +5,12 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
 
+                 [berest-core/berest-core "0.0.1-SNAPSHOT"]
+
                  [tailrecursion/hoplon "5.8.3"]
 
                  #_[org.infinispan/infinispan-client-hotrod "6.0.0.CR1"]
-                 [com.datomic/datomic-pro "0.9.4766"]
+                 [com.datomic/datomic-pro "0.9.4766.11"]
                  #_[com.datomic/datomic-free "0.8.4218"]
 
                  [buddy "0.1.0-beta4"]
@@ -50,11 +52,12 @@
                                    :password "dfe713b3-62f0-469d-8ac9-07d6b02b0175"}}
 
   :profiles {:dev {:dependencies [[org.immutant/immutant-web "1.1.1"]
-                                  [org.immutant/immutant-jobs "1.1.1"]]}}
+                                  [org.immutant/immutant-jobs "1.1.1"]
+                                  [com.vaadin/vaadin-server "7.2.0"]]}}
 
   :min-lein-version "2.0.0"
 
-  :source-paths ["src/core" "src/castra-service" "src/rest-service" "src/immutant"
+  :source-paths ["src/castra-service" "src/rest-service" "src/immutant"
                  "src/hoplon-client/src/hl"]
   :resource-paths ["config" "resources" "private-resources"]
 
