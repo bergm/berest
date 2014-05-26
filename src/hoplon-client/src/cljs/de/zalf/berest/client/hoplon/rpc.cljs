@@ -13,7 +13,7 @@
 (defc= counter (get state :counter))
 
 (def get-state
-  (mkremote 'berest.web.castra.api/get-state state error loading))
+  (mkremote 'de.zalf.berest.web.castra.api/get-state state error loading))
 
 (defn init []
   (get-state)

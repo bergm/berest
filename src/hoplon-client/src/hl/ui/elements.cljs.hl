@@ -3,7 +3,8 @@
                    [tailrecursion.hoplon :refer :all])
   (:require [tailrecursion.javelin :refer :all]
             [tailrecursion.hoplon :refer :all]
-            #_[de.zalf.berest.client.hoplon.bersim.state :as s]))
+            [de.zalf.berest.client.hoplon.util :as util]
+            [de.zalf.berest.client.hoplon.berest.state :as s]))
 
 (defmethod tailrecursion.hoplon/do! :selected
   [elem key value]
@@ -27,7 +28,7 @@
            max set-max-fn
            opt set-opt-fn
            step-size set-step-size-fn
-           sprinkle-loss-factor set-sprinkle-loss-factor
+           sprinkle-loss-factor set-sprinkle-loss-factor-fn
            outlet-height set-outlet-height-fn]}]
     (let [[tt-id cd-id
            min-id max-id opt-id
@@ -109,8 +110,19 @@
         )))
 
 
+(defc temp-donations {:day nil :month nil :amount nil})
 
 
+
+(defn remove-donation-row [row-no]
+  (swap! s/state assoc :donations
+         (->> @s/donations
+              (keep-indexed #(when-not (= %1 row-no) %2) ,,,)
+              (into [] ,,,))))
+
+(defn add-donation-row [_]
+  (swap! s/state update-in [:donations] conj @temp-donations)
+  (reset! temp-donations {:day nil :month nil :amount nil}))
 
 
 (defn create-irrigation-inputs
@@ -126,8 +138,8 @@
           :value day
           :data-id "day"
           :on-change #(if template?
-                       (swap! temp-donations assoc :day (js/parseInt (val-event %)))
-                       (swap! s/state assoc-in [:donations @row-no :day] (val-event %)))))
+                       (swap! temp-donations assoc :day (js/parseInt (util/val-event %)))
+                       (swap! s/state assoc-in [:donations @row-no :day] (util/val-event %)))))
       (div
         :class "col-xs-2"
         (input
@@ -137,8 +149,8 @@
           :value month
           :data-id "month"
           :on-change #(if template?
-                       (swap! temp-donations assoc :month (js/parseInt (val-event %)))
-                       (swap! s/state assoc-in [:donations @row-no :month] (val-event %)))))
+                       (swap! temp-donations assoc :month (js/parseInt (util/val-event %)))
+                       (swap! s/state assoc-in [:donations @row-no :month] (util/val-event %)))))
       (div
         :class "col-xs-2"
         (input
@@ -148,8 +160,8 @@
           :value amount
           :data-id "amount"
           :on-change #(if template?
-                       (swap! temp-donations assoc :amount (js/parseInt (val-event %)))
-                       (swap! s/state assoc-in [:donations @row-no :amount] (val-event %)))))
+                       (swap! temp-donations assoc :amount (js/parseInt (util/val-event %)))
+                       (swap! s/state assoc-in [:donations @row-no :amount] (util/val-event %)))))
       (input
         :class "btn btn-default"
         :type "button"

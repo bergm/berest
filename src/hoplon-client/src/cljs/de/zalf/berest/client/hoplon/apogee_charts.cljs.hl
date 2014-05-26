@@ -8,7 +8,7 @@
             [tailrecursion.hoplon.svg :as hsvg]
 
             [clojure.walk :as cw]
-            [de.zalf.berest.helper :as bh :refer [ajuxt rcomp]]
+            [de.zalf.berest.client.hoplon.helper :as bh :refer [ajuxt rcomp]]
             )
 
   )

@@ -7,8 +7,9 @@
             [hiccup.util :as hu]
             [datomic.api :as d]
             #_[de.zalf.berest.datomic :as db]
-            [de.zalf.berest.web.rest.queries :as queries]
-            [de.zalf.berest.web.rest.util :as util]
+            [de.zalf.berest.core.queries :as queries]
+            [de.zalf.berest.web.rest
+             [util :as util]]
             [ring.util.response :as rur]
             #_[geheimtur.util.auth :as auth]))
 

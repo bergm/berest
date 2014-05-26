@@ -59,7 +59,7 @@
 
                  ;both will be used if castra is used for rpc, for now we use the REST service (has to work anyway)
                  #_"src/castra"
-                 "../core"})
+                 "../../../berest-core/src"})
 
 ;; Static resources (css, images, etc.):
 (add-sync! (get-env :out-path) #{"assets"})
@@ -91,7 +91,7 @@
   (comp (watch)
         (hear)
         (hoplon {:prerender false :pretty-print true})
-        (c/castra-dev-server 'berest.web.castra.api)))
+        (c/castra-dev-server 'de.zalf.berest.web.castra.api)))
 
 (deftask production
   "Build BEREST hoplon client for production."

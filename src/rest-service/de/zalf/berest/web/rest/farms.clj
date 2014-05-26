@@ -1,12 +1,14 @@
 (ns de.zalf.berest.web.rest.farms
-  (:require [de.zalf.berest.core.core :as bc]
-            [de.zalf.berest.core.datomic :as db]
-            [de.zalf.berest.core.data :as data]
-            [de.zalf.berest.core.helper :as bh :refer [rcomp]]
-            [de.zalf.berest.web.rest.common :as common]
-            [de.zalf.berest.web.rest.queries :as queries]
-            [de.zalf.berest.web.rest.util :as util]
-            [de.zalf.berest.web.rest.template :as temp]
+  (:require [de.zalf.berest.core
+             [core :as bc]
+             [datomic :as db]
+             [data :as data]
+             [helper :as bh :refer [rcomp]]
+             [queries :as queries]]
+            [de.zalf.berest.web.rest
+             [common :as common]
+             [util :as util]
+             [template :as temp]]
             [datomic.api :as d]
             [ring.util.response :as rur]
             [ring.util.request :as req]
