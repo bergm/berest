@@ -13,6 +13,7 @@
             [de.zalf.berest.core.api :as api]
             [de.zalf.berest.core.plot :as plot]
             [de.zalf.berest.core.datomic :as db]
+            [de.zalf.berest.core.data :as data]
             [de.zalf.berest.core.util :as bu]
             [de.zalf.berest.core.helper :as bh :refer [rcomp]]
             [de.zalf.berest.core.climate.climate :as climate]
@@ -88,7 +89,7 @@
 
 (defn calculate-plot-from-db
   [db farm-id plot-id until-julian-day year irrigation-donations dc-assertions]
-  (if-let [plot (bc/db-read-plot db plot-id year)]
+  (if-let [plot (bc/deep-db->plot db plot-id year)]
     (let [;plot could be updated with given dc-assertions
           ;plot* (update-in plot [])
 
@@ -181,7 +182,7 @@
 
 (defn simulate-plot-from-db
   [db farm-id plot-id until-julian-day year donations dc-assertions]
-  (if-let [plot (bc/db-read-plot db plot-id year)]
+  (if-let [plot (bc/deep-db->plot db plot-id year)]
     (let [;plot could be updated with given dc-assertions
           ;plot* (update-in plot [])
 

@@ -19,8 +19,8 @@
 (defn is-leap-year [year]
   (= 0 (rem (- 2012 year) 4)))
 
-
-(defn indexed [col]
+(def indexed (partial map-indexed vector))
+#_(defn indexed [col]
   (->> col
        (interleave (range) ,,,)
        (partition 2 ,,,)))

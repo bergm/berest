@@ -4,7 +4,7 @@
   (:require [tailrecursion.javelin :refer :all]
             [tailrecursion.hoplon :refer :all]
             [de.zalf.berest.client.hoplon.util :as util]
-            [de.zalf.berest.client.hoplon.berest.state :as s]))
+            [de.zalf.berest.client.hoplon.state :as s]))
 
 (defmethod tailrecursion.hoplon/do! :selected
   [elem key value]

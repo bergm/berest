@@ -70,28 +70,22 @@
          '[tailrecursion.castra.task :as c]
          #_'[tailrecursion.castra.handler :as c])
 
-#_(deftask castra
-  [& specs]
-  (r/ring-task (fn [_] (apply c/castra specs))))
-
-#_(deftask server
-  "Start castra dev server (port 8000)."
-  []
-  (comp (r/head) (r/dev-mode) (r/session-cookie) (r/files) (castra 'demo.api.chat) (r/jetty)))
-
-#_(deftask chat-demo
-         "Build the castra chat demo. Server on port 8000."
-  []
-  (comp (watch) (hoplon {:prerender false}) (server)))
-
-
 (deftask development
-  "Build BEREST Hoplon client for development."
-  []
-  (comp (watch)
-        (hear)
-        (hoplon {:prerender false :pretty-print true})
-        (c/castra-dev-server 'de.zalf.berest.web.castra.api)))
+         "Build BEREST Hoplon client for development."
+         []
+         (comp (watch)
+               (hear)
+               (hoplon {:prerender false :pretty-print true})
+               (c/castra-dev-server 'de.zalf.berest.web.castra.api)))
+
+(deftask dev-sourcemap
+         []
+         (comp
+           (watch)
+           (hear)
+           (hoplon {:prerender false :pretty-print true :source-map true})
+           (c/castra-dev-server 'de.zalf.berest.web.castra.api)
+           #_(dev-server)))
 
 (deftask production
   "Build BEREST hoplon client for production."

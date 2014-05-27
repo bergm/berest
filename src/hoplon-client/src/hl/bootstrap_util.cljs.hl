@@ -1,0 +1,58 @@
+(ns bootstrap-util
+  (:refer-hoplon :exclude [form input])
+  (:require [clojure.string :as str]))
+
+;; TWITTER BOOTSTRAP API ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod do! :col [elem _ [size num]]
+  (println "do! :col " elem "[" size " " num "]")
+  (elem :class (str/join "-" ["col" (name size) num])))
+
+(defn load-bootstrap-cdn [version]
+  (let [proto  "//"
+        domain "netdna.bootstrapcdn.com"
+        path   (str "/bootstrap/" version)
+        css    (str proto domain path "/css/")
+        js     (str proto domain path "/js/")
+        link   #(link :rel "stylesheet" :type "text/css" :href (str css %))
+        script #(script :type "text/javascript" :src (str js %))]
+    [(link "bootstrap.min.css")
+     (link "bootstrap-theme.min.css")
+     (script "bootstrap.min.js")]))
+
+(defn opts-classes
+  [prefix opts]
+  (->> opts (map #(str prefix "-" (name %)))))
+
+(defn sr-only       [elem] (elem :class "sr-only"))
+(defn icon-bar      [elem] (elem :class "icon-bar"))
+(defn navbar-toggle [elem] (elem :class "navbar-toggle"))
+(defn navbar-brand  [elem] (elem :class "navbar-brand"))
+(defn well          [elem] (elem :class "well"))
+
+(defelem container       [attr kids] ((div :class "container") attr kids))
+(defelem navbar-header   [attr kids] ((div :class "navbar-header") attr kids))
+(defelem navbar-collapse [attr kids] ((div :class "collapse navbar-collapse") attr kids))
+(defelem navbar-nav      [attr kids] ((ul :class "nav navbar-nav") attr (map li kids)))
+(defelem form-group      [attr kids] ((div :class "form-group") attr kids))
+(defelem control-label   [attr kids] ((label :class "control-label") attr kids))
+(defelem btn-group       [attr kids] ((div :class "btn-group") attr kids))
+(defelem input [attrs kids] (div :class "form-control" attrs kids))
+
+(defelem form
+         [{:keys [opts] :as attr} kids]
+         (let [classes (->> opts (opts-classes "form") (str/join " "))]
+           ((tailrecursion.hoplon/form :class classes :role "form") (dissoc attr :opts) kids)))
+
+(defelem navbar
+         [{:keys [opts] :as attr} kids]
+         (let [classes (->> opts (opts-classes "navbar") (cons "navbar") (str/join " "))]
+           ((div :class classes :role "navigation") (dissoc attr :opts) kids)))
+
+(defelem bootstrap-page
+         [{:keys [version title] :as attr} kids]
+         (html
+           (head
+             (load-bootstrap-cdn version)
+             (tailrecursion.hoplon/title :text title))
+           (body (dissoc attr :version :title) kids)))

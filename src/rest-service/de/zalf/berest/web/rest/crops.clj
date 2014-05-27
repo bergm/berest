@@ -45,7 +45,7 @@
 (defn get-crops-edn*
   [db full-url]
   (map #(select-keys % [:crop/id :crop/name :crop/symbol :url])
-       (data/db->crops db full-url)))
+       (data/db->all-crops db full-url)))
 
 (defn get-crops-edn
   [request]
@@ -57,7 +57,7 @@
   [db request]
   (let [full-url (req/request-url request)
         url-path (:uri request)
-        crops (data/db->crops db full-url)]
+        crops (data/db->all-crops db full-url)]
     [:div.container
      (temp/standard-header url-path)
 
