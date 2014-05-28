@@ -26,7 +26,39 @@
 
 (defn bersim-pane
   []
-  (let [[farm-id plot-id until-date-id] (repeatedly gensym)]
+  (let [[farm-id plot-id until-date-id] (repeatedly gensym)
+        selected-farm-id* (cell nil)
+        selected-farm (cell= (if selected-farm-id*
+                               (get s/farms selected-farm-id*)
+                               (-> s/farms first second)))
+
+        selected-plot-id* (cell nil)
+        plots (cell= (:plots selected-farm))
+        selected-plot (cell= (if selected-plot-id*
+                               (get plots selected-plot-id*)
+                               (-> plots first second)))
+        selected-plot-id (cell= (:plot/id selected-plot))
+
+        until-date (cell #inst "1993-09-30")
+
+        donations (cell [{:day 1 :month 4 :amount 22}
+                         {:day 2 :month 5 :amount 10}
+                         {:day 11 :month 7 :amount 30}])
+        _ (cell= (println "donations: " (pr-str donations)))
+
+        temp-donations (cell {:day nil :month nil :amount nil})
+        _ (cell= (println "temp-donations: " (pr-str temp-donations)))
+
+        remove-donation-row! (fn [row-no]
+                              (reset! donations (->> @donations
+                                                     (keep-indexed #(when-not (= %1 row-no) %2) ,,,)
+                                                     (into [] ,,,))))
+
+        add-donation-row! #(when (not-any? nil? (map second @temp-donations))
+                            (swap! donations conj @temp-donations)
+                            (reset! temp-donations {:day nil :month nil :amount nil}))]
+
+
     (div
       :id "bersim-pane"
       :do-toggle (cell= (= s/route "#/bersim"))
@@ -42,22 +74,22 @@
             (select
               :id farm-id
               :class "form-control"
-              :on-change #(swap! s/local-state assoc [:bersim :selected-farm-id] (val-id farm-id))
+              :on-change #(reset! selected-farm-id* (val-id farm-id))
               (loop-tpl :bindings [[_ {fid :farm/id
                                        name :farm/name}] s/farms]
-                        (uie/create-option fid (:farm/id @s/selected-farm) name)))))
+                        (uie/create-option fid (:farm/id @selected-farm) name)))))
 
         (bs/form-group
-          (control-label :col [:sm 2] :for "plot" "Schlag")
+          (bs/control-label :col [:sm 2] :for "plot" "Schlag")
           (div
             :col [:xs 3]
             (select
               :id plot-id
               :class "form-control"
-              :on-change #(swap! s/local-state assoc-in [:bersim :selected-plot-id] (val-id plot-id))
+              :on-change #(reset! selected-plot-id* (val-id plot-id))
               (loop-tpl :bindings [[_ {pid :plot/id
-                                       name :plot/name}] s/plots]
-                        (uie/create-option pid (:plot/id @s/selected-plot) name)))))
+                                       name :plot/name}] plots]
+                        (uie/create-option pid (:plot/id @selected-plot) name)))))
 
 
         (bs/form-group
@@ -69,17 +101,34 @@
               :class "form-control"
               :type "date"
               :placeholder "Datum"
-              :value (cell= (util/js-date-time->date-str s/until-date))
-              :on-change #(swap! s/state assoc :until-date (js/Date. (val-id until-date-id))))))
+              :value (cell= (util/js-date-time->date-str until-date))
+              :on-change #(reset! until-date (js/Date. (val-id until-date-id))))))
 
 
         (fieldset
           (legend "Beregnungsdaten")
           (bs/form-group
-            (div :id "donations"
-                 (loop-tpl :bindings [[row-no {:keys [day month amount]}] (cell= (util/indexed s/donations))]
-                           (uie/create-irrigation-inputs row-no day month amount)))
-            (apply uie/create-irrigation-inputs nil (cell-map (fn [[_ v]] v) s/temp-donations))))
+            (let [[day* month* amount*] (cell-map (fn [[_ v]] v) temp-donations)
+                  set-x! (fn [x]
+                           (fn [row-no value]
+                             (swap! donations assoc-in [row-no x] value)))
+                  set-x!* (fn [x]
+                            (fn [_ value]
+                              (swap! temp-donations assoc x value)))]
+              (div
+                :id "donations-and-template"
+                (div
+                  :id "donations"
+                  (loop-tpl
+                    :bindings [[row-no {:keys [day month amount]}] (cell= (util/indexed donations))]
+                    (uie/create-irrigation-inputs row-no remove-donation-row!
+                                                  day (set-x! :day)
+                                                  month (set-x! :month)
+                                                  amount (set-x! :amount))))
+                (uie/create-irrigation-inputs nil add-donation-row!
+                                              day* (set-x!* :day)
+                                              month* (set-x!* :month)
+                                              amount* (set-x!* :amount))))))
 
         (hr)
 
@@ -90,13 +139,13 @@
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
-              :on-click #(apply s/calculate-csv ((juxt :selected-plot-id :until-date :donations) @s/state))
+              :on-click #(s/calculate-csv @selected-plot-id @until-date @donations)
               :value "Berechnen & CSV")
             (div :css {:height "5px"})
             (input
               :class "btn btn-primary btn-lg"
               :type "button"
-              :on-click #(apply s/simulate-csv ((juxt :selected-plot-id :until-date :donations) @s/state))
+              :on-click #(s/simulate-csv @selected-plot-id @until-date @donations)
               :value "Simulieren & CSV")
             (div :css {:height "5px"})
             (a

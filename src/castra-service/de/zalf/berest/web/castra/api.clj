@@ -46,16 +46,6 @@
 
    :farms nil
 
-   :selected-farm-id nil
-
-   :selected-plot-id nil
-
-   :until-date #inst "1993-09-30"
-
-   :donations [] #_[{:day 1 :month 4 :amount 22}
-               {:day 2 :month 5 :amount 10}
-               {:day 11 :month 7 :amount 30}]
-
    :minimal-all-crops nil #_[{:crop/id :id
                     :crop/name :name
                     :crop/symbol :symbol}]
@@ -113,12 +103,11 @@
              (rules/logged-in?)]}
   (let [db (db/current-db)
 
-        {user-id* :user/id
-         :as cred} (if user-id
-                             (db/credentials* db user-id pwd)
-                             (:user @*session*))]
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
     (when cred
-      (stem-cell-state db user-id))))
+      (stem-cell-state db cred))))
 
 
 (defrpc get-state-with-full-selected-crops
@@ -127,14 +116,13 @@
              (rules/logged-in?)]}
   (let [db (db/current-db)
 
-        {user-id* :user/id
-         :as cred} (if user-id
-                             (db/credentials* db user-id pwd)
-                             (:user @*session*))
+        cred  (if user-id
+                (db/credentials* db user-id pwd)
+                (:user @*session*))
 
         crops (data/db->full-selected-crops db selected-crop-ids)]
     (when cred
-      (assoc (stem-cell-state db user-id*)
+      (assoc (stem-cell-state db cred)
         :full-selected-crops (into {} (map (fn [c] [(:crop/id c) c]) crops))))))
 
 

@@ -110,63 +110,57 @@
         )))
 
 
-(defc temp-donations {:day nil :month nil :amount nil})
-
-
-
-(defn remove-donation-row [row-no]
+#_(defn remove-donation-row [row-no]
   (swap! s/state assoc :donations
          (->> @s/donations
               (keep-indexed #(when-not (= %1 row-no) %2) ,,,)
               (into [] ,,,))))
 
-(defn add-donation-row [_]
+#_(defn add-donation-row [_]
   (swap! s/state update-in [:donations] conj @temp-donations)
   (reset! temp-donations {:day nil :month nil :amount nil}))
 
 
 (defn create-irrigation-inputs
-  [row-no day month amount]
-  (let [template? (nil? row-no)]
+  [row-no add-or-remove-row!
+   day set-day!
+   month set-month!
+   amount set-amount!]
+
+  (let [[day-id month-id amount-id] (repeatedly gensym)]
     (div
       (div
         :class "col-xs-2"
         (input
+          :id day-id
           :class "form-control"
           :type "number"
           :placeholder "Tag"
           :value day
-          :data-id "day"
-          :on-change #(if template?
-                       (swap! temp-donations assoc :day (js/parseInt (util/val-event %)))
-                       (swap! s/state assoc-in [:donations @row-no :day] (util/val-event %)))))
+          :on-change #(set-day! (some-> row-no deref) (js/parseInt (val-id day-id)))))
       (div
         :class "col-xs-2"
         (input
+          :id month-id
           :class "form-control"
           :type "number"
           :placeholder "Monat"
           :value month
-          :data-id "month"
-          :on-change #(if template?
-                       (swap! temp-donations assoc :month (js/parseInt (util/val-event %)))
-                       (swap! s/state assoc-in [:donations @row-no :month] (util/val-event %)))))
+          :on-change #(set-month! (some-> row-no deref) (js/parseInt (val-id month-id)))))
       (div
         :class "col-xs-2"
         (input
+          :id amount-id
           :class "form-control"
           :type "number"
           :placeholder "Menge [mm]"
           :value amount
-          :data-id "amount"
-          :on-change #(if template?
-                       (swap! temp-donations assoc :amount (js/parseInt (util/val-event %)))
-                       (swap! s/state assoc-in [:donations @row-no :amount] (util/val-event %)))))
+          :on-change #(set-amount! (some-> row-no deref) (js/parseInt (val-id month-id)))))
       (input
         :class "btn btn-default"
         :type "button"
-        :value (if template? "Zeile hinzufügen" "Zeile entfernen")
-        :on-click (if template? add-donation-row (partial remove-donation-row @row-no))))))
+        :value (if row-no "Zeile entfernen" "Zeile hinzufügen")
+        :on-click #(add-or-remove-row! (some-> row-no deref))))))
 
 
 

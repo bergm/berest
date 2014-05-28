@@ -3,21 +3,15 @@
     [tailrecursion.javelin :refer [defc defc=]])
   (:require
    [tailrecursion.javelin]
-   [tailrecursion.castra :refer [mkremote]]))
+   [tailrecursion.castra :refer [mkremote]]
+   [de.zalf.berest.client.hoplon.state :as s]))
 
-(defc state {:random nil})
-(defc error nil)
-(defc loading [])
-
-(defc= random-number (get state :random))
-(defc= counter (get state :counter))
-
-(def get-state
-  (mkremote 'de.zalf.berest.web.castra.api/get-state state error loading))
-
-(defn init []
-  (get-state)
-  (js/setInterval get-state 1000))
+(def login! (mkremote 'de.zalf.berest.web.castra.api/login s/state s/error s/loading))
+(def logout! (mkremote 'de.zalf.berest.web.castra.api/logout s/state s/error s/loading))
+(def get-state (mkremote 'de.zalf.berest.web.castra.api/get-berest-state s/state s/error s/loading))
+(def get-full-selected-crops (mkremote 'de.zalf.berest.web.castra.api/get-state-with-full-selected-crops s/state s/error s/loading))
+(def calculate-csv (mkremote 'de.zalf.berest.web.castra.api/calculate-csv s/csv-result s/calc-error s/calculating))
+(def simulate-csv (mkremote 'de.zalf.berest.web.castra.api/simulate-csv s/csv-result s/calc-error s/calculating))
 
 
 

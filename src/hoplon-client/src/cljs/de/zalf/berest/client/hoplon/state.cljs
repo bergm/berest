@@ -13,29 +13,9 @@
 (defc state {})
 (cell= (println "state: \n" (pr-str state)))
 
-;local state stem cell
-(defc local-state {:bersim {:selected-farm-id nil
-                            :selected-plot-id nil}})
-(cell= (println "local-state: \n" (pr-str local-state)))
-
 ;derived state
 
-(defc= donations (:donations state))
-
-(defc temp-donations {:day nil :month nil :amount nil})
-
 (defc= farms (:farms state))
-(defc= selected-farm (if-let [sf-id (some-> local-state :bersim :selected-farm-id)]
-                       (sf-id farms)
-                       (-> farms first second)))
-
-(defc= plots (:plots selected-farm))
-(defc= selected-plot (if-let [sp-id (some-> local-state :bersim :selected-plot-id)]
-                       (sp-id plots)
-                       (-> plots first second)))
-
-(defc= until-date (:until-date state))
-
 
 (defc= technology-cycle-days (-> state :technology :technology/cycle-days))
 (defn set-technology-cycle-days

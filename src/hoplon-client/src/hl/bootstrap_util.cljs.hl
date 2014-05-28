@@ -5,7 +5,6 @@
 ;; TWITTER BOOTSTRAP API ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod do! :col [elem _ [size num]]
-  (println "do! :col " elem "[" size " " num "]")
   (elem :class (str/join "-" ["col" (name size) num])))
 
 (defn load-bootstrap-cdn [version]
