@@ -45,7 +45,7 @@
 
 (defn get-users-edn*
   [db full-url]
-  (map #(select-keys % [:user/id :user/full-name :url]) (data/db->users db full-url)))
+  (map #(select-keys % [:user/id :user/full-name :url]) (data/db->all-users db full-url)))
 
 (defn get-users-edn
   [request]
@@ -57,7 +57,7 @@
   [db request]
   (let [full-url (req/request-url request)
         url-path (:uri request)
-        users (data/db->users db full-url)]
+        users (data/db->all-users db full-url)]
     [:div.container
      (temp/standard-header url-path)
 

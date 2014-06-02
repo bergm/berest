@@ -38,7 +38,7 @@
 
 (defn get-farms-edn*
   [db user-id full-url]
-  (map #(select-keys % [:farm/id :farm/name :url]) (data/db->farms db user-id full-url)))
+  (map #(select-keys % [:farm/id :farm/name :url]) (data/db->a-users-farms db user-id full-url)))
 
 (defn get-farms-edn
   [request]
@@ -53,7 +53,7 @@
   (let [full-url (req/request-url request)
         url-path (:uri request)
         user-id (some-> request :session :identity :user/id)
-        farms (data/db->farms db user-id full-url)]
+        farms (data/db->a-users-farms db user-id full-url)]
     [:div.container
      (temp/standard-header url-path)
 

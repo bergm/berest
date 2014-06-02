@@ -5,6 +5,7 @@
             [de.zalf.berest.core.util :as util]
             [de.zalf.berest.core.api :as api]
             [de.zalf.berest.core.datomic :as db]
+            [de.zalf.berest.core.climate.climate :as climate]
             [datomic.api :as d]
             [simple-time.core :as time]
             [clj-time.core :as ctc]
@@ -33,11 +34,11 @@
 
 (defn get-farms
   [db user-id]
-  (map #(select-keys % [:farm/id :farm/name]) (data/db->farms db user-id)))
+  (map #(select-keys % [:farm/id :farm/name]) (data/db->a-users-farms db user-id)))
 
 (defn get-plots
   [db farm-id]
-  (map #(select-keys % [:plot/id :plot/name]) (data/db->plots db farm-id)))
+  (map #(select-keys % [:plot/id :plot/name]) (data/db->a-farms-plots db farm-id)))
 
 
 
@@ -51,12 +52,13 @@
                     :crop/symbol :symbol}]
    :full-selected-crops nil #_{:crop-id {:crop :map}}
 
-   :weather {} #_{:weather-data/prognosis-data? true
+   :weather-stations {} #_{:weather-data/prognosis-data? true
                     :weather-data/date date*
                     :weather-data/precipitation (parse-german-double rr-s)
                     :weather-data/evaporation (parse-german-double vp-t)
                     :weather-data/average-temperature (parse-german-double tm)
                     :weather-data/global-radiation (parse-german-double gs)}
+   :full-selected-weather-stations {}
 
    :technology nil #_{:technology/cycle-days 1
                 :technology/outlet-height 200
@@ -91,8 +93,17 @@
                                                                   (get-plots db farm-id))))])
                       (get-farms db user-id)))
 
-        min-all-crops (map #(select-keys % [:crop/id :crop/name :crop/symbol]) (data/db->min-all-crops db))]
+        min-all-crops (map #(select-keys % [:crop/id :crop/name :crop/symbol])
+                           (data/db->min-all-crops db))
+
+        weather-stations (map #(select-keys % [:weather-station/id
+                                               :weather-station/name
+                                               :weather-station/geo-coord])
+                              (data/db->a-users-weather-stations db user-id))
+
+        ]
     (assoc state-template :farms farms-with-plots
+                          :weather-stations weather-stations
                           :minimal-all-crops min-all-crops
                           :user-credentials cred)))
 
@@ -126,8 +137,25 @@
         :full-selected-crops (into {} (map (fn [c] [(:crop/id c) c]) crops))))))
 
 
+(defrpc get-weather-station-data
+  [weather-station-id & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
 
-
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (->> weather-station-id
+           (climate/weather-station-data db 1993 ,,,)
+           :data
+           (map #(select-keys % [:weather-data/date
+                                 :weather-data/global-radiation
+                                 :weather-data/average-temperature
+                                 :weather-data/precipitation
+                                 :weather-data/evaporation
+                                 :weather-data/prognosis-data?]) ,,,)))))
 
 
 (defrpc login

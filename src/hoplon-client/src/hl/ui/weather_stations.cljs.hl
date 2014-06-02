@@ -1,0 +1,156 @@
+(ns ui.weather-stations
+  #_(:require-macros [tailrecursion.javelin :refer :all]
+                   [tailrecursion.hoplon :refer :all])
+  (:require #_[tailrecursion.javelin :refer :all]
+            #_[tailrecursion.hoplon :refer :all]
+            [de.zalf.berest.client.hoplon.util :as util]
+            [de.zalf.berest.client.hoplon.state :as s]
+            [ui.elements :as uie]
+            [bootstrap-util :as bs]))
+
+
+(defn vocab
+  "translatable vocabulary for this page"
+  [element lang]
+  (get-in {:name-label {:lang/de "Name"
+                        :lang/en "Name"}
+           :name-placeholder {:lang/de "Name der Wetterstation"
+                              :lang/en "Name of weather station"}
+           :lat-label {:lang/de "Breitengrad"
+                        :lang/en "Latitude"}
+           :lat-placeholder {:lang/de "Breitengrad"
+                              :lang/en "Latitude"}
+           :long-label {:lang/de "Längengrad"
+                        :lang/en "Longitude"}
+           :long-placeholder {:lang/de "Längengrad"
+                              :lang/en "Longitude"}
+
+           :show-data {:lang/de "Daten anzeigen"
+                       :lang/en "Show data"}
+           :edit {:lang/de "Ändern"
+                  :lang/en "Edit"}
+           :save-edit {:lang/de "Änderungen speichern"
+                       :lang/en "Save changes"}
+           }
+          [element (or lang :lang/de)] "UNKNOWN element"))
+
+
+(defn weather-stations-pane
+  []
+  (div
+    :id "weather-stations-pane"
+    :do-toggle (cell= (= s/route "#/climate"))
+
+    (bs/form
+      :opts [:horizontal]
+      :name "weather-stations-form"
+
+      (loop-tpl
+        :bindings [{id :weather-station/id
+                    name :weather-station/name
+                    {lat :geo-coord/latitude
+                     long :geo-coord/longitude} :weather-station/geo-coord}
+                   (cell= (sort-by #(if-let [n (:weather-station/name %)] n (:weather-station/id %))
+                                   (:weather-stations s/state)))]
+        :bind-ids [name-input lat-input long-input]
+
+        (let [data-visible? (cell false)
+              edit? (cell false)
+              no-edit? (cell= (not edit?))]
+          (div
+            (button
+              ;:toggle no-edit?
+              :style "float:right"
+              :class "btn btn-primary"
+              :click #(swap! edit? not)
+              (text "~(vocab :edit s/lang)"))
+            (button
+              :toggle edit?
+              :style "float:right"
+              :class "btn btn-danger"
+              :click #()
+              (text "~(vocab :save-edit s/lang)"))
+
+            (bs/form-group
+              (bs/control-label :col [:sm 2] :for name-input (text "~(vocab :name-label s/lang)"))
+              (div
+                :col [:xs 3]
+                (p :toggle no-edit? :class "form-control-static" (text "~{name}"))
+                (input
+                  :id name-input
+                  :toggle edit?
+                  :class "form-control"
+                  :type "text"
+                  :placeholder (cell= (vocab :name-placeholder s/lang))
+                  :value name
+                  :on-change #())))
+
+            (bs/form-group
+              (bs/control-label :col [:sm 2] :for lat-input (text "~(vocab :lat-label s/lang)"))
+              (div
+                :col [:xs 3]
+                (p :toggle no-edit? :class "form-control-static" (text "~{lat}"))
+                (input
+                  :id lat-input
+                  :toggle edit?
+                  :class "form-control"
+                  :type "number"
+                  :placeholder (cell= (vocab :lat-placeholder s/lang))
+                  :value lat
+                  :on-change #())))
+
+            (bs/form-group
+              (bs/control-label :col [:sm 2] :for "long-input" (text "~(vocab :long-label s/lang)"))
+              (div
+                :col [:xs 3]
+                (p :toggle no-edit? :class "form-control-static" (text "~{long}"))
+                (input
+                  :id long-input
+                  :toggle edit?
+                  :class "form-control"
+                  :type "number"
+                  :placeholder (cell= (vocab :long-placeholder s/lang))
+                  :value long
+                  :on-change #())))
+
+            (div
+              (span
+                :class "glyphicon glyphicon-plus"
+                :toggle (cell= (not data-visible?))
+                :on-click #(reset! data-visible? true))
+              (span
+                :toggle data-visible?
+                :class "glyphicon glyphicon-minus"
+                :click #(reset! data-visible? false))
+              (span (text " ~(vocab :show-data s/lang)"))
+
+              (div
+                (button
+                  :on-click #(s/load-weather-station-data @id)
+                  "click me")
+
+                )
+              )
+
+
+
+
+
+
+            (hr)))
+
+
+
+
+
+
+
+
+
+        )
+
+
+      )
+
+
+    ))

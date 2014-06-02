@@ -13,6 +13,11 @@
 (defc state {})
 (cell= (println "state: \n" (pr-str state)))
 
+
+;local state
+(defc weather-station-data {})
+(cell= (println "weather-station-data: " (pr-str weather-station-data)))
+
 ;derived state
 
 (defc= farms (:farms state))
@@ -65,6 +70,12 @@
 (def get-full-selected-crops (mkremote 'de.zalf.berest.web.castra.api/get-state-with-full-selected-crops state error loading))
 (def calculate-csv (mkremote 'de.zalf.berest.web.castra.api/calculate-csv csv-result calc-error calculating))
 (def simulate-csv (mkremote 'de.zalf.berest.web.castra.api/simulate-csv csv-result calc-error calculating))
+
+(defn load-weather-station-data
+  [weather-station-id]
+  (let [result (cell nil)
+        _ (cell= (swap! ~(cell weather-station-data) assoc weather-station-id result))]
+    ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data result error loading) weather-station-id)))
 
 (defn init []
   (get-state)

@@ -87,9 +87,10 @@
               :id plot-id
               :class "form-control"
               :on-change #(reset! selected-plot-id* (val-id plot-id))
-              (loop-tpl :bindings [[_ {pid :plot/id
-                                       name :plot/name}] plots]
-                        (uie/create-option pid (:plot/id @selected-plot) name)))))
+              (loop-tpl
+                :bindings [[_ {pid :plot/id
+                               name :plot/name}] plots]
+                (uie/create-option pid (:plot/id @selected-plot) name)))))
 
 
         (bs/form-group
