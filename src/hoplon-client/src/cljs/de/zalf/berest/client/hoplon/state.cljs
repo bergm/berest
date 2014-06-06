@@ -11,7 +11,7 @@
 
 ;stem cell
 (defc state {})
-(cell= (println "state: \n" (pr-str state)))
+#_(cell= (println "state: \n" (pr-str state)))
 
 
 ;local state

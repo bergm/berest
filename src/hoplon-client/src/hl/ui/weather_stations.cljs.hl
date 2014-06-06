@@ -52,11 +52,46 @@
                      long :geo-coord/longitude} :weather-station/geo-coord}
                    (cell= (sort-by #(if-let [n (:weather-station/name %)] n (:weather-station/id %))
                                    (:weather-stations s/state)))]
-        :bind-ids [name-input lat-input long-input]
+        :bind-ids [name-input lat-input long-input chart-id]
 
         (let [data-visible? (cell false)
               edit? (cell false)
-              no-edit? (cell= (not edit?))]
+              no-edit? (cell= (not edit?))
+              chart-config {:chart {:renderTo chart-id
+                                    :defaultSeriesType "spline"}
+                            :title {:text "Wetter"
+                                    :x -20}
+                            :subtitle {:text "Source: DWD Station xy"
+                                       :x -20}
+                            :xAxis {:type "datetime"}
+                            :yAxis {:title {:text "Temperature (°C)"}
+                                    #_:plotLines #_[{:value 0
+                                                 :width 1
+                                                 :color "#808080"}]}
+                            :tooltip {:valueSuffix "°C"}
+                            :legend {:layout "vertical"
+                                     :align "right"
+                                     :verticalAlign "middle"
+                                     :borderWidth 0}
+                            :series [{:name "T-min"
+                                      :data []}
+                                     {:name "T-max"
+                                      :data []}
+                                     {:name "T-avg"
+                                      :data []}]}
+              hc (.Chart js/Highcharts)
+              ;chart (hc. (clj->js chart-config))
+              _ (comment
+                  measured-data (cell= (filter #(not (:weather-data/prognosis-data? %))
+                                               (get s/weather-station-data id)))
+                  tavg (cell= (mapv (fn [{date :weather-data/date
+                                          t :weather-data/average-temperature}]
+                                      [date t])
+                                    measured-data))
+                  _ (println "tavg: " (pr-str tavg))
+                  _ (cell= (-> chart .series first (.setData (clj->js tavg))))
+                  )
+              ]
           (div
             (button
               ;:toggle no-edit?
@@ -123,6 +158,8 @@
                 :class "glyphicon glyphicon-minus"
                 :click #(reset! data-visible? false))
               (span (text " ~(vocab :show-data s/lang)"))
+
+              (div :id chart-id)
 
               (div
                 (button
