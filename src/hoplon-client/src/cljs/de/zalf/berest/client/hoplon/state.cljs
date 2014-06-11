@@ -11,12 +11,12 @@
 
 ;stem cell
 (defc state {})
-#_(cell= (println "state: \n" (pr-str state)))
+(cell= (println "state: \n" (pr-str state)))
 
 
 ;local state
 (defc weather-station-data {})
-(cell= (println "weather-station-data: " (pr-str weather-station-data)))
+#_(cell= (println "weather-station-data: " (pr-str weather-station-data)))
 
 ;derived state
 
@@ -72,10 +72,9 @@
 (def simulate-csv (mkremote 'de.zalf.berest.web.castra.api/simulate-csv csv-result calc-error calculating))
 
 (defn load-weather-station-data
-  [weather-station-id]
-  (let [result (cell nil)
-        _ (cell= (swap! ~(cell weather-station-data) assoc weather-station-id result))]
-    ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data result error loading) weather-station-id)))
+  [result-cell weather-station-id years]
+  ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data
+             result-cell error loading) weather-station-id years))
 
 (defn init []
   (get-state)

@@ -6,7 +6,8 @@
             [de.zalf.berest.client.hoplon.util :as util]
             [de.zalf.berest.client.hoplon.state :as s]
             [ui.elements :as uie]
-            [bootstrap-util :as bs]))
+            [bootstrap-util :as bs]
+            #_[cljs-time.coerce :as cstcoe]))
 
 
 (defn vocab
@@ -48,22 +49,43 @@
       (loop-tpl
         :bindings [{id :weather-station/id
                     name :weather-station/name
+                    years :available-years
                     {lat :geo-coord/latitude
                      long :geo-coord/longitude} :weather-station/geo-coord}
                    (cell= (sort-by #(if-let [n (:weather-station/name %)] n (:weather-station/id %))
                                    (:weather-stations s/state)))]
-        :bind-ids [name-input lat-input long-input chart-id]
+        :bind-ids [name-input lat-input long-input chart-id years-id]
 
         (let [data-visible? (cell false)
               edit? (cell false)
               no-edit? (cell= (not edit?))
+              selected-data (cell nil)
+              _ (cell= (println "selected-data: " (pr-str selected-data)))
+
+              ;;_ (cell= (println "selected-years: " (pr-str selected-years)))
+              #_#__ (cell= (let [selected-years* (or selected-years #{(first years)})
+                             _ (println "selected-years*: " (pr-str selected-years*))
+                             cached-data (get s/weather-station-data id)
+                             _ (println "cached-data: " (pr-str cached-data))
+                             years-to-fetch (if cached-data
+                                              (filter (fn [year] (not (nil? (get cached-data year))))
+                                                      selected-years*)
+                                              selected-years*)
+                             _ (println "years-to-fetch: " (pr-str years-to-fetch))]
+                         (when (not (empty? years-to-fetch))
+                           (println "would call (load-weather-station-data" id years-to-fetch)
+                           #_(s/load-weather-station-data id years-to-fetch))))
+
               chart-config {:chart {:renderTo chart-id
                                     :defaultSeriesType "spline"}
                             :title {:text "Wetter"
                                     :x -20}
                             :subtitle {:text "Source: DWD Station xy"
                                        :x -20}
-                            :xAxis {:type "datetime"}
+                            :xAxis {:type "datetime"
+                                    :labels {:format "{value: %d.%m.%Y}"
+                                             :rotation 45
+                                             :align "left"}}
                             :yAxis {:title {:text "Temperature (°C)"}
                                     #_:plotLines #_[{:value 0
                                                  :width 1
@@ -79,18 +101,23 @@
                                       :data []}
                                      {:name "T-avg"
                                       :data []}]}
-              hc (.Chart js/Highcharts)
-              ;chart (hc. (clj->js chart-config))
-              _ (comment
-                  measured-data (cell= (filter #(not (:weather-data/prognosis-data? %))
-                                               (get s/weather-station-data id)))
-                  tavg (cell= (mapv (fn [{date :weather-data/date
-                                          t :weather-data/average-temperature}]
-                                      [date t])
-                                    measured-data))
-                  _ (println "tavg: " (pr-str tavg))
-                  _ (cell= (-> chart .series first (.setData (clj->js tavg))))
-                  )
+              _ (with-timeout 0 (js/Highcharts.Chart. (clj->js chart-config)))
+
+
+              measured-data (cell= (filter #(not (:weather-data/prognosis-data? (second %))) selected-data))
+              _ (cell= (println "measured-data: " (pr-str measured-data)))
+
+              tavg (cell= (->> measured-data
+                               (map second ,,,)
+                               flatten
+                               (mapv (fn [{date :weather-data/date
+                                           t :weather-data/average-temperature}]
+                                       [(.getTime date) t])
+                                 ,,,)
+                               (sort-by first ,,,)))
+
+              _ (cell= (some-> chart-id by-id js/jQuery .highcharts .-series first (.setData (clj->js tavg))))
+
               ]
           (div
             (button
@@ -159,13 +186,25 @@
                 :click #(reset! data-visible? false))
               (span (text " ~(vocab :show-data s/lang)"))
 
-              (div :id chart-id)
+
 
               (div
-                (button
+                :toggle data-visible?
+
+                (select
+                  :id years-id
+                  :class "form-control"
+                  :multiple "multiple"
+                  :on-change #(s/load-weather-station-data selected-data id (map js/parseInt (val-id years-id)))
+                  (loop-tpl
+                    :bindings [year years]
+                    (uie/create-option year (first @years))))
+
+                (div :id chart-id)
+
+                #_(button
                   :on-click #(s/load-weather-station-data @id)
                   "click me")
-
                 )
               )
 

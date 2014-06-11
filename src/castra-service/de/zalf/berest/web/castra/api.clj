@@ -52,12 +52,8 @@
                     :crop/symbol :symbol}]
    :full-selected-crops nil #_{:crop-id {:crop :map}}
 
-   :weather-stations {} #_{:weather-data/prognosis-data? true
-                    :weather-data/date date*
-                    :weather-data/precipitation (parse-german-double rr-s)
-                    :weather-data/evaporation (parse-german-double vp-t)
-                    :weather-data/average-temperature (parse-german-double tm)
-                    :weather-data/global-radiation (parse-german-double gs)}
+   :weather-stations {}
+
    :full-selected-weather-stations {}
 
    :technology nil #_{:technology/cycle-days 1
@@ -98,7 +94,8 @@
 
         weather-stations (map #(select-keys % [:weather-station/id
                                                :weather-station/name
-                                               :weather-station/geo-coord])
+                                               :weather-station/geo-coord
+                                               :available-years])
                               (data/db->a-users-weather-stations db user-id))
 
         ]
@@ -138,7 +135,7 @@
 
 
 (defrpc get-weather-station-data
-  [weather-station-id & [user-id pwd]]
+  [weather-station-id years & [user-id pwd]]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -147,15 +144,19 @@
                (db/credentials* db user-id pwd)
                (:user @*session*))]
     (when cred
-      (->> weather-station-id
-           (climate/weather-station-data db 1993 ,,,)
-           :data
-           (map #(select-keys % [:weather-data/date
-                                 :weather-data/global-radiation
-                                 :weather-data/average-temperature
-                                 :weather-data/precipitation
-                                 :weather-data/evaporation
-                                 :weather-data/prognosis-data?]) ,,,)))))
+      (->> years
+           (map (fn [year]
+                  (let [data (:data (climate/weather-station-data db year weather-station-id))
+                        data* (map #(select-keys % [:weather-data/date
+                                                    :weather-data/global-radiation
+                                                    :weather-data/average-temperature
+                                                    :weather-data/precipitation
+                                                    :weather-data/evaporation
+                                                    :weather-data/prognosis-data?]) data)]
+                    [year data*]))
+             ,,,)
+           (into {})))))
+
 
 
 (defrpc login

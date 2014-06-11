@@ -68,7 +68,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn highcharts-test
+#_(defn highcharts-test
   []
   (let [container (by-id "hc-container")
         config {:title {:text "Monthly Average Temperature"
@@ -98,7 +98,7 @@
         _ (println js-config)]
     (-> container js/jQuery (.highcharts ,,, js-config))))
 
-(add-initfn! highcharts-test)
+#_(add-initfn! highcharts-test)
 
 (s/login! "zalf" "fLAz")
 
@@ -171,7 +171,7 @@
 
     (uic/login-pane)
 
-    (div :id "hc-container" :style "min-width: 310px; height: 400px; margin: 0 auto")
+    #_(div :id "hc-container" :style "min-width: 310px; height: 400px; margin: 0 auto")
 
     (div
       :id "content-pane"
