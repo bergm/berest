@@ -79,6 +79,10 @@
   ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data
              result-cell error loading) weather-station-id years))
 
+;TODO: can't update weather-stations easily as they're actually shared most of the time, do this later properly
+#_(def update-weather-station (mkremote 'de.zalf.berest.web.castra.api/update-weather-station state error loading))
+
+
 (defn init []
   (get-state)
   #_(js/setInterval #(if @logged-in? (get-state)) 100))

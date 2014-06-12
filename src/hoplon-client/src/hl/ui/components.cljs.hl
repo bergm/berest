@@ -15,7 +15,24 @@
            :username {:lang/de "Nutzername"
                       :lang/en "Username"}
            :password {:lang/de "Passwort"
-                      :lang/en "Password"}}
+                      :lang/en "Password"}
+           :nav-news {:lang/de "Aktuell"
+                         :lang/en "Current"}
+           :nav-farms {:lang/de "Betriebe"
+                       :lang/en "Farms"}
+           :nav-weather {:lang/de "Wetterdaten"
+                         :lang/en "Weather data"}
+           :nav-crops {:lang/de "Fruchtarten"
+                       :lang/en "Crops"}
+           :nav-soils {:lang/de "Böden"
+                       :lang/en "Soils"}
+           :nav-archive {:lang/de "Archiv"
+                         :lang/en "Archive"}
+           :nav-settings {:lang/de "Einstellungen"
+                          :lang/en "Settings"}
+           :nav-bersim {:lang/de "BERSIM"
+                        :lang/en "BERSIM"}
+           }
           [element (or lang :lang/de)] "UNKNOWN element"))
 
 
@@ -77,14 +94,14 @@
     :col [:sm 2]
     (ul
       :class "nav nav-pills nav-stacked"
-      (li :class (cell= {:active (= s/route "#/news")}) (a :href "#/news" "Aktuell"))
-      (li :class (cell= {:active (= s/route "#/farms")}) (a :href "#/farms" "Betriebe"))
-      (li :class (cell= {:active (= s/route "#/climate")}) (a :href "#/climate" "Klima"))
-      (li :class (cell= {:active (= s/route "#/crops")}) (a :href "#/crops" "Fruchtarten"))
-      (li :class (cell= {:active (= s/route "#/soils")}) (a :href "#/soils" "Boden"))
-      (li :class (cell= {:active (= s/route "#/archive")}) (a :href "#/archive" "Archiv"))
-      (li :class (cell= {:active (= s/route "#/settings")}) (a :href "#/settins" "Einstellungen"))
-      (li :class (cell= {:active (= s/route "#/bersim")}) (a :href "#/bersim" "BERSIM")))))
+      (li :class (cell= {:active (= s/route "#/news")}) (a :href "#/news" (cell= (vocab :nav-news s/lang))))
+      (li :class (cell= {:active (= s/route "#/farms")}) (a :href "#/farms" (cell= (vocab :nav-farms s/lang))))
+      (li :class (cell= {:active (= s/route "#/weather")}) (a :href "#/weather" (cell= (vocab :nav-weather s/lang))))
+      (li :class (cell= {:active (= s/route "#/crops")}) (a :href "#/crops" (cell= (vocab :nav-crops s/lang))))
+      (li :class (cell= {:active (= s/route "#/soils")}) (a :href "#/soils" (cell= (vocab :nav-soils s/lang))))
+      (li :class (cell= {:active (= s/route "#/archive")}) (a :href "#/archive" (cell= (vocab :nav-archive s/lang))))
+      (li :class (cell= {:active (= s/route "#/settings")}) (a :href "#/settins" (cell= (vocab :nav-settings s/lang))))
+      (li :class (cell= {:active (= s/route "#/bersim")}) (a :href "#/bersim" (cell= (vocab :nav-bersim s/lang)))))))
 
 
 (defn login-pane

@@ -157,6 +157,29 @@
              ,,,)
            (into {})))))
 
+#_(defrpc update-weather-station
+  [weather-station-id name lat lng & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))
+
+        (d/q '[:find ?ws-e #_?year
+               :in $ ?ws-id
+               :where
+               [?-e :user/id ?user-id]
+               [?user-e :user/weather-stations ?ws-e]]
+             db weather-station-id)
+
+        ]
+    (when cred
+      (d/transact (db/connection)
+                  [(when name [:db/add [:weather-station/id weather-station-id] :weather-station/name name])
+                   (when lat [:db/add [:weather-station/id weather-station-id] :weather-station/g name])
+                   ]))))
 
 
 (defrpc login

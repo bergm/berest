@@ -32,6 +32,12 @@
                   :lang/en "Edit"}
            :save-edit {:lang/de "Änderungen speichern"
                        :lang/en "Save changes"}
+           :chart-year {:lang/de "Jahr"
+                         :lang/en "Year"}
+           :chart-header {:lang/de "Wetterdaten"
+                          :lang/en "Weather data"}
+           :chart-subheader {:lang/de "Quelle: DWD Station"
+                             :lang/en "Source: DWD station"}
            :evap {:lang/de "Verdunstung"
                   :lang/en "Evaporation"}
            :precip {:lang/de "Niederschlag"
@@ -45,7 +51,7 @@
   []
   (div
     :id "weather-stations-pane"
-    :do-toggle (cell= (= s/route "#/climate"))
+    :do-toggle (cell= (= s/route "#/weather"))
 
     (bs/form
       :opts [:horizontal]
@@ -64,16 +70,23 @@
         (let [data-visible? (cell false)
               edit? (cell false)
               no-edit? (cell= (not edit?))
-              selected-data (cell nil)
-              ;_ (cell= (println "selected-data: " (pr-str selected-data)))
+
+              station-data (cell {:name nil
+                                  :lat nil
+                                  :long nil})
+
+              weather-data (cell nil)
+              ;_ (cell= (println "weather-data: " (pr-str weather-data)))
 
               chart-config {:chart {:renderTo chart-id
                                     ;:defaultSeriesType "spline"
-                                    :zoomType "x"}
-                            :title {:text "Wetter"
-                                    :x -20}
-                            :subtitle {:text "Source: DWD Station xy"
-                                       :x -20}
+                                    :zoomType "x"
+                                    #_:spacingTop #_50}
+                            :title {:text "" #_(vocab :chart-header @s/lang)
+                                    :x 0 #_-20}
+                            #_:subtitle #_{:text (str (vocab :chart-subheader @s/lang) " " @name)
+                                       :x 0 #_-20
+                                       :y -20}
                             :xAxis {:type "datetime"
                                     :labels {:format "{value: %d.%m.%Y}"
                                              :rotation 45
@@ -84,9 +97,9 @@
                                      :opposite true}]
                             :tooltip {:shared true
                                       :crosshairs true}
-                            :legend {:layout "vertical"
-                                     :align "right"
-                                     :verticalAlign "middle"
+                            :legend {:layout "horizontal" #_"vertical"
+                                     :align "center" #_"right"
+                                     :verticalAlign "top" #_"middle"
                                      :borderWidth 0}
                             :series [{:type "line"
                                       :name (vocab :tavg @s/lang)
@@ -108,11 +121,11 @@
                                       :data []}]}
               _ (with-timeout 0 (js/Highcharts.Chart. (clj->js chart-config)))
 
-              measured-data (cell= (->> selected-data
+              measured-data (cell= (->> weather-data
                                         (filter #(not (:weather-data/prognosis-data? (second %))) ,,,)
                                         (map second ,,,)
                                         flatten))
-              _ (cell= (println "measured-data: " (pr-str measured-data)))
+              ;_ (cell= (println "measured-data: " (pr-str measured-data)))
 
               #_prognosis-data #_(cell= (->> selected-data
                                          (filter #(:weather-data/prognosis-data? (second %)) ,,,)
@@ -153,13 +166,13 @@
               _ (cell= (set-series-data 2 evap))]
 
           (div
-            (button
+            #_(button
               ;:toggle no-edit?
               :style "float:right"
               :class "btn btn-primary"
               :click #(swap! edit? not)
               (text "~(vocab :edit s/lang)"))
-            (button
+            #_(button
               :toggle edit?
               :style "float:right"
               :class "btn btn-danger"
@@ -178,7 +191,7 @@
                   :type "text"
                   :placeholder (cell= (vocab :name-placeholder s/lang))
                   :value name
-                  :on-change #())))
+                  :on-change #(swap! station-data assoc :name (val-id name-input)))))
 
             (bs/form-group
               (bs/control-label :col [:sm 2] :for lat-input (text "~(vocab :lat-label s/lang)"))
@@ -192,10 +205,10 @@
                   :type "number"
                   :placeholder (cell= (vocab :lat-placeholder s/lang))
                   :value lat
-                  :on-change #())))
+                  :on-change #(swap! station-data assoc :lat (val-id lat-input)))))
 
             (bs/form-group
-              (bs/control-label :col [:sm 2] :for "long-input" (text "~(vocab :long-label s/lang)"))
+              (bs/control-label :col [:sm 2] :for long-input (text "~(vocab :long-label s/lang)"))
               (div
                 :col [:xs 3]
                 (p :toggle no-edit? :class "form-control-static" (text "~{long}"))
@@ -206,7 +219,7 @@
                   :type "number"
                   :placeholder (cell= (vocab :long-placeholder s/lang))
                   :value long
-                  :on-change #())))
+                  :on-change #(swap! station-data assoc :long (val-id long-input)))))
 
             (div
               (span
@@ -222,16 +235,24 @@
               (div
                 :toggle data-visible?
 
-                (select
-                  :id years-id
-                  :class "form-control"
-                  :multiple "multiple"
-                  :on-change #(s/load-weather-station-data selected-data @id (map js/parseInt (val-id years-id)))
-                  (loop-tpl
-                    :bindings [year years]
-                    (uie/create-option year (first @years))))
+                (bs/form-group
+                  (bs/control-label :col [:sm 2] :for years-id (text "~(vocab :chart-year s/lang)"))
+                  (div
+                    :col [:xs 3]
+                    (select
+                      :id years-id
+                      :class "form-control"
+                      :multiple "multiple"
+                      :on-change #(s/load-weather-station-data weather-data @id (map js/parseInt (val-id years-id)))
+                      (loop-tpl
+                        :bindings [year years]
+                        (option :value year
+                                ;:selected (cell= (= value selected-value))
+                                (text "~{year}"))))))
 
-                (div :id chart-id)))
+                (div
+                  :id chart-id
+                  :col [:xs 12])))
 
 
             (hr)))
