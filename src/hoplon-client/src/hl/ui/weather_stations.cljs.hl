@@ -32,7 +32,12 @@
                   :lang/en "Edit"}
            :save-edit {:lang/de "Änderungen speichern"
                        :lang/en "Save changes"}
-           }
+           :evap {:lang/de "Verdunstung"
+                  :lang/en "Evaporation"}
+           :precip {:lang/de "Niederschlag"
+                    :lang/en "Precipitation"}
+           :tavg {:lang/de "mittl. Temperatur"
+                  :lang/en "avg. Temperature"}}
           [element (or lang :lang/de)] "UNKNOWN element"))
 
 
@@ -60,24 +65,11 @@
               edit? (cell false)
               no-edit? (cell= (not edit?))
               selected-data (cell nil)
-              _ (cell= (println "selected-data: " (pr-str selected-data)))
-
-              ;;_ (cell= (println "selected-years: " (pr-str selected-years)))
-              #_#__ (cell= (let [selected-years* (or selected-years #{(first years)})
-                             _ (println "selected-years*: " (pr-str selected-years*))
-                             cached-data (get s/weather-station-data id)
-                             _ (println "cached-data: " (pr-str cached-data))
-                             years-to-fetch (if cached-data
-                                              (filter (fn [year] (not (nil? (get cached-data year))))
-                                                      selected-years*)
-                                              selected-years*)
-                             _ (println "years-to-fetch: " (pr-str years-to-fetch))]
-                         (when (not (empty? years-to-fetch))
-                           (println "would call (load-weather-station-data" id years-to-fetch)
-                           #_(s/load-weather-station-data id years-to-fetch))))
+              ;_ (cell= (println "selected-data: " (pr-str selected-data)))
 
               chart-config {:chart {:renderTo chart-id
-                                    :defaultSeriesType "spline"}
+                                    ;:defaultSeriesType "spline"
+                                    :zoomType "x"}
                             :title {:text "Wetter"
                                     :x -20}
                             :subtitle {:text "Source: DWD Station xy"
@@ -86,39 +78,80 @@
                                     :labels {:format "{value: %d.%m.%Y}"
                                              :rotation 45
                                              :align "left"}}
-                            :yAxis {:title {:text "Temperature (°C)"}
-                                    #_:plotLines #_[{:value 0
-                                                 :width 1
-                                                 :color "#808080"}]}
-                            :tooltip {:valueSuffix "°C"}
+                            :yAxis [{:title {:text (str (vocab :tavg @s/lang) " [°C]")}}
+                                    {:title {:text (str (vocab :precip @s/lang) "/"
+                                                        (vocab :evap @s/lang) " [mm]")}
+                                     :opposite true}]
+                            :tooltip {:shared true
+                                      :crosshairs true}
                             :legend {:layout "vertical"
                                      :align "right"
                                      :verticalAlign "middle"
                                      :borderWidth 0}
-                            :series [{:name "T-min"
+                            :series [{:type "line"
+                                      :name (vocab :tavg @s/lang)
+                                      :yAxis 0
+                                      :tooltip {:valueSuffix " °C"}
+                                      :color "#FF0000"
                                       :data []}
-                                     {:name "T-max"
+                                     {:type "column"
+                                      :name (vocab :precip @s/lang)
+                                      :yAxis 1
+                                      :tooltip {:valueSuffix " mm"}
+                                      :color "blue"
                                       :data []}
-                                     {:name "T-avg"
+                                     {:type "column"
+                                      :name (vocab :evap @s/lang)
+                                      :yAxis 1
+                                      :tooltip {:valueSuffix " mm"}
+                                      :color "#FF6600"
                                       :data []}]}
               _ (with-timeout 0 (js/Highcharts.Chart. (clj->js chart-config)))
 
-
-              measured-data (cell= (filter #(not (:weather-data/prognosis-data? (second %))) selected-data))
+              measured-data (cell= (->> selected-data
+                                        (filter #(not (:weather-data/prognosis-data? (second %))) ,,,)
+                                        (map second ,,,)
+                                        flatten))
               _ (cell= (println "measured-data: " (pr-str measured-data)))
 
+              #_prognosis-data #_(cell= (->> selected-data
+                                         (filter #(:weather-data/prognosis-data? (second %)) ,,,)
+                                         (map second ,,,)
+                                         flatten))
+
+              set-series-data (fn [series-index data]
+                                (some-> chart-id
+                                        by-id
+                                        js/jQuery
+                                        .highcharts
+                                        .-series
+                                        (#(nth % series-index) ,,,)
+                                        (.setData (clj->js data))))
+
               tavg (cell= (->> measured-data
-                               (map second ,,,)
-                               flatten
                                (mapv (fn [{date :weather-data/date
                                            t :weather-data/average-temperature}]
                                        [(.getTime date) t])
                                  ,,,)
                                (sort-by first ,,,)))
+              _ (cell= (set-series-data 0 tavg))
 
-              _ (cell= (some-> chart-id by-id js/jQuery .highcharts .-series first (.setData (clj->js tavg))))
+              precip (cell= (->> measured-data
+                               (mapv (fn [{date :weather-data/date
+                                           t :weather-data/precipitation}]
+                                       [(.getTime date) t])
+                                 ,,,)
+                               (sort-by first ,,,)))
+              _ (cell= (set-series-data 1 precip))
 
-              ]
+              evap (cell= (->> measured-data
+                               (mapv (fn [{date :weather-data/date
+                                           t :weather-data/evaporation}]
+                                       [(.getTime date) (- t)])
+                                 ,,,)
+                               (sort-by first ,,,)))
+              _ (cell= (set-series-data 2 evap))]
+
           (div
             (button
               ;:toggle no-edit?
@@ -186,8 +219,6 @@
                 :click #(reset! data-visible? false))
               (span (text " ~(vocab :show-data s/lang)"))
 
-
-
               (div
                 :toggle data-visible?
 
@@ -195,38 +226,16 @@
                   :id years-id
                   :class "form-control"
                   :multiple "multiple"
-                  :on-change #(s/load-weather-station-data selected-data id (map js/parseInt (val-id years-id)))
+                  :on-change #(s/load-weather-station-data selected-data @id (map js/parseInt (val-id years-id)))
                   (loop-tpl
                     :bindings [year years]
                     (uie/create-option year (first @years))))
 
-                (div :id chart-id)
-
-                #_(button
-                  :on-click #(s/load-weather-station-data @id)
-                  "click me")
-                )
-              )
-
-
-
-
+                (div :id chart-id)))
 
 
             (hr)))
 
-
-
-
-
-
-
-
-
         )
-
-
       )
-
-
     ))

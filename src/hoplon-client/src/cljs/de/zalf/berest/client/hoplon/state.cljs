@@ -73,6 +73,9 @@
 
 (defn load-weather-station-data
   [result-cell weather-station-id years]
+  (println "result-cell: " result-cell
+           " weather-station-id: " weather-station-id
+           " years: " years)
   ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data
              result-cell error loading) weather-station-id years))
 
