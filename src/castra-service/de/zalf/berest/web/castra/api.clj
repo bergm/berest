@@ -157,6 +157,19 @@
              ,,,)
            (into {})))))
 
+(defrpc get-crop-data
+  [crop-id & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (first (data/db->full-selected-crops db [crop-id])))))
+
+
 #_(defrpc update-weather-station
   [weather-station-id name lat lng & [user-id pwd]]
   {:rpc/pre [(nil? user-id)

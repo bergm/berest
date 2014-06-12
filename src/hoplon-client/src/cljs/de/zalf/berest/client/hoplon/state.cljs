@@ -73,11 +73,13 @@
 
 (defn load-weather-station-data
   [result-cell weather-station-id years]
-  (println "result-cell: " result-cell
-           " weather-station-id: " weather-station-id
-           " years: " years)
   ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data
              result-cell error loading) weather-station-id years))
+
+(defn load-crop-data
+  [result-cell crop-id]
+  ((mkremote 'de.zalf.berest.web.castra.api/get-crop-data
+             result-cell error loading) crop-id))
 
 ;TODO: can't update weather-stations easily as they're actually shared most of the time, do this later properly
 #_(def update-weather-station (mkremote 'de.zalf.berest.web.castra.api/update-weather-station state error loading))

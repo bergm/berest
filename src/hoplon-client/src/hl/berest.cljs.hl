@@ -9,6 +9,7 @@
        [ui.elements :as uie]
        [ui.bersim :as bersim]
        [ui.weather-stations :as weather-stations]
+       [ui.crops :as crops]
        [clojure.string :as str]
                 #_[tailrecursion.hoplon.svg :as hsvg]
        [tailrecursion.hoplon.reload :refer [reload-all]]
@@ -216,10 +217,13 @@
 
                   ))))
 
-          (bersim/bersim-pane)
+
 
           (weather-stations/weather-stations-pane)
 
+          (crops/crops-pane)
+
+          (bersim/bersim-pane)
           ))
 
       (hr)
