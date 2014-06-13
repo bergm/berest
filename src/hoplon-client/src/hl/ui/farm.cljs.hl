@@ -1,0 +1,119 @@
+(ns ui.farm
+  #_(:require-macros [tailrecursion.javelin :refer :all]
+                   [tailrecursion.hoplon :refer :all])
+  (:require #_[tailrecursion.javelin :refer :all]
+            #_[tailrecursion.hoplon :refer :all]
+            [de.zalf.berest.client.hoplon.util :as util]
+            [de.zalf.berest.client.hoplon.state :as s]
+            [ui.elements :as uie]
+            [bootstrap-util :as bs]
+            #_[cljs-time.coerce :as cstcoe]))
+
+
+(defn vocab
+  "translatable vocabulary for this page"
+  [element lang]
+  (get-in {:name-label {:lang/de "Name"
+                        :lang/en "Name"}
+           :name-placeholder {:lang/de "Name des Betriebes"
+                              :lang/en "Name of farm"}
+
+           :notes-label {:lang/de "Notizen"
+                        :lang/en "Notes"}
+           :notes-placeholder {:lang/de "Hier können Notizen zum Betrieb gemacht werden ..."
+                              :lang/en "Here you can keep notes regarding the farm ..."}
+
+           :show-data {:lang/de "Daten anzeigen"
+                       :lang/en "Show data"}
+           :edit {:lang/de "Ändern"
+                  :lang/en "Edit"}
+           :save-edit {:lang/de "Änderungen speichern"
+                       :lang/en "Save changes"}
+           :chart-header {:lang/de "Wetterdaten"
+                          :lang/en "Weather data"}
+           :chart-subheader {:lang/de "Quelle: DWD Station"
+                             :lang/en "Source: DWD station"}
+
+           :dc {:lang/de "BEREST DC Code"
+                :lang/en "BEREST DC code"}
+
+           :cover-degree {:lang/de "Bedeckungsgrad"
+                          :lang/en "Cover degree"}
+
+           :extraction-depth {:lang/de "Entzugstiefe"
+                              :lang/en "Extraction depth"}
+
+           :aet-pet {:lang/de "Quotient AET/PET"
+                     :lang/en "Quotient AET/PET"}
+
+           :transpiration-factor {:lang/de "Transpirations-Faktor"
+                                  :lang/en "Transpiration factor"}
+           }
+          [element (or lang :lang/de)] "UNKNOWN element"))
+
+
+(defelem farm
+  [{{:keys [name name!
+            addresses
+            com-connections
+            contacts
+            notes notes!
+            irrigation-technologies
+            plots
+            authorative-weather-station
+            weather-station
+            weather-data weather-data!
+            edit?]} :fields
+    :as attrs}
+   kids]
+  (let [no-edit? (cell= (not edit?))
+        [name-id notes-id] (repeatedly gensym)
+        ]
+    ((div
+       (bs/form
+         :opts [:horizontal]
+         :name "new-farm-form"
+
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for name-id (text "~(vocab :name-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{name}"))
+             (input
+               :id name-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :name-placeholder s/lang))
+               :value name
+               :on-change #(name! (val-id name-id)))))
+
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for notes-id (text "~(vocab :notes-label s/lang)"))
+           (div
+             :col [:xs 7]
+             (p :toggle no-edit? :class "form-control-static" (text "~{notes}"))
+             (textarea
+               :id notes-id
+               :toggle edit?
+               :class "form-control"
+               :rows 5
+               :placeholder (cell= (vocab :notes-placeholder s/lang))
+               :value notes
+               :on-change #(notes! (val-id notes-id)))))
+
+
+         #_(bs/form-group
+           (bs/control-label :col [:sm 2] :for symbol-id (text "~(vocab :symbol-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{symbol}"))
+             (input
+               :id symbol-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :symbol-placeholder s/lang))
+               :value long
+               :on-change #(swap! form-data assoc :symbol (val-id symbol-id)))))
+         )) (dissoc attrs :fields) kids)))

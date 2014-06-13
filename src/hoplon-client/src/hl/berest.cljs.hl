@@ -10,6 +10,7 @@
        [ui.bersim :as bersim]
        [ui.weather-stations :as weather-stations]
        [ui.crops :as crops]
+       [ui.farms :as farms]
        [clojure.string :as str]
                 #_[tailrecursion.hoplon.svg :as hsvg]
        [tailrecursion.hoplon.reload :refer [reload-all]]
@@ -189,35 +190,9 @@
           :id "main-content"
           :class "col-sm-10"
 
-          (div
-            :id "farms-pane"
-            :toggle (cell= (= s/route "#/farms"))
-
-            (div
-              :id "farms"
-
-              (loop-tpl
-                :bindings [[_ {farm-id :farm/id
-                               farm-name :farm/name
-                               :as farm}] s/farms]
-                ;:bind-ids [farm-id]
-                (div
-                  :id farm-id
-                  (a :href (cell= (str "#/farms/" farm-id))
-                     (text "~{farm-name}"))
-
-                  (loop-tpl
-                    :bindings [[_ {plot-id :plot/id
-                                   plot-name :plot/name}] (cell= (:plots farm))]
-
-                    (div
-                      :id plot-id
-                      (a :href (cell= (str "#/farms/" farm-id "/plots/" plot-id))
-                         (text "~{plot-name}"))))
-
-                  ))))
 
 
+          (farms/farms-pane)
 
           (weather-stations/weather-stations-pane)
 
