@@ -65,12 +65,15 @@
         fc-first-char (cell= (.charAt lc-filter-criterium 0))
         filtered-crops (cell= (if (> fc-count 0)
                                 (filter (fn [{name :crop/name}]
-                                          (let [lc-name (.toLowerCase name)]
-                                            (if (> fc-count 1)
-                                              (> (.search lc-name lc-filter-criterium) -1)
-                                              (= (.charAt lc-name 0) fc-first-char))))
-                                        (:minimal-all-crops s/state))
-                                (:minimal-all-crops s/state)))]
+                                          ;include crops in resultset, whose name is missing
+                                          (if name
+                                            (let [lc-name (.toLowerCase name)]
+                                              (if (> fc-count 1)
+                                                (> (.search lc-name lc-filter-criterium) -1)
+                                                (= (.charAt lc-name 0) fc-first-char)))
+                                            true))
+                                        s/minimal-all-crops)
+                                s/minimal-all-crops))]
 
     (div
       :id "crops-pane"

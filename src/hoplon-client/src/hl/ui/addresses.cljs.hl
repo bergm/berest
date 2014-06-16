@@ -1,6 +1,7 @@
 (ns ui.addresses
   #_(:require-macros [tailrecursion.javelin :refer :all]
                    [tailrecursion.hoplon :refer :all])
+  (:refer-hoplon :exclude [address])
   (:require #_[tailrecursion.javelin :refer :all]
             #_[tailrecursion.hoplon :refer :all]
             [de.zalf.berest.client.hoplon.util :as util]
@@ -23,15 +24,56 @@
            :query-placeholder {:lang/de "Achtung LEERE SUCHE!! Alle Fruchtarten anzeigen kann lange dauern!!!"
                                 :lang/en "Attention EMPTY SEARCH!! Showing all crops might take long!!!"}
 
-           :name-label {:lang/de "Name"
-                        :lang/en "Name"}
-           :name-placeholder {:lang/de "Name der Fruchtart"
-                              :lang/en "Name of crop"}
+           :street-label {:lang/de "Strasse"
+                        :lang/en "Street"}
+           :street-placeholder {:lang/de "Name der Strasse"
+                              :lang/en "Name of street"}
 
-           :symbol-label {:lang/de "Symbol"
-                        :lang/en "Symbol"}
-           :symbol-placeholder {:lang/de "Symbol der Fruchtart"
-                              :lang/en "Symbol of crop"}
+           :postal-code-label {:lang/de "PLZ"
+                               :lang/en "Postal code"}
+           :postal-code-placeholder {:lang/de "Postleitzahl"
+                                     :lang/en "Postal code"}
+
+           :city-label {:lang/de "Stadt"
+                          :lang/en "City"}
+           :city-placeholder {:lang/de "Name der Stadt"
+                                :lang/en "Name of city"}
+
+           :city-part-label {:lang/de "Stadtteil"
+                          :lang/en "City part"}
+           :city-part-placeholder {:lang/de "Name des Stadtteils"
+                                :lang/en "Name of city part"}
+
+           :municipality-label {:lang/de "Landkreis"
+                                :lang/en "Municipality"}
+           :municipality-placeholder {:lang/de "Name des Landkreises"
+                                :lang/en "Name of municipality"}
+
+           :municipality-short-label {:lang/de "Landkreiskürzel"
+                                      :lang/en "Municipality symbol"}
+           :municipality-short-placeholder {:lang/de "Landkreiskürzel (z.B. MOL)"
+                                :lang/en "Short symbol for municipality"}
+
+           :state-label {:lang/de "Bundesland"
+                          :lang/en "State"}
+           :state-placeholder {:lang/de "Name des Bundeslandes"
+                                :lang/en "Name of state"}
+
+           :state-short-label {:lang/de "Bundesland-Kürzel"
+                          :lang/en "State symbol "}
+           :state-short-placeholder {:lang/de "Kürzel des Bundeslandes"
+                                :lang/en "Symbol of state"}
+
+           :country-label {:lang/de "Land"
+                          :lang/en "Country"}
+           :country-placeholder {:lang/de "Name des Landes"
+                                :lang/en "Name of country"}
+
+           :country-short-label {:lang/de "Landeskürzel"
+                          :lang/en "Country symbol"}
+           :country-short-placeholder {:lang/de "Name des Landes"
+                                :lang/en "Symbol of country"}
+
 
            :show-data {:lang/de "Daten anzeigen"
                        :lang/en "Show data"}
@@ -62,322 +104,174 @@
           [element (or lang :lang/de)] "UNKNOWN element"))
 
 
-(defn farms-pane
-  []
-  (let [#_(filter-criterium (cell "A")
-        fc-count (cell= (count filter-criterium))
-        lc-filter-criterium (cell= (.toLowerCase filter-criterium))
-        fc-first-char (cell= (.charAt lc-filter-criterium 0))
-        filtered-crops (cell= (if (> fc-count 0)
-                                (filter (fn [{name :crop/name}]
-                                          (let [lc-name (.toLowerCase name)]
-                                            (if (> fc-count 1)
-                                              (> (.search lc-name lc-filter-criterium) -1)
-                                              (= (.charAt lc-name 0) fc-first-char))))
-                                        (:minimal-all-crops s/state))
-                                (:minimal-all-crops s/state))))
-         data-visible? (cell false)
-         edit-new-farm? (cell false)
-         no-edit-new-farm? (cell= (not edit-new-farm?))
+(defelem
+  address
+  [{{:keys [street street!
+            postal-code postal-code!
+            city city!
+            city-part city-part!
+            municipality municipality!
+            municipality-short municipality-short!
+            state state!
+            state-short state-short!
+            country country!
+            country-short country-short!
+            edit?]} :fields
+    :as attrs}
+   kids]
+  (let [no-edit? (cell= (not edit?))
+        [address-form-name
+         street-id postal-code-id city-id city-part-id
+         municipality-id municipality-short-id
+         state-id state-short-id
+         country-id country-short-id] (repeatedly gensym)
+        ]
+    ((div
+       (bs/form
+         :opts [:horizontal]
+         :name address-form-name
 
-         ]
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for street-id (text "~(vocab :street-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{street}"))
+             (input
+               :id street-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :street-placeholder s/lang))
+               :value street
+               :on-change #(street! (val-id street-id)))))
 
-    (div
-      :id "farms-pane"
-      :do-toggle (cell= (= s/route "#/farms"))
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for postal-code-id (text "~(vocab :postal-code-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{postal-code}"))
+             (input
+               :id postal-code-id
+               :toggle edit?
+               :class "form-control"
+               :type "number"
+               :step 1
+               :min 9999
+               :max 100000
+               :placeholder (cell= (vocab :postal-code-placeholder s/lang))
+               :value postal-code
+               :on-change #(postal-code! (val-id postal-code-id)))))
 
-      (div
-        :id "new-farm"
-        (button
-          ;:toggle no-edit?
-          :style "float:right"
-          :class "btn btn-primary"
-          :click #(swap! edit-new-farm? not)
-          (text "~(vocab :new-farm s/lang)"))
-        (button
-          :toggle edit-new-farm?
-          :style "float:right"
-          :class "btn btn-danger"
-          :click #()
-          (text "~(vocab :save-new-farm s/lang)"))
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for city-id (text "~(vocab :city-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{city}"))
+             (input
+               :id city-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :city-placeholder s/lang))
+               :value city
+               :on-change #(city! (val-id city-id)))))
 
-        (bs/form
-          :opts [:horizontal]
-          :name "new-farm-form"
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for city-part-id (text "~(vocab :city-part-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{city-part}"))
+             (input
+               :id city-part-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :city-part-placeholder s/lang))
+               :value city-part
+               :on-change #(city-part! (val-id city-part-id)))))
 
-          #_(bs/form-group
-            (bs/control-label :col [:sm 2] :for name-id (text "~(vocab :name-label s/lang)"))
-            (div
-              :col [:xs 3]
-              (p :toggle no-edit? :class "form-control-static" (text "~{name}"))
-              (input
-                :id name-id
-                :toggle edit?
-                :class "form-control"
-                :type "text"
-                :placeholder (cell= (vocab :name-placeholder s/lang))
-                :value name
-                :on-change #(swap! form-data assoc :name (val-id name-id)))))
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for municipality-id (text "~(vocab :municipality-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{municipality}"))
+             (input
+               :id municipality-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :municipality-placeholder s/lang))
+               :value municipality
+               :on-change #(municipality! (val-id municipality-id)))))
 
-          #_(bs/form-group
-            (bs/control-label :col [:sm 2] :for symbol-id (text "~(vocab :symbol-label s/lang)"))
-            (div
-              :col [:xs 3]
-              (p :toggle no-edit? :class "form-control-static" (text "~{symbol}"))
-              (input
-                :id symbol-id
-                :toggle edit?
-                :class "form-control"
-                :type "text"
-                :placeholder (cell= (vocab :symbol-placeholder s/lang))
-                :value long
-                :on-change #(swap! form-data assoc :symbol (val-id symbol-id)))))
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for municipality-short-id (text "~(vocab :municipality-short-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{municipality-short}"))
+             (input
+               :id municipality-short-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :municipality-short-placeholder s/lang))
+               :value municipality-short
+               :on-change #(municipality-short! (val-id municipality-short-id)))))
 
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for state-id (text "~(vocab :state-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{state}"))
+             (input
+               :id state-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :state-placeholder s/lang))
+               :value state
+               :on-change #(state! (val-id state-id)))))
 
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for state-short-id (text "~(vocab :state-short-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{state}"))
+             (input
+               :id state-short-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :state-short-placeholder s/lang))
+               :value state-short
+               :on-change #(state-short! (val-id state-short-id)))))
 
-          )
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for country-id (text "~(vocab :country-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{country}"))
+             (input
+               :id country-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :country-placeholder s/lang))
+               :value country
+               :on-change #(country! (val-id country-id)))))
 
+         (bs/form-group
+           (bs/control-label :col [:sm 2] :for country-short-id (text "~(vocab :country-short-label s/lang)"))
+           (div
+             :col [:xs 3]
+             (p :toggle no-edit? :class "form-control-static" (text "~{country}"))
+             (input
+               :id country-short-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :country-short-placeholder s/lang))
+               :value country-short
+               :on-change #(country-short! (val-id country-short-id)))))
 
-          )
-
-      (div
-        :id "farms"
-
-        (loop-tpl
-          :bindings [[_ {farm-id :farm/id
-                         farm-name :farm/name
-                         :as farm}] s/farms]
-          ;:bind-ids [farm-id]
-          (div
-
-
-
-            (a :href (cell= (str "#/farms/" farm-id))
-               (text "~{farm-name}"))
-
-            (loop-tpl
-              :bindings [[_ {plot-id :plot/id
-                             plot-name :plot/name}] (cell= (:plots farm))]
-
-              (div
-                :id plot-id
-                (a :href (cell= (str "#/farms/" farm-id "/plots/" plot-id))
-                   (text "~{plot-name}"))))
-
-            )))
-
-
-      #_(bs/form
-        :opts [:horizontal]
-
-        (bs/form-group
-          (div
-            :class "col-xs-offset-1 form-control-static"
-            :col [:xs 11]
-            (for [c (range 65 91)]
-              (button
-                :type "button"
-                :class "btn btn-link"
-                :on-click #(reset! filter-criterium (char c))
-                (char c)))))
-
-        (bs/form-group
-          (bs/control-label :col [:xs 1] :for "crop-query-input-id" (text "~(vocab :query-label s/lang)"))
-          (div
-            :col [:xs 11]
-            (input
-              :id "crop-query-input-id"
-              :class "form-control"
-              :type "text"
-              :placeholder (cell= (vocab :query-placeholder s/lang))
-              :value filter-criterium
-              :on-change #(reset! filter-criterium (val-id "crop-query-input-id"))))))
-
-      (hr)
-
-      #_(bs/form
-        :opts [:horizontal]
-        :name "crops-form"
-
-        (loop-tpl
-          :bindings [{id :crop/id
-                      name :crop/name
-                      symbol :crop/symbol}
-                     (cell= (sort-by :crop/name filtered-crops))]
-          :bind-ids [name-id symbol-id chart-id]
-
-          (let [data-visible? (cell false)
-                edit? (cell false)
-                no-edit? (cell= (not edit?))
-
-                form-data {:name nil
-                           :symbol nil}
-
-                crop-data (cell nil)
-                _ (cell= (when crop-data (println "crop-data: " (pr-str crop-data))))
-
-                ;keep crop data in sync with currently activated elements as these
-                ;are backed by stem cell state
-                _ (cell= (when (and crop-data (not= id (:crop/id crop-data)))
-                           (reset! ~(cell data-visible?) false)
-                           (reset! ~(cell crop-data) nil)))
-
-                chart-config {:chart {:renderTo chart-id
-                                      :defaultSeriesType "line"
-                                      :zoomType "x"
-                                      #_:spacingTop #_50}
-                              :title {:text "" #_(vocab :chart-header @s/lang)
-                                      :x 0 #_-20}
-                              :xAxis {:title {:text "relative DC Tage"}
-                                      ;:type "datetime"
-                                      #_:labels #_{:format "{value: %d.%m.%Y}"
-                                             :rotation 45
-                                             :align "left"}}
-                              :yAxis [{:title {:text (str (vocab :dc @s/lang) " []")}}
-                                      {:title {:text (str (vocab :cover-degree @s/lang) " [%]")}}
-                                      {:title {:text (str (vocab :extraction-depth @s/lang) " [dm]")}}
-                                      {:title {:text (str (vocab :aet-pet @s/lang) " [°C]")}
-                                       :opposite true}
-                                      {:title {:text (str (vocab :transpiration-factor @s/lang) " []")}
-                                       :opposite true}]
-                              :tooltip {:shared true
-                                        :crosshairs true}
-                              :legend {:layout "horizontal" #_"vertical"
-                                       :align "center" #_"right"
-                                       :verticalAlign "top" #_"middle"
-                                       :borderWidth 0}
-                              :series [{:name (vocab :dc @s/lang)
-                                        :yAxis 0
-                                        ;:tooltip {:valueSuffix " "}
-                                        ;:color "#FF6600"
-                                        :data []}
-                                        {:name (vocab :cover-degree @s/lang)
-                                        :yAxis 1
-                                        :tooltip {:valueSuffix " %"}
-                                        ;:color "#FF0000"
-                                        :data []}
-                                       {:name (vocab :extraction-depth @s/lang)
-                                        :yAxis 2
-                                        :tooltip {:valueSuffix " dm"}
-                                        ;:color "blue"
-                                        :data []}
-                                       {:name (vocab :aet-pet @s/lang)
-                                        :yAxis 3
-                                        ;:tooltip {:valueSuffix " mm"}
-                                        ;:color "#FF6600"
-                                        :data []}
-                                       {:name (vocab :transpiration-factor @s/lang)
-                                        :yAxis 4
-                                        ;:tooltip {:valueSuffix " "}
-                                        ;:color "#FF6600"
-                                        :data []}]}
-                _ (with-timeout 0 (js/Highcharts.Chart. (clj->js chart-config)))
-
-                set-series-data (fn [series-index data]
-                                  (some-> chart-id
-                                          by-id
-                                          js/jQuery
-                                          .highcharts
-                                          .-series
-                                          (#(nth % series-index),,,)
-                                          (.setData (clj->js data))))
-
-                dc (cell= (->> (:crop/dc-to-rel-dc-days crop-data)
-                               (mapv (fn [[k v]] {:name (str "<b>" (get (:crop/dc-to-developmental-state-names crop-data) k) "</b>")
-                                                  :x v :y k})
-                                 ,,,)
-                               (sort-by :x ,,,)))
-                _ (cell= (set-series-data 0 dc))
-
-                cover-degrees (cell= (->> (:crop/rel-dc-day-to-cover-degrees crop-data)
-                                          (into [],,,)
-                                          (sort-by first,,,)))
-                _ (cell= (set-series-data 1 cover-degrees))
-
-                extraction-depths (cell= (->> (:crop/rel-dc-day-to-extraction-depths crop-data)
-                                              (into [],,,)
-                                              (sort-by first,,,)))
-                _ (cell= (set-series-data 2 extraction-depths))
-
-                aet-pet (cell= (->> (:crop/rel-dc-day-to-quotient-aet-pets crop-data)
-                                    (into [],,,)
-                                    (sort-by first,,,)))
-                _ (cell= (set-series-data 3 aet-pet))
-
-                transpiration-factors (cell= (->> (:crop/rel-dc-day-to-transpiration-factors crop-data)
-                                                  (into [],,,)
-                                                  (sort-by first,,,)))
-                _ (cell= (set-series-data 4 transpiration-factors))
-
-                ]
-
-
-
-            (div
-              #_(button
-                ;:toggle no-edit?
-                :style "float:right"
-                :class "btn btn-primary"
-                :click #(swap! edit? not)
-                (text "~(vocab :edit s/lang)"))
-              #_(button
-                :toggle edit?
-                :style "float:right"
-                :class "btn btn-danger"
-                :click #()
-                (text "~(vocab :save-edit s/lang)"))
-
-              (bs/form-group
-                (bs/control-label :col [:sm 2] :for name-id (text "~(vocab :name-label s/lang)"))
-                (div
-                  :col [:xs 3]
-                  (p :toggle no-edit? :class "form-control-static" (text "~{name}"))
-                  (input
-                    :id name-id
-                    :toggle edit?
-                    :class "form-control"
-                    :type "text"
-                    :placeholder (cell= (vocab :name-placeholder s/lang))
-                    :value name
-                    :on-change #(swap! form-data assoc :name (val-id name-id)))))
-
-              (bs/form-group
-                (bs/control-label :col [:sm 2] :for symbol-id (text "~(vocab :symbol-label s/lang)"))
-                (div
-                  :col [:xs 3]
-                  (p :toggle no-edit? :class "form-control-static" (text "~{symbol}"))
-                  (input
-                    :id symbol-id
-                    :toggle edit?
-                    :class "form-control"
-                    :type "text"
-                    :placeholder (cell= (vocab :symbol-placeholder s/lang))
-                    :value long
-                    :on-change #(swap! form-data assoc :symbol (val-id symbol-id)))))
-
-              (div
-                (span
-                  :class "glyphicon glyphicon-plus"
-                  :toggle (cell= (not data-visible?))
-                  :on-click #(do
-                              (s/load-crop-data crop-data @id)
-                              (reset! data-visible? true)))
-                (span
-                  :toggle data-visible?
-                  :class "glyphicon glyphicon-minus"
-                  :click #(reset! data-visible? false))
-                (span (text " ~(vocab :show-data s/lang)"))
-
-                (div
-                  :toggle data-visible?
-
-                  (div
-                    :id chart-id
-                    :style "width:100%"
-                    :col [:xs 12])))
-
-              (hr)))
-
-          )
-        )
-      )))
+         )) (dissoc attrs :fields) kids)))

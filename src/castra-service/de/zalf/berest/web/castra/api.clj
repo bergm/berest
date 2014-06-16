@@ -47,11 +47,6 @@
 
    :farms nil
 
-   :minimal-all-crops nil #_[{:crop/id :id
-                    :crop/name :name
-                    :crop/symbol :symbol}]
-   :full-selected-crops nil #_{:crop-id {:crop :map}}
-
    :weather-stations {}
 
    :full-selected-weather-stations {}
@@ -65,7 +60,7 @@
                 :donation/opt 20
                 :donation/step-size 5}
 
-   :plot nil #_{:plot/stt 6212
+   #_:plot #_{:plot/stt 6212
           :plot/slope 1
           :plot/field-capacities []
           :plot/fc-unit :soil-moisture.unit/volP
@@ -86,13 +81,15 @@
         (into {} (map (fn [{farm-id :farm/id
                             :as farm}]
                         [farm-id (assoc farm :plots (into {} (map (juxt :plot/id identity)
-                                                                  (get-plots db farm-id))))])
-                      (get-farms db user-id)))
+                                                                  (data/db->a-farms-plots db farm-id))))])
+                      (data/db->a-users-farms db user-id)))
 
-        min-all-crops (map #(select-keys % [:crop/id :crop/name :crop/symbol])
-                           (data/db->min-all-crops db))
+         #_farms-with-plots #_(data/db->a-users-farms db user-id)
 
-        weather-stations (map #(select-keys % [:weather-station/id
+         #_min-all-crops #_(map #(select-keys % [:crop/id :crop/name :crop/symbol])
+                            (data/db->min-all-crops db))
+
+         weather-stations (map #(select-keys % [:weather-station/id
                                                :weather-station/name
                                                :weather-station/geo-coord
                                                :available-years])
@@ -101,7 +98,7 @@
         ]
     (assoc state-template :farms farms-with-plots
                           :weather-stations weather-stations
-                          :minimal-all-crops min-all-crops
+                          ;:minimal-all-crops min-all-crops
                           :user-credentials cred)))
 
 
@@ -116,6 +113,25 @@
                (:user @*session*))]
     (when cred
       (stem-cell-state db cred))))
+
+
+(defrpc get-minimal-all-crops
+  "returns the minimal version of all crops, a list of
+  [{:crop/id :id
+    :crop/name :name
+    :crop/symbol :symbol}]
+    currently"
+  [& [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (map #(select-keys % [:crop/id :crop/name :crop/symbol])
+           (data/db->min-all-crops db)))))
 
 
 (defrpc get-state-with-full-selected-crops
@@ -168,6 +184,57 @@
                (:user @*session*))]
     (when cred
       (first (data/db->full-selected-crops db [crop-id])))))
+
+
+(defrpc create-new-farm
+  [temp-farm-name & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/create-new-farm (db/connection) (:user/id cred) temp-farm-name)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new farm!")))))))
+
+(defrpc create-new-farm-address
+  [farm-id & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/create-new-farm-address (db/connection) (:user/id cred) farm-id)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new farm!")))))))
+
+(defrpc update-address
+  [db-e-id attr value & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))
+
+        tx-data [:db/add db-e-id (d/entid db attr) value]]
+    (when cred
+      (try
+        (d/transact (db/connection) [tx-data])
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error (str "Couldn't update address! tx-data: " tx-data))))))))
 
 
 #_(defrpc update-weather-station

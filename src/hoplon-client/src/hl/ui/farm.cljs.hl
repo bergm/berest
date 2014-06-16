@@ -6,6 +6,7 @@
             [de.zalf.berest.client.hoplon.util :as util]
             [de.zalf.berest.client.hoplon.state :as s]
             [ui.elements :as uie]
+            [ui.addresses :as addr]
             [bootstrap-util :as bs]
             #_[cljs-time.coerce :as cstcoe]))
 
@@ -18,15 +19,26 @@
            :name-placeholder {:lang/de "Name des Betriebes"
                               :lang/en "Name of farm"}
 
+           :address-fieldset-label {:lang/de "Adressdaten"
+                                    :lang/en "Address data"}
+           :new-address-button-label {:lang/de "Neue Adresse ..."
+                                      :lang/en "New address ..."}
+           :save-new-address-button-label {:lang/de "Neue Adresse speichern!"
+                                           :lang/en "Save new address!"}
+
            :notes-label {:lang/de "Notizen"
-                        :lang/en "Notes"}
+                         :lang/en "Notes"}
            :notes-placeholder {:lang/de "Hier können Notizen zum Betrieb gemacht werden ..."
-                              :lang/en "Here you can keep notes regarding the farm ..."}
+                               :lang/en "Here you can keep notes regarding the farm ..."}
 
            :show-data {:lang/de "Daten anzeigen"
                        :lang/en "Show data"}
-           :edit {:lang/de "Ändern"
-                  :lang/en "Edit"}
+
+           :edit-farm-button-label {:lang/de "Ändern"
+                                      :lang/en "Edit"}
+           #_:edit-farm-button-label-2 #_{:lang/de "Ändern"
+                                      :lang/en "Edit"}
+
            :save-edit {:lang/de "Änderungen speichern"
                        :lang/en "Save changes"}
            :chart-header {:lang/de "Wetterdaten"
@@ -52,8 +64,10 @@
           [element (or lang :lang/de)] "UNKNOWN element"))
 
 
-(defelem farm
-  [{{:keys [name name!
+(defelem
+  farm
+  [{{:keys [id
+            name name!
             addresses
             com-connections
             contacts
@@ -63,16 +77,35 @@
             authorative-weather-station
             weather-station
             weather-data weather-data!
-            edit?]} :fields
+            show-edit?]} :fields
     :as attrs}
    kids]
-  (let [no-edit? (cell= (not edit?))
-        [name-id notes-id] (repeatedly gensym)
+  (let [edit? (cell (if (cell? show-edit?) @show-edit? show-edit?))
+        no-edit? (cell= (not edit?))
+        edit-new-address? (cell false)
+        [farm-form-name name-id notes-id] (repeatedly gensym)
+        street (cell nil)
+        postal-code (cell nil)
+        city (cell nil)
+        city-part (cell nil)
+        municipality (cell nil)
+        municipality-short (cell nil)
+        state (cell nil)
+        state-short (cell nil)
+        country (cell nil)
+        country-short (cell nil)
         ]
     ((div
        (bs/form
          :opts [:horizontal]
-         :name "new-farm-form"
+         :name farm-form-name
+
+         (button
+           :style "float:right"
+           :class "btn btn-default"
+           :click #(swap! edit? not)
+           (text "~(vocab :edit-farm-button-label s/lang)"))
+
 
          (bs/form-group
            (bs/control-label :col [:sm 2] :for name-id (text "~(vocab :name-label s/lang)"))
@@ -87,6 +120,49 @@
                :placeholder (cell= (vocab :name-placeholder s/lang))
                :value name
                :on-change #(name! (val-id name-id)))))
+
+         (fieldset
+           (legend (text "~(vocab :address-fieldset-label s/lang)"))
+
+           (button
+             ;:style "float:right"
+             :class "btn btn-primary"
+             :click #(s/create-new-address @id)
+             (text "~(vocab :new-address-button-label s/lang)"))
+
+           (hr)
+
+           (div
+             #_(h3 (text "~(vocab :address-header s/lang)"))
+
+             (loop-tpl
+               :bindings [{db-e-id :db/id
+                           street :address/street
+                           postal-code :address/postal-code
+                           city :address/city
+                           city-part :address/city-part
+                           municipality :address/municipality
+                           municipality-short :address/municipality-short
+                           state :address/state
+                           state-short :state-short
+                           country :address/country
+                           country-short :address/country-short
+                           :as address} addresses]
+               ;:bind-ids [farm-id]
+               (div
+                 (addr/address
+                   :fields {:street street :street! #(s/update-address db-e-id :address/street %)
+                            :postal-code postal-code :postal-code! #(s/update-address db-e-id :address/postal-code %)
+                            :city city :city! #(s/update-address db-e-id :address/city %)
+                            :city-part city-part :city-part! #(s/update-address db-e-id :address/city-part %)
+                            :municipality municipality :municipality! #(s/update-address db-e-id :address/municipality %)
+                            :municipality-short municipality-short :municipality-short! #(s/update-address db-e-id :address/municipality-short %)
+                            :state state :state! #(s/update-address db-e-id :address/state %)
+                            :state-short state-short :state-short! #(s/update-address db-e-id :address/state-short %)
+                            :country country :country! #(s/update-address db-e-id :address/country %)
+                            :country-short country-short :country-short! #(s/update-address db-e-id :address/country-short %)
+                            :edit? true})))
+             ))
 
          (bs/form-group
            (bs/control-label :col [:sm 2] :for notes-id (text "~(vocab :notes-label s/lang)"))

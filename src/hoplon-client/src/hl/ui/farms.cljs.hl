@@ -14,15 +14,23 @@
 (defn vocab
   "translatable vocabulary for this page"
   [element lang]
-  (get-in {:new-farm {:lang/de "Neuer Betrieb ..."
+  (get-in {:new-farm-filter-value {:lang/de "Neuer Betriebsname"
+                                   :lang/en "New farm name"}
+
+           :new-farm {:lang/de "Neuer Betrieb ..."
                       :lang/en "New farm ..."}
            :save-new-farm {:lang/de "Neuen Betrieb speichern"
                            :lang/en "Save new farm"}
+           :new-farm-header {:lang/de "Neuen Betrieb anlegen"
+                                :lang/en "Create new farm"}
 
            :query-label {:lang/de "Suche"
                          :lang/en "Search"}
-           :query-placeholder {:lang/de "Achtung LEERE SUCHE!! Alle Fruchtarten anzeigen kann lange dauern!!!"
-                                :lang/en "Attention EMPTY SEARCH!! Showing all crops might take long!!!"}
+           :query-placeholder {:lang/de "Achtung LEERE SUCHE!! Alle Betriebe anzeigen kann lange dauern!!!"
+                                :lang/en "Attention EMPTY SEARCH!! Showing all farms might take long!!!"}
+
+           :no-farm-name-label {:lang/de "Betrieb ohne Name"
+                                :lang/en "Farm without name"}
 
            :name-label {:lang/de "Name"
                         :lang/en "Name"}
@@ -65,18 +73,23 @@
 
 (defn farms-pane
   []
-  (let [#_(filter-criterium (cell "A")
-        fc-count (cell= (count filter-criterium))
-        lc-filter-criterium (cell= (.toLowerCase filter-criterium))
+  (let [filter-criterium (cell {:attr :farm/name
+                                :value ""})
+        fc-count (cell= (count (:value filter-criterium)))
+        lc-filter-criterium (cell= (.toLowerCase (:value filter-criterium)))
         fc-first-char (cell= (.charAt lc-filter-criterium 0))
-        filtered-crops (cell= (if (> fc-count 0)
-                                (filter (fn [{name :crop/name}]
-                                          (let [lc-name (.toLowerCase name)]
-                                            (if (> fc-count 1)
-                                              (> (.search lc-name lc-filter-criterium) -1)
-                                              (= (.charAt lc-name 0) fc-first-char))))
-                                        (:minimal-all-crops s/state))
-                                (:minimal-all-crops s/state))))
+        filtered-farms (cell= (if (> fc-count 0)
+                                (filter (fn [[farm-id farm {name :farm/name}]]
+                                          (let [value (-> :attr filter-criterium farm)]
+                                            ;include farms in resultset, whose name is missing
+                                            (if value
+                                              (let [lc-name (.toLowerCase value)]
+                                                (if (> fc-count 1)
+                                                  (> (.search lc-name lc-filter-criterium) -1)
+                                                  (= (.charAt lc-name 0) fc-first-char)))
+                                              true)))
+                                        (:farms s/state))
+                                (:farms s/state)))
          data-visible? (cell false)
          edit-new-farm? (cell false)
          no-edit-new-farm? (cell= (not edit-new-farm?))
@@ -84,35 +97,80 @@
          name (cell nil)
          notes (cell nil)
 
+         new-farm-no (cell 0)
+
+         [new-farm-id query-id] (repeatedly gensym)
+
          ]
 
     (div
       :id "farms-pane"
       :do-toggle (cell= (= s/route "#/farms"))
 
+      (bs/form
+        :opts [:horizontal]
+
+        (bs/form-group
+          (div
+            :class "col-xs-offset-1 form-control-static"
+            :col [:xs 11]
+            (for [c (range 65 91)]
+              (button
+                :type "button"
+                :class "btn btn-link"
+                :on-click #(reset! filter-criterium {:attr :farm/name
+                                                     :value (char c)})
+                (char c)))))
+
+        (bs/form-group
+          (bs/control-label :col [:xs 1] :for query-id (text "~(vocab :query-label s/lang)"))
+          (div
+            :col [:xs 11]
+            (input
+              :id query-id
+              :class "form-control"
+              :type "text"
+              :placeholder (cell= (vocab :query-placeholder s/lang))
+              :value (cell= (:value filter-criterium))
+              :on-change #(reset! filter-criterium {:attr :farm/name
+                                                    :value (val-id query-id)})))))
+
+      (hr)
+
       (div
-        :id "new-farm"
+        :id new-farm-id
         (button
           ;:toggle no-edit?
-          :style "float:right"
+          ;:style "float:right"
           :class "btn btn-primary"
-          :click #(swap! edit-new-farm? not)
+          :click #(let [temp-farm-name (str (vocab :new-farm-filter-value @s/lang) " "
+                                            (swap! new-farm-no inc))]
+                   (s/create-new-farm temp-farm-name)
+                   (reset! filter-criterium {:attr :farm/name
+                                             :value temp-farm-name})
+                   #_(swap! edit-new-farm? not))
           (text "~(vocab :new-farm s/lang)"))
-        (button
+
+        (hr)
+
+        #_(button
           :toggle edit-new-farm?
           :style "float:right"
           :class "btn btn-danger"
           :click #()
           (text "~(vocab :save-new-farm s/lang)"))
 
-        (div
+        #_(div
           :toggle edit-new-farm?
-          (h3 "neue farm anlegen")
+          (h3 (text "~(vocab :new-farm-header s/lang)"))
           (farm/farm
             :fields {:name name :name! #(reset! name %)
                      :notes notes :notes! #(reset! notes %)
                      :edit? true})
           (hr))
+
+
+
 
 
 
@@ -158,18 +216,25 @@
           )
 
       (div
-        :id "farms"
-
         (loop-tpl
           :bindings [[_ {farm-id :farm/id
                          farm-name :farm/name
-                         :as farm}] s/farms]
+                         addresses :farm/addresses
+                         farm-notes :farm/notes
+                         :as farm}] filtered-farms]
           ;:bind-ids [farm-id]
           (div
 
+            (h3
+              (text "~(if farm-name farm-name (vocab :no-farm-name-label s/lang))"))
 
+            (farm/farm
+              :fields {:name farm-name :name! #()
+                       :addresses addresses
+                       :notes farm-notes :notes! #()
+                       :show-edit? true})
 
-            (a :href (cell= (str "#/farms/" farm-id))
+            #_(a :href (cell= (str "#/farms/" farm-id))
                (text "~{farm-name}"))
 
             (loop-tpl
@@ -181,7 +246,10 @@
                 (a :href (cell= (str "#/farms/" farm-id "/plots/" plot-id))
                    (text "~{plot-name}"))))
 
-            )))
+            (hr)
+            )
+
+          ))
 
 
       #_(bs/form

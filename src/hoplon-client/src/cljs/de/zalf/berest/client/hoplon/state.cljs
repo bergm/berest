@@ -13,6 +13,11 @@
 (defc state {})
 (cell= (println "state: \n" (pr-str state)))
 
+;cell holding immutable minimal crops from server, these won't change and thus
+;don't constitute a real stem cell
+(defc minimal-all-crops nil)
+(cell= (println "minimal-all-crops:\n " (pr-str minimal-all-crops)))
+
 
 ;local state
 (defc weather-station-data {})
@@ -76,17 +81,27 @@
   ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data
              result-cell error loading) weather-station-id years))
 
+(def load-minimal-all-crops
+  (mkremote 'de.zalf.berest.web.castra.api/get-minimal-all-crops minimal-all-crops error loading))
+
 (defn load-crop-data
   [result-cell crop-id]
   ((mkremote 'de.zalf.berest.web.castra.api/get-crop-data
              result-cell error loading) crop-id))
 
+(def create-new-farm (mkremote 'de.zalf.berest.web.castra.api/create-new-farm state error loading))
+
+(def create-new-farm-address (mkremote 'de.zalf.berest.web.castra.api/create-new-farm-address state error loading))
+
+(def update-address (mkremote 'de.zalf.berest.web.castra.api/update-address state error loading))
+
 ;TODO: can't update weather-stations easily as they're actually shared most of the time, do this later properly
 #_(def update-weather-station (mkremote 'de.zalf.berest.web.castra.api/update-weather-station state error loading))
 
 
-(defn init []
-  (get-state)
+(defn init-after-login []
+  (when-not @minimal-all-crops (load-minimal-all-crops))
+  #_(get-state)
   #_(js/setInterval #(if @logged-in? (get-state)) 100))
 
 
