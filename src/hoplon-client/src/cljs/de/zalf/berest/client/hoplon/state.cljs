@@ -16,7 +16,7 @@
 ;cell holding immutable minimal crops from server, these won't change and thus
 ;don't constitute a real stem cell
 (defc minimal-all-crops nil)
-(cell= (println "minimal-all-crops:\n " (pr-str minimal-all-crops)))
+#_(cell= (println "minimal-all-crops:\n " (pr-str minimal-all-crops)))
 
 
 ;local state
@@ -26,6 +26,9 @@
 ;derived state
 
 (defc= farms (:farms state))
+
+(defc= user-weather-stations (:weather-stations state))
+(cell= (println "user-weather-stations: " (pr-str user-weather-stations)))
 
 (defc= technology-cycle-days (-> state :technology :technology/cycle-days))
 (defn set-technology-cycle-days
@@ -93,7 +96,9 @@
 
 (def create-new-farm-address (mkremote 'de.zalf.berest.web.castra.api/create-new-farm-address state error loading))
 
-(def update-address (mkremote 'de.zalf.berest.web.castra.api/update-address state error loading))
+(def update-db-entity (mkremote 'de.zalf.berest.web.castra.api/update-db-entity state error loading))
+
+(def delete-db-entity (mkremote 'de.zalf.berest.web.castra.api/delete-db-entity state error loading))
 
 ;TODO: can't update weather-stations easily as they're actually shared most of the time, do this later properly
 #_(def update-weather-station (mkremote 'de.zalf.berest.web.castra.api/update-weather-station state error loading))

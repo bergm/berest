@@ -82,23 +82,9 @@
                             :as farm}]
                         [farm-id (assoc farm :plots (into {} (map (juxt :plot/id identity)
                                                                   (data/db->a-farms-plots db farm-id))))])
-                      (data/db->a-users-farms db user-id)))
-
-         #_farms-with-plots #_(data/db->a-users-farms db user-id)
-
-         #_min-all-crops #_(map #(select-keys % [:crop/id :crop/name :crop/symbol])
-                            (data/db->min-all-crops db))
-
-         weather-stations (map #(select-keys % [:weather-station/id
-                                               :weather-station/name
-                                               :weather-station/geo-coord
-                                               :available-years])
-                              (data/db->a-users-weather-stations db user-id))
-
-        ]
+                      (data/db->a-users-farms db user-id)))]
     (assoc state-template :farms farms-with-plots
-                          :weather-stations weather-stations
-                          ;:minimal-all-crops min-all-crops
+                          :weather-stations (data/db->a-users-weather-stations db user-id)
                           :user-credentials cred)))
 
 
@@ -216,10 +202,10 @@
         (data/create-new-farm-address (db/connection) (:user/id cred) farm-id)
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
-          (throw (ex error "Couldn't create new farm!")))))))
+          (throw (ex error "Couldn't create new farm address!")))))))
 
-(defrpc update-address
-  [db-e-id attr value & [user-id pwd]]
+(defrpc update-db-entity
+  [entity-id attr value & [user-id pwd]]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -228,13 +214,31 @@
                (db/credentials* db user-id pwd)
                (:user @*session*))
 
-        tx-data [:db/add db-e-id (d/entid db attr) value]]
+        tx-data [:db/add entity-id (d/entid db attr) value]]
     (when cred
       (try
         (d/transact (db/connection) [tx-data])
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
-          (throw (ex error (str "Couldn't update address! tx-data: " tx-data))))))))
+          (throw (ex error (str "Couldn't update entity! tx-data: " tx-data))))))))
+
+(defrpc delete-db-entity
+  [entity-id & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))
+
+        tx-data [:db.fn/retractEntity entity-id]]
+    (when cred
+      (try
+        (d/transact (db/connection) [tx-data])
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error (str "Couldn't retract entity! tx-data: " tx-data))))))))
 
 
 #_(defrpc update-weather-station

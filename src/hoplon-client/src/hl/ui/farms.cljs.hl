@@ -44,6 +44,11 @@
 
            :show-data {:lang/de "Daten anzeigen"
                        :lang/en "Show data"}
+
+           :show-farm-details {:lang/de "Details anzeigen"
+                               :lang/en "Show detailed data"}
+
+
            :edit {:lang/de "Ändern"
                   :lang/en "Edit"}
            :save-edit {:lang/de "Änderungen speichern"
@@ -90,7 +95,7 @@
                                               true)))
                                         (:farms s/state))
                                 (:farms s/state)))
-         data-visible? (cell false)
+
          edit-new-farm? (cell false)
          no-edit-new-farm? (cell= (not edit-new-farm?))
 
@@ -142,7 +147,7 @@
         (button
           ;:toggle no-edit?
           ;:style "float:right"
-          :class "btn btn-primary"
+          :class "btn btn-warning"
           :click #(let [temp-farm-name (str (vocab :new-farm-filter-value @s/lang) " "
                                             (swap! new-farm-no inc))]
                    (s/create-new-farm temp-farm-name)
@@ -217,37 +222,65 @@
 
       (div
         (loop-tpl
-          :bindings [[_ {farm-id :farm/id
+          :bindings [[_ {farm-db-id :db/id
+                         farm-id :farm/id
                          farm-name :farm/name
                          addresses :farm/addresses
                          farm-notes :farm/notes
-                         :as farm}] filtered-farms]
+                         authorative-weather-station :farm/authorative-weather-station
+                         weather-station :farm/weather-station
+                         weather-data :farm/weather-data
+                         :as farm}] (cell= (sort-by #(-> % second :farm/name) filtered-farms))]
           ;:bind-ids [farm-id]
-          (div
+          (let [farm-details-visible? (cell false)]
+            (div
 
-            (h3
-              (text "~(if farm-name farm-name (vocab :no-farm-name-label s/lang))"))
+              (h3
+                (text "~(if farm-name farm-name (vocab :no-farm-name-label s/lang))"))
 
-            (farm/farm
-              :fields {:name farm-name :name! #()
-                       :addresses addresses
-                       :notes farm-notes :notes! #()
-                       :show-edit? true})
+              (span
+                :class "glyphicon glyphicon-plus"
+                :toggle (cell= (not farm-details-visible?))
+                :on-click #(reset! farm-details-visible? true))
+              (span
+                :toggle farm-details-visible?
+                :class "glyphicon glyphicon-minus"
+                :click #(reset! farm-details-visible? false))
+              (span (text " ~(vocab :show-farm-details s/lang)"))
 
-            #_(a :href (cell= (str "#/farms/" farm-id))
-               (text "~{farm-name}"))
+              (farm/farm
+                :toggle farm-details-visible?
+                :fields {:id farm-id
+                         :name farm-name :name! #(s/update-db-entity @farm-db-id :farm/name %)
+                         :addresses addresses
+                         :notes farm-notes :notes! #(s/update-db-entity @farm-db-id :farm/notes %)
 
-            (loop-tpl
-              :bindings [[_ {plot-id :plot/id
-                             plot-name :plot/name}] (cell= (:plots farm))]
+                         :authorative-weather-station authorative-weather-station
+                         :authorative-weather-station! #(s/update-db-entity @farm-db-id :farm/authorative-weather-station %)
 
-              (div
-                :id plot-id
-                (a :href (cell= (str "#/farms/" farm-id "/plots/" plot-id))
-                   (text "~{plot-name}"))))
+                         :weather-station weather-station
+                         :weather-station! #(s/update-db-entity @farm-id :farm/weather-station %)
 
-            (hr)
-            )
+                         :weather-data weather-data}
+                :opts {:edit? true
+                       :label-cols 2
+                       :value-cols 3})
+
+              #_(a :href (cell= (str "#/farms/" farm-id))
+                 (text "~{farm-name}"))
+
+              (loop-tpl
+                :bindings [[_ {plot-db-id :db/id
+                               plot-id :plot/id
+                               plot-name :plot/name}] (cell= (:plots farm))]
+
+                (div
+                  :id plot-id
+                  (a :href (cell= (str "#/farms/" farm-id "/plots/" plot-id))
+                     (text "~{plot-name}"))))
+
+              (hr)
+              ))
 
           ))
 
