@@ -188,6 +188,22 @@
         (catch Exception e
           (throw (ex error "Couldn't create new farm!")))))))
 
+(defrpc create-new-plot
+  [farm-id & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/create-new-plot (db/connection) (:user/id cred) farm-id)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new plot!")))))))
+
 (defrpc create-new-farm-address
   [farm-id & [user-id pwd]]
   {:rpc/pre [(nil? user-id)

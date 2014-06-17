@@ -1,4 +1,4 @@
-(ns ui.farm
+(ns ui.plot
   #_(:require-macros [tailrecursion.javelin :refer :all]
                    [tailrecursion.hoplon :refer :all])
   (:require #_[tailrecursion.javelin :refer :all]
@@ -16,23 +16,40 @@
   [element lang]
   (get-in {:name-label {:lang/de "Name"
                         :lang/en "Name"}
-           :name-placeholder {:lang/de "Name des Betriebes"
-                              :lang/en "Name of farm"}
+           :name-placeholder {:lang/de "Name des Schlages"
+                              :lang/en "Name of plot"}
 
-           :address-fieldset-label {:lang/de "Adressdaten"
-                                    :lang/en "Address data"}
-           :new-address-button-label {:lang/de "Neue Adresse ..."
-                                      :lang/en "New address ..."}
-           :save-new-address-button-label {:lang/de "Neue Adresse speichern!"
-                                           :lang/en "Save new address!"}
-           :delete-address-button-label {:lang/de "Adresse löschen!"
-                                         :lang/en "Delete address!"}
+           :number-label {:lang/de "Nummer"
+                          :lang/en "Number"}
+           :number-placeholder {:lang/de "BEREST-Nummer des Schlages"
+                                :lang/en "BEREST-number of plot"}
+
+           :description-label {:lang/de "Beschreibung"
+                               :lang/en "Description"}
+           :description-placeholder {:lang/de "Beschreibung des Schlages"
+                                     :lang/en "Description of plot"}
+
+           :short-description-label {:lang/de "Kurz-Beschreibung"
+                                     :lang/en "Short-description"}
+           :short-description-placeholder {:lang/de "Kurzbeschreibung des Schlages"
+                                           :lang/en "Short description of plot"}
+
+           :crop-area-label {:lang/de "Anbaufläche"
+                             :lang/en "Cropping area"}
+           :crop-area-placeholder {:lang/de "Fläche des Schlages"
+                                   :lang/en "Cropping area of plot"}
+
+           :irrigation-area-label {:lang/de "Beregnete Fläche"
+                                   :lang/en "Irrigated area"}
+           :irrigation-area-placeholder {:lang/de "Fläche unter Beregnung"
+                                         :lang/en "Area under irrigation"}
+
+
+
+
 
            :weather-data-fieldset-label {:lang/de "Wetterdaten"
                                          :lang/en "Weather data"}
-
-           :authorative-weather-station-label {:lang/de "Haupt-Wetterstation"
-                                         :lang/en "Main weather station"}
 
            :weather-station-label {:lang/de "lokale Wetterstation"
                                    :lang/en "Local weather station"}
@@ -42,19 +59,17 @@
 
            :notes-label {:lang/de "Notizen"
                          :lang/en "Notes"}
-           :notes-placeholder {:lang/de "Hier können Notizen zum Betrieb gemacht werden ..."
-                               :lang/en "Here you can keep notes regarding the farm ..."}
+           :notes-placeholder {:lang/de "Hier können Notizen zum Schlag gemacht werden ..."
+                               :lang/en "Here you can keep notes regarding the plot ..."}
 
            :show-data {:lang/de "Daten anzeigen"
                        :lang/en "Show data"}
 
-           :edit-farm-button-label {:lang/de "Ändern"
-                                      :lang/en "Edit"}
-           #_:edit-farm-button-label-2 #_{:lang/de "Ändern"
+           :edit-plot-button-label {:lang/de "Ändern"
                                       :lang/en "Edit"}
 
-           :save-edit {:lang/de "Änderungen speichern"
-                       :lang/en "Save changes"}
+
+
            :chart-header {:lang/de "Wetterdaten"
                           :lang/en "Weather data"}
            :chart-subheader {:lang/de "Quelle: DWD Station"
@@ -79,25 +94,64 @@
 
 
 (defelem
-  farm
+  plot
   [{{:keys [id
             name name!
-            addresses
-            com-connections
-            contacts
-            notes notes!
-            irrigation-technologies
-            plots
-            authorative-weather-station authorative-weather-station!
+            number number!
+            description description!
+            short-description short-description!
+            crop-area crop-area!
+            irrigation-area irrigation-area!
+            stt stt!
+            slope slope!
+            field-capacities field-capacities!
+            fc-unit fc-unit!
+            permanent-wilting-points permanent-wilting-points!
+            pwp-unit pwp-unit!
+            ka5-soil-types ka5-soil-types!
+            groundwaterlevel groundwaterlevel!
+            annuals
             weather-station weather-station!
-            weather-data]} :fields
+            weather-data
+            location-coords location-coords!
+            notes notes!
+            az-glz az-glz!
+            nft nft!
+            bse bse!
+            sse sse!
+            bwb bwb!
+            irrigation-well irrigation-well!]} :fields
     {:keys [edit? label-cols value-cols]} :opts
     :as attrs}
    kids]
   (let [edit? (cell (if (cell? edit?) @edit? edit?))
         no-edit? (cell= (not edit?))
-        [farm-form-name name-id notes-id
-         authorative-ws-id ws-id weather-data-id] (repeatedly gensym)]
+        [farm-form-name
+         name-id
+         number-id
+         description-id
+         short-description-id
+         crop-area-id
+         irrigation-area-id
+         stt-id
+         slope-id
+         field-capacities-id
+         fc-unit-id
+         permanent-wilting-points-id
+         pwp-unit-id
+         ka5-soil-types-id
+         groundwaterlevel-id
+         annuals-id
+         weather-station-id
+         weather-data-id
+         location-coords-id
+         notes-id
+         az-glz-id
+         nft-id
+         bse-id
+         sse-id
+         bwb-id
+         irrigation-well-id] (repeatedly gensym)]
     ((div
        (bs/form
          :opts [:horizontal]
@@ -107,7 +161,7 @@
            :style "float:right"
            :class "btn btn-info"
            :click #(swap! edit? not)
-           (text "~(vocab :edit-farm-button-label s/lang)"))
+           (text "~(vocab :edit-plot-button-label s/lang)"))
 
 
          (bs/form-group
@@ -124,7 +178,87 @@
                :value name
                :on-change #(name! (val-id name-id)))))
 
-         (fieldset
+         (bs/form-group
+           (bs/control-label :col [:sm label-cols] :for number-id (text "~(vocab :number-label s/lang)"))
+           (div
+             :col [:xs value-cols]
+             (p :toggle no-edit? :class "form-control-static" (text "~{number}"))
+             (input
+               :id number-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :number-placeholder s/lang))
+               :value number
+               :on-change #(number! (val-id number-id)))))
+
+         (bs/form-group
+           (bs/control-label :col [:sm label-cols] :for description-id (text "~(vocab :description-label s/lang)"))
+           (div
+             :col [:xs value-cols]
+             (p :toggle no-edit? :class "form-control-static" (text "~{description}"))
+             (input
+               :id description-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :description-placeholder s/lang))
+               :value description
+               :on-change #(description! (val-id description-id)))))
+
+         (bs/form-group
+           (bs/control-label :col [:sm label-cols] :for short-description-id (text "~(vocab :short-description-label s/lang)"))
+           (div
+             :col [:xs value-cols]
+             (p :toggle no-edit? :class "form-control-static" (text "~{short-description}"))
+             (input
+               :id short-description-id
+               :toggle edit?
+               :class "form-control"
+               :type "text"
+               :placeholder (cell= (vocab :short-description-placeholder s/lang))
+               :value short-description
+               :on-change #(short-description! (val-id short-description-id)))))
+
+         (bs/form-group
+           (bs/control-label :col [:sm label-cols] :for crop-area-id (text "~(vocab :crop-area-label s/lang)"))
+           (div
+             :col [:xs value-cols]
+             (p :toggle no-edit? :class "form-control-static" (text "~{crop-area}"))
+             (div
+               :class "input-group"
+               (input
+                 :id crop-area-id
+                 :toggle edit?
+                 :class "form-control"
+                 :type "number"
+                 :step 0.1
+                 :min 0
+                 :placeholder (cell= (vocab :crop-area-placeholder s/lang))
+                 :value crop-area
+                 :on-change #(crop-area! (js/parseFloat (val-id crop-area-id))))
+               (span :class "input-group-addon" "ha"))))
+
+         (bs/form-group
+           (bs/control-label :col [:sm label-cols] :for irrigation-area-id (text "~(vocab :irrigation-area-label s/lang)"))
+           (div
+             :col [:xs value-cols]
+             (p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
+             (div
+               :class "input-group"
+               (input
+               :id irrigation-area-id
+               :toggle edit?
+               :class "form-control"
+               :type "number"
+               :step 0.1
+               :min 0
+               :placeholder (cell= (vocab :irrigation-area-placeholder s/lang))
+               :value irrigation-area
+               :on-change #(irrigation-area! (js/parseFloat (val-id irrigation-area-id))))
+               (span :class "input-group-addon" "ha"))))
+
+         #_(fieldset
            (legend (text "~(vocab :address-fieldset-label s/lang)"))
 
            (div
@@ -200,31 +334,7 @@
            (legend (text "~(vocab :weather-data-fieldset-label s/lang)"))
 
            (bs/form-group
-             (bs/control-label :col [:sm label-cols] :for authorative-ws-id
-                               (text "~(vocab :authorative-weather-station-label s/lang)"))
-             (div
-               :col [:xs value-cols]
-               (p :toggle no-edit? :class "form-control-static"
-                  (text "~(or (:weather-station/name authorative-weather-station)
-                  (:weather-station/id authorative-weather-station))"))
-               (select
-                 :toggle edit?
-                 :id authorative-ws-id
-                 :class "form-control"
-                 :on-change #(authorative-weather-station! (js/parseInt (val-id authorative-ws-id)))
-                 (loop-tpl
-                   :bindings [{ws-db-id :db/id
-                               ws-id :weather-station/id
-                               ws-name :weather-station/name}
-                              (cell= (sort-by #(if-let [name (:weather-station/name %)]
-                                                name
-                                                (:weather-station/id %)) s/user-weather-stations))]
-                   (option :value ws-db-id
-                           :selected (cell= (= ws-id (:weather-station/id authorative-weather-station)))
-                           (text "~{ws-name}"))))))
-
-           (bs/form-group
-             (bs/control-label :col [:sm label-cols] :for ws-id
+             (bs/control-label :col [:sm label-cols] :for weather-station-id
                                (text "~(vocab :weather-station-label s/lang)"))
              (div
                :col [:xs value-cols]
@@ -233,9 +343,9 @@
                   (:weather-station/id weather-station))"))
                (select
                  :toggle edit?
-                 :id ws-id
+                 :id weather-station-id
                  :class "form-control"
-                 :on-change #(weather-station! (js/parseInt (val-id ws-id)))
+                 :on-change #(weather-station! (js/parseInt (val-id weather-station-id)))
                  (option :value "" "")
                  (loop-tpl
                    :bindings [{ws-db-id :db/id

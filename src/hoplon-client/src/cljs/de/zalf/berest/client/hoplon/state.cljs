@@ -93,6 +93,7 @@
              result-cell error loading) crop-id))
 
 (def create-new-farm (mkremote 'de.zalf.berest.web.castra.api/create-new-farm state error loading))
+(def create-new-plot (mkremote 'de.zalf.berest.web.castra.api/create-new-plot state error loading))
 
 (def create-new-farm-address (mkremote 'de.zalf.berest.web.castra.api/create-new-farm-address state error loading))
 
