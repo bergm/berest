@@ -218,7 +218,7 @@
                   ;:toggle no-edit?
                   ;:style "float:right"
                   :class "btn btn-warning"
-                  :click #(s/create-new-plot farm-id)
+                  :click #(s/create-new-plot @farm-id)
                   (text "~(vocab :new-plot s/lang)")))
 
               (hr)
@@ -284,8 +284,8 @@
                                  :irrigation-area irrigation-area
                                  :irrigation-area! #(s/update-db-entity @db-id :plot/irrigation-area %)
 
-                                 :stt stt :stt! #(s/update-db-entity @db-id :plot/stt %)
-                                 :slope slope :slope! #(s/update-db-entity @db-id :plot/slope %)
+                                 :stt stt :stt! #(s/update-db-entity @db-id :plot/stt [:soil.stt/key %])
+                                 :slope slope :slope! #(s/update-db-entity @db-id :plot/slope [:slope/key %])
 
                                  :field-capacities field-capacities
                                  ;:field-capacities! #(s/update-db-entity @db-id :plot/field-capacities %)

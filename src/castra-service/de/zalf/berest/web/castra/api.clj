@@ -71,6 +71,9 @@
 
    :user-credentials nil})
 
+(def static-state-template
+  {:stts nil
+   :slopes nil})
 
 
 ;;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -87,6 +90,10 @@
                           :weather-stations (data/db->a-users-weather-stations db user-id)
                           :user-credentials cred)))
 
+(defn- static-stem-cell-state
+  [db]
+  (assoc static-state-template :stts (data/db->all-stts db)
+                               :slopes (data/db->all-slopes db)))
 
 (defrpc get-berest-state
   [& [user-id pwd]]
@@ -99,6 +106,19 @@
                (:user @*session*))]
     (when cred
       (stem-cell-state db cred))))
+
+(defrpc get-static-state
+  "returns static state which usually won't change once it's on the client"
+  [& [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (static-stem-cell-state db))))
 
 
 (defrpc get-minimal-all-crops
@@ -118,6 +138,8 @@
     (when cred
       (map #(select-keys % [:crop/id :crop/name :crop/symbol])
            (data/db->min-all-crops db)))))
+
+
 
 
 (defrpc get-state-with-full-selected-crops

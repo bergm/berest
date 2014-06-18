@@ -18,6 +18,13 @@
 (defc minimal-all-crops nil)
 #_(cell= (println "minimal-all-crops:\n " (pr-str minimal-all-crops)))
 
+;cell holding static app state, which will hardly change
+(defc static-state nil)
+(cell= (println "static-state:\n " (pr-str static-state)))
+
+(defc= slopes (:slopes static-state))
+(defc= stts (:stts static-state))
+(defc= stt-descriptions (into {} (map (juxt :soil.stt/key :soil.stt/description) stts)))
 
 ;local state
 (defc weather-station-data {})
@@ -86,6 +93,9 @@
 
 (def load-minimal-all-crops
   (mkremote 'de.zalf.berest.web.castra.api/get-minimal-all-crops minimal-all-crops error loading))
+
+(def load-static-state
+  (mkremote 'de.zalf.berest.web.castra.api/get-static-state static-state error loading))
 
 (defn load-crop-data
   [result-cell crop-id]

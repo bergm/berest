@@ -106,6 +106,7 @@
 #_(cell= (when logged-in? (s/init-after-login)))
 
 (cell= (when (and s/logged-in? (not s/minimal-all-crops)) (s/load-minimal-all-crops)))
+(cell= (when (and s/logged-in? (not s/static-state)) (s/load-static-state)))
 
 (cell= (print (:trace s/error)))
 

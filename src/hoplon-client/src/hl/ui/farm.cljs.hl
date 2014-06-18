@@ -200,6 +200,8 @@
            (legend (text "~(vocab :weather-data-fieldset-label s/lang)"))
 
            (bs/form-group
+             :class (cell= {:has-error (nil? authorative-weather-station)})
+
              (bs/control-label :col [:sm label-cols] :for authorative-ws-id
                                (text "~(vocab :authorative-weather-station-label s/lang)"))
              (div
@@ -212,6 +214,7 @@
                  :id authorative-ws-id
                  :class "form-control"
                  :on-change #(authorative-weather-station! (js/parseInt (val-id authorative-ws-id)))
+                 (option :value "" "")
                  (loop-tpl
                    :bindings [{ws-db-id :db/id
                                ws-id :weather-station/id
@@ -224,6 +227,8 @@
                            (text "~{ws-name}"))))))
 
            (bs/form-group
+             ;:class (cell= {:has-error (nil? weather-station)})
+
              (bs/control-label :col [:sm label-cols] :for ws-id
                                (text "~(vocab :weather-station-label s/lang)"))
              (div
