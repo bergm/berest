@@ -24,7 +24,8 @@
 
 (defc= slopes (:slopes static-state))
 (defc= stts (:stts static-state))
-(defc= stt-descriptions (into {} (map (juxt :soil.stt/key :soil.stt/description) stts)))
+(defc= substrate-groups (into {} (map (juxt :soil.substrate/key identity) (:substrate-groups static-state))))
+#_(defc= stt-descriptions (into {} (map (juxt :soil.stt/key :soil.stt/description) stts)))
 
 ;local state
 (defc weather-station-data {})

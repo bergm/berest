@@ -73,7 +73,8 @@
 
 (def static-state-template
   {:stts nil
-   :slopes nil})
+   :slopes nil
+   :substrate-groups nil})
 
 
 ;;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -93,7 +94,8 @@
 (defn- static-stem-cell-state
   [db]
   (assoc static-state-template :stts (data/db->all-stts db)
-                               :slopes (data/db->all-slopes db)))
+                               :slopes (data/db->all-slopes db)
+                               :substrate-groups (data/db->all-substrate-groups db)))
 
 (defrpc get-berest-state
   [& [user-id pwd]]

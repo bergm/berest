@@ -44,11 +44,20 @@
            :irrigation-area-placeholder {:lang/de "Fläche unter Beregnung"
                                          :lang/en "Area under irrigation"}
 
-           :stt-label {:lang/de "MMK Standorttyp"
+           :stt-label {:lang/de "Standorttyp (MMK STT)"
                        :lang/en "MMK STT"}
 
            :slope-label {:lang/de "Hangneigung (MMK NFT)"
                          :lang/en "Slope (MMK NFT)"}
+
+           :field-capacities-label {:lang/de "Feldkapazitäten"
+                                    :lang/en "Field capacities"}
+
+           :permanent-wilting-points-label {:lang/de "Permanente Welkepunkte"
+                                            :lang/en "Permanent wilting points"}
+
+           :soil-data-fieldset-label {:lang/de "Bodendaten/Bodenschichtungsdaten"
+                                      :lang/en "Soil data/soil layer data"}
 
 
            :weather-data-fieldset-label {:lang/de "Wetterdaten"
@@ -198,7 +207,9 @@
          sse-id
          bwb-id
          irrigation-well-id] (repeatedly gensym)
-        selected-stt-substrate-groups (cell= (:soil.stt/substrate-groups stt))]
+        selected-stt-substrate-group-keys (cell= (:soil.stt/substrate-groups stt))
+
+        ]
     ((div
        (bs/form
          :opts [:horizontal]
@@ -305,79 +316,87 @@
                :on-change #(irrigation-area! (js/parseFloat (val-id irrigation-area-id))))
                (span :class "input-group-addon" "ha"))))
 
-         (bs/form-group
-           (bs/control-label :col [:sm label-cols] :for stt-id (text "~(vocab :stt-label s/lang)"))
-           (div
-             :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-             (p :toggle no-edit? :class "form-control-static" (text "~{stt}"))
-             (select
-               :toggle edit?
-               :id stt-id
-               :class "form-control"
-               :on-change #(stt! (js/parseInt (val-id stt-id)))
-               (loop-tpl
-                 :bindings [{key :soil.stt/key
-                             symbol :soil.stt/symbol
-                             description :soil.stt/description
-                             subs-groups :soil.stt/substrate-groups}
-                            (cell= (sort-by :soil.stt/symbol s/stts))]
-                 (option :value key
-                         :selected (cell= (= key (:soil.stt/key stt)))
-                         (text "~{symbol} | ~{description}"))))))
+         (fieldset
+           (legend (text "~(vocab :soil-data-fieldset-label s/lang)"))
 
-         (bs/form-group
-           (bs/control-label :col [:sm label-cols] :for slope-id (text "~(vocab :slope-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{slope}"))
-             (select
-               :toggle edit?
-               :id slope-id
-               :class "form-control"
-               :on-change #(slope! (js/parseInt (val-id slope-id)))
-               (loop-tpl
-                 :bindings [{key :slope/key
-                             symbol :slope/symbol
-                             description :slope/description}
-                            (cell= (sort-by :slope/key s/slopes))]
-                 (option :value key
-                         :selected (cell= (= key (:slope/key slope)))
-                         (text "~{symbol} | ~{description}"))))))
+           (bs/form-group
+             (bs/control-label :col [:sm (+ 1 label-cols)] :for stt-id (text "~(vocab :stt-label s/lang)"))
+             (div
+               :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+               (p :toggle no-edit? :class "form-control-static" (text "~{stt}"))
+               (select
+                 :toggle edit?
+                 :id stt-id
+                 :class "form-control"
+                 :on-change #(stt! (js/parseInt (val-id stt-id)))
+                 (loop-tpl
+                   :bindings [{key :soil.stt/key
+                               symbol :soil.stt/symbol
+                               description :soil.stt/description
+                               subs-groups :soil.stt/substrate-groups}
+                              (cell= (sort-by :soil.stt/symbol s/stts))]
+                   (option :value key
+                           :selected (cell= (= key (:soil.stt/key stt)))
+                           (text "~{symbol} | ~{description}"))))))
 
-         (bs/form-group
-           (bs/control-label :col [:sm label-cols] :for field-capacities-id (text "~(vocab :field-capacities-label s/lang)"))
-           (let [depth* (cell nil)
-                 fc* (cell nil)
-                 ;[amount*] (cell-map (fn [[_ v]] v) temp-donations)
-                 #_set-x! #_(fn [x]
+           (bs/form-group
+             (bs/control-label :col [:sm (+ 1 label-cols)] :for slope-id (text "~(vocab :slope-label s/lang)"))
+             (div
+               :col [:xs value-cols]
+               (p :toggle no-edit? :class "form-control-static" (text "~{slope}"))
+               (select
+                 :toggle edit?
+                 :id slope-id
+                 :class "form-control"
+                 :on-change #(slope! (js/parseInt (val-id slope-id)))
+                 (loop-tpl
+                   :bindings [{key :slope/key
+                               symbol :slope/symbol
+                               description :slope/description}
+                              (cell= (sort-by :slope/key s/slopes))]
+                   (option :value key
+                           :selected (cell= (= key (:slope/key slope)))
+                           (text "~{symbol} | ~{description}"))))))
+
+           (bs/form-group
+             (bs/control-label :col [:sm (+ 1 label-cols)] :for field-capacities-id (text "~(vocab :field-capacities-label s/lang)"))
+             (let [depth* (cell nil)
+                   fc* (cell nil)
+                   ;[amount*] (cell-map (fn [[_ v]] v) temp-donations)
+                   #_set-x! #_(fn [x]
                           (fn [row-no value]
                             (swap! donations assoc-in [row-no x] value)))
-                 #_set-x!* #_(fn [x]
+                   #_set-x!* #_(fn [x]
                            (fn [_ value]
                              (swap! temp-donations assoc x value)))
-                 ]
+                   _ (cell= (println "selected-stt-substrate-group-keys: " (pr-str selected-stt-substrate-group-keys)))
+                   _ (cell= (println "select-keys: " (pr-str (select-keys s/substrate-groups selected-stt-substrate-group-keys))))
+                   ]
 
-             (div
-             :col [:xs value-cols]
-             #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
+               (div
+                 :col [:xs value-cols]
+                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
 
-             (select
-               :toggle edit?
-               :id substrate-groups-fc-id
-               :class "form-control"
-               :on-change #(stt! (js/parseInt (val-id substrate-groups-fc-id)))
-               (option "" "")
-               (loop-tpl
-                 :bindings [{key :soil.substrate/key
-                             symbol :soil.substrate/symbol
-                             description :soil.substrate/description
-                             fcs :soil.substrate/field-capacities}
-                            (cell= (sort-by :soil.substrate/description selected-stt-substrate-groups))]
-                 (option :value key
-                         ;:selected (cell= (= key (:soil.stt/key stt)))
-                         (text "~{symbol} | ~{description}"))))
+                 (select
+                   :toggle edit?
+                   :id substrate-groups-fc-id
+                   :class "form-control"
+                   :on-change #(stt! (js/parseInt (val-id substrate-groups-fc-id)))
+                   (option "" "")
+                   (loop-tpl
+                     :bindings [{key :soil.substrate/key
+                                 symbol :soil.substrate/symbol
+                                 description :soil.substrate/description
+                                 fcs :soil.substrate/field-capacities}
+                                (cell= (->> selected-stt-substrate-group-keys
+                                            (select-keys s/substrate-groups ,,,)
+                                            vals
+                                            (sort-by :soil.substrate/description ,,,)))]
+                     (option :value key
+                             ;:selected (cell= (= key (:soil.stt/key stt)))
+                             (text "~{symbol} | ~{description}"))))
 
-             (div
+                 #_(div
                (loop-tpl
                  :bindings [[row-no {db-id :db/id
                                      fc :soil/field-capacity
@@ -386,15 +405,15 @@
                  (create-fc-inputs row-no #() #_remove-donation-row!
                                    depth #()
                                    fc #())))
-             (create-fc-inputs nil #() #_remove-donation-row!
-                               depth* #()
-                               fc* #())
-             )
+                 (create-fc-inputs nil #() #_remove-donation-row!
+                                   depth* #()
+                                   fc* #())
+                 )
 
 
 
 
-             #_(input
+               #_(input
                :id irrigation-area-id
                :toggle edit?
                :class "form-control"
@@ -404,8 +423,9 @@
                :placeholder (cell= (vocab :irrigation-area-placeholder s/lang))
                :value irrigation-area
                :on-change #(irrigation-area! (js/parseFloat (val-id irrigation-area-id))))
-             )))
+               ))
 
+           )
 
          #_(fieldset
            (legend (text "~(vocab :address-fieldset-label s/lang)"))
@@ -505,8 +525,6 @@
                                                 (:weather-station/id %)) s/user-weather-stations))]
                    (option :value ws-db-id
                            :selected (cell= (= ws-id (:weather-station/id weather-station)))
-                           (text "~{ws-name}"))))))
-
-           )
+                           (text "~{ws-name}")))))))
 
          )) (dissoc attrs :fields :opts) kids)))
