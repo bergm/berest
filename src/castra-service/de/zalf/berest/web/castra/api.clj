@@ -244,6 +244,22 @@
         (catch Exception e
           (throw (ex error "Couldn't create new farm address!")))))))
 
+(defrpc create-new-fc-pwp-layer
+  [plot-id depth fc-or-pwp value & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/create-new-fc-pwp-layer (db/connection) (:user/id cred) plot-id depth fc-or-pwp value)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new fc or pwp layer!")))))))
+
 (defrpc update-db-entity
   [entity-id attr value & [user-id pwd]]
   {:rpc/pre [(nil? user-id)

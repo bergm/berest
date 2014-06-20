@@ -20,7 +20,7 @@
 
 ;cell holding static app state, which will hardly change
 (defc static-state nil)
-(cell= (println "static-state:\n " (pr-str static-state)))
+#_(cell= (println "static-state:\n " (pr-str static-state)))
 
 (defc= slopes (:slopes static-state))
 (defc= stts (:stts static-state))
@@ -107,6 +107,8 @@
 (def create-new-plot (mkremote 'de.zalf.berest.web.castra.api/create-new-plot state error loading))
 
 (def create-new-farm-address (mkremote 'de.zalf.berest.web.castra.api/create-new-farm-address state error loading))
+
+(def create-new-fc-pwp-layer (mkremote 'de.zalf.berest.web.castra.api/create-new-fc-pwp-layer state error loading))
 
 (def update-db-entity (mkremote 'de.zalf.berest.web.castra.api/update-db-entity state error loading))
 
