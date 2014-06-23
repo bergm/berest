@@ -236,7 +236,7 @@
                                  stt :plot/stt
                                  slope :plot/slope
                                  field-capacities :plot/field-capacities
-                                 fc-unit :plot/fc-unit
+                                 fc-pwp-unit :plot/fc-pwp-unit
                                  permanent-wilting-points :plot/permanent-wilting-points
                                  pwp-unit :plot/pwp-unit
                                  ka5-soil-types :plot/ka5-soil-types
@@ -290,7 +290,7 @@
                                  :field-capacities field-capacities
                                  ;:field-capacities! #(s/update-db-entity @db-id :plot/field-capacities %)
 
-                                 :fc-unit fc-unit :fc-unit! #(s/update-db-entity @db-id :plot/fc-unit %)
+                                 :fc-pwp-unit fc-pwp-unit :fc-pwp-unit! #(s/update-db-entity @db-id :plot/fc-pwp-unit %)
 
                                  :permanent-wilting-points permanent-wilting-points
                                  ;:permanent-wilting-points! #(s/update-db-entity @db-id :plot/permanent-wilting-points %)

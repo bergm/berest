@@ -63,9 +63,8 @@
    #_:plot #_{:plot/stt 6212
           :plot/slope 1
           :plot/field-capacities []
-          :plot/fc-unit :soil-moisture.unit/volP
+          :plot/fc-pwp-unit :soil-moisture.unit/volP
           :plot/permanent-wilting-points []
-          :plot/pwp-unit :soil-moisture.unit/volP
           :plot/ka5-soil-types []
           :plot/groundwaterlevel 300}
 
@@ -95,7 +94,8 @@
   [db]
   (assoc static-state-template :stts (data/db->all-stts db)
                                :slopes (data/db->all-slopes db)
-                               :substrate-groups (data/db->all-substrate-groups db)))
+                               :substrate-groups (data/db->all-substrate-groups db)
+                               :ka5-soil-types (data/db->all-k5-soil-types db)))
 
 (defrpc get-berest-state
   [& [user-id pwd]]
@@ -244,8 +244,8 @@
         (catch Exception e
           (throw (ex error "Couldn't create new farm address!")))))))
 
-(defrpc create-new-fc-pwp-layer
-  [plot-id depth fc-or-pwp value & [user-id pwd]]
+(defrpc create-new-fc-pwp-ka5-layer
+  [plot-id depth type value & [user-id pwd]]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -255,10 +255,13 @@
                (:user @*session*))]
     (when cred
       (try
-        (data/create-new-fc-pwp-layer (db/connection) (:user/id cred) plot-id depth fc-or-pwp value)
+        (data/create-new-fc-pwp-ka5-layer (db/connection) (:user/id cred)
+                                          plot-id (int depth) type (case type
+                                                                     [:pwp :fc] (double value)
+                                                                     :ka5 value))
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
-          (throw (ex error "Couldn't create new fc or pwp layer!")))))))
+          (throw (ex error "Couldn't create new fc, pwp or ka5 layer!")))))))
 
 (defrpc update-db-entity
   [entity-id attr value & [user-id pwd]]
@@ -270,16 +273,16 @@
                (db/credentials* db user-id pwd)
                (:user @*session*))
 
-        tx-data [:db/add entity-id (d/entid db attr) value]]
+        tx-data [[:db/add entity-id (d/entid db attr) value]]]
     (when cred
       (try
-        (d/transact (db/connection) [tx-data])
+        (d/transact (db/connection) tx-data)
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
-          (throw (ex error (str "Couldn't update entity! tx-data: " tx-data))))))))
+          (throw (ex error (str "Couldn't update entity! tx-data:\n" tx-data))))))))
 
 (defrpc delete-db-entity
-  [entity-id & [user-id pwd]]
+  [entity-id?s & [user-id pwd]]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -288,14 +291,48 @@
                (db/credentials* db user-id pwd)
                (:user @*session*))
 
-        tx-data [:db.fn/retractEntity entity-id]]
+        entity-ids (if (sequential? entity-id?s) entity-id?s [entity-id?s])
+
+        tx-data (for [e-id entity-ids]
+                  [:db.fn/retractEntity e-id])]
     (when cred
       (try
-        (d/transact (db/connection) [tx-data])
+        (d/transact (db/connection) tx-data)
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
-          (throw (ex error (str "Couldn't retract entity! tx-data: " tx-data))))))))
+          (throw (ex error (str "Couldn't retract entity! tx-data:\n" tx-data))))))))
 
+(defrpc set-substrate-group-fcs-and-pwps
+  [plot-id substrate-group-key & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/set-substrate-group-fcs-and-pwps db (db/connection) (:user/id cred) plot-id substrate-group-key)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't set/copy substrate group's fcs/pws!")))))))
+
+#_(defrpc update-fc-pwp-unit
+  [plot-id new-fc-pwp-unit & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/set-substrate-group-fcs-and-pwps db (db/connection) (:user/id cred) plot-id substrate-group-key)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't set/copy substrate group's fcs/pws!")))))))
 
 #_(defrpc update-weather-station
   [weather-station-id name lat lng & [user-id pwd]]
@@ -397,9 +434,8 @@
         :plot {:plot/stt 6212
                :plot/slope 1
                :plot/field-capacities []
-               :plot/fc-unit :soil-moisture.unit/volP
+               :plot/fc-pwp-unit :soil-moisture.unit/volP
                :plot/permanent-wilting-points []
-               :plot/pwp-unit :soil-moisture.unit/volP
                :plot/ka5-soil-types []
                :plot/groundwaterlevel 300}
 
@@ -447,9 +483,8 @@
        :plot {:plot/stt 6212
               :plot/slope 1
               :plot/field-capacities []
-              :plot/fc-unit :soil-moisture.unit/volP
+              :plot/fc-pwp-unit :soil-moisture.unit/volP
               :plot/permanent-wilting-points []
-              :plot/pwp-unit :soil-moisture.unit/volP
               :plot/ka5-soil-types []
               :plot/groundwaterlevel 300}
        :user cred})))

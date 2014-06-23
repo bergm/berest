@@ -25,6 +25,7 @@
 (defc= slopes (:slopes static-state))
 (defc= stts (:stts static-state))
 (defc= substrate-groups (into {} (map (juxt :soil.substrate/key identity) (:substrate-groups static-state))))
+(defc= ka5-soil-types (into {} (map (juxt :soil.type.ka5/name identity) (:ka5-soil-types static-state))))
 #_(defc= stt-descriptions (into {} (map (juxt :soil.stt/key :soil.stt/description) stts)))
 
 ;local state
@@ -108,11 +109,14 @@
 
 (def create-new-farm-address (mkremote 'de.zalf.berest.web.castra.api/create-new-farm-address state error loading))
 
-(def create-new-fc-pwp-layer (mkremote 'de.zalf.berest.web.castra.api/create-new-fc-pwp-layer state error loading))
+(def create-new-fc-pwp-ka5-layer (mkremote 'de.zalf.berest.web.castra.api/create-new-fc-pwp-ka5-layer state error loading))
+(def set-substrate-group-fcs-and-pwps (mkremote 'de.zalf.berest.web.castra.api/set-substrate-group-fcs-and-pwps state error loading))
 
 (def update-db-entity (mkremote 'de.zalf.berest.web.castra.api/update-db-entity state error loading))
 
 (def delete-db-entity (mkremote 'de.zalf.berest.web.castra.api/delete-db-entity state error loading))
+(def delete-db-entities (mkremote 'de.zalf.berest.web.castra.api/delete-db-entity state error loading))
+
 
 ;TODO: can't update weather-stations easily as they're actually shared most of the time, do this later properly
 #_(def update-weather-station (mkremote 'de.zalf.berest.web.castra.api/update-weather-station state error loading))

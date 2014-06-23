@@ -51,6 +51,9 @@
            :permanent-wilting-points-label {:lang/de "Permanente Welkepunkte"
                                             :lang/en "Permanent wilting points"}
 
+           :ka5-soil-types-label {:lang/de "KA5 Bodentypen"
+                                  :lang/en "KA5 soil types"}
+
            :substrate-groups-label {:lang/de "Substratgruppen für"
                                     :lang/en "Substrate groups for"}
 
@@ -129,9 +132,8 @@
           [element (or lang :lang/de)] "UNKNOWN element"))
 
 (defelem
-  create-fc-pwp-inputs
+  create-ka5-inputs
   [{{:keys [row-no row-action!
-            fc-pwp-unit
             depth depth!
             value value!]} :fields
     opts :opts
@@ -149,26 +151,28 @@
             :class "form-control"
             :type "number"
             :placeholder (cell= (vocab :depth-placeholder s/lang))
+            :step 1
+            :min 0
+            :max 200
             :value depth
-            :on-change #(depth! (some-> row-no deref) (js/parseInt (val-id depth-id))))
+            :on-change #(depth! (js/parseInt (val-id depth-id))))
           (span :class "input-group-addon" "cm")))
 
-      (div
-        :col [:xs 4]
-        (div
-          :class "input-group"
-          (input
-            :id value-id
-            :class "form-control"
-            :type "number"
-            :placeholder (cell= (vocab :value-placeholder s/lang))
-            :value value
-            :on-change #(value! (some-> row-no deref) (js/parseInt (val-id value-id))))
-          (span :class "input-group-addon" (text "~{fc-pwp-unit}"))))
+       (div
+         :col [:xs 4]
+         (select
+           :id value-id
+           :class "form-control"
+           :on-change #(value! (val-id value-id))
+           (loop-tpl
+             :bindings [[name _] s/ka5-soil-types]
+             (option :value name
+                     :selected (cell= (= name value))
+                     (text "~{name}")))))
 
-      (div
-        :col [:xs 4]
-        (input
+       (div
+         :col [:xs 4]
+         (input
           :class (cell= {:btn true
                          :btn-danger (not (nil? row-no))
                          :btn-warning (nil? row-no)})
@@ -177,7 +181,59 @@
           :on-click #(row-action! (some-> row-no deref)))))
      (dissoc attrs :fields :opts) kids)))
 
+(defelem
+  create-fc-pwp-inputs
+  [{{:keys [row-no row-action!
+            fc-pwp-unit
+            depth depth!
+            value value!]} :fields
+    opts :opts
+    :as attrs} kids]
 
+  (let [[depth-id value-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id depth-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :depth-placeholder s/lang))
+             :step 1
+             :min 0
+             :max 200
+             :value depth
+             :on-change #(depth! (js/parseInt (val-id depth-id))))
+           (span :class "input-group-addon" "cm")))
+
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id value-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :value-placeholder s/lang))
+             :step 0.1
+             :min 0
+             :value value
+             :on-change #(value! (js/parseFloat (val-id value-id))))
+           (span :class "input-group-addon" (text "~{fc-pwp-unit}"))))
+
+       (div
+         :col [:xs 4]
+         (input
+           :class (cell= {:btn true
+                          :btn-danger (not (nil? row-no))
+                          :btn-warning (nil? row-no)})
+           :type "button"
+           :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+           :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
 
 (defelem
   plot
@@ -191,9 +247,8 @@
             stt stt!
             slope slope!
             field-capacities field-capacities!
-            fc-unit fc-unit!
+            fc-pwp-unit fc-pwp-unit!
             permanent-wilting-points permanent-wilting-points!
-            pwp-unit pwp-unit!
             ka5-soil-types ka5-soil-types!
             groundwaterlevel groundwaterlevel!
             annuals
@@ -223,10 +278,9 @@
          slope-id
          field-capacities-id
          substrate-groups-fc-id
-         fc-unit-id
+         fc-pwp-unit-id
          permanent-wilting-points-id
          stt-pwp-id
-         pwp-unit-id
          ka5-soil-types-id
          groundwaterlevel-id
          annuals-id
@@ -391,91 +445,150 @@
                            :selected (cell= (= key (:slope/key slope)))
                            (text "~{symbol} | ~{description}"))))))
 
-           (let [sg-key (cell nil)]
+           (bs/form-group
+             (bs/control-label :col [:sm (+ 1 label-cols)] :for ka5-soil-types-id
+                               (text "~(vocab :ka5-soil-types-label s/lang)"))
+             (let [depth* (cell nil)
+                   ka5* (cell nil)]
+               (div
+                 :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
 
-             (fieldset
-               (legend
-                 :style "font-size: 18px; margin-left: 5%; width:95%"
-                 (text "~(vocab :fc-pwp-data-fieldset-label s/lang)"))
+                 (loop-tpl
+                   :bindings [[row-no {db-id :db/id
+                                       ka5 :soil/ka5-soil-type
+                                       depth :soil/upper-boundary-depth}]
+                              (cell= (util/indexed (sort-by :soil/upper-boundary-depth ka5-soil-types)))]
+                   (create-ka5-inputs
+                     :fields {:row-no row-no
+                              :row-action! #(s/delete-db-entity @db-id)
+                              :depth depth :depth! #()
+                              :value ka5 :value! #()}))
+                 (create-ka5-inputs
+                   :fields {:row-action! #(when (and @depth* @ka5*)
+                                           (s/create-new-fc-pwp-ka5-layer @id @depth* :ka5 @ka5*)
+                                           (reset! depth* nil)
+                                           (reset! ka5* nil))
+                            :depth depth* :depth! #(reset! depth* %)
+                            :value ka5* :value! #(reset! ka5* %)})
+                 )))
 
-               (bs/form-group
-                 :toggle edit? ;we don't have to show this for read-only mode
-                 (bs/control-label :col [:sm (+ 1 label-cols)] :for substrate-groups-fc-id
-                                   (text "~(vocab :substrate-groups-label s/lang) ~(:soil.stt/symbol stt)"))
+
+           (fieldset
+             (legend
+               :style "font-size: 18px; margin-left: 5%; width:95%"
+               (text "~(vocab :fc-pwp-data-fieldset-label s/lang)"))
+
+             (bs/form-group
+               :toggle edit? ;we don't have to show this for read-only mode
+               (bs/control-label :col [:sm (+ 1 label-cols)] :for substrate-groups-fc-id
+                                 (text "~(vocab :substrate-groups-label s/lang) ~(:soil.stt/symbol stt)"))
+               (div
+                 :col [:xs value-cols]
+                 (select
+                   :id substrate-groups-fc-id
+                   :class "form-control"
+                   :on-change #(s/set-substrate-group-fcs-and-pwps @id (js/parseInt (val-id substrate-groups-fc-id)))
+                   (option "")
+                   (loop-tpl
+                     :bindings [{key :soil.substrate/key
+                                 symbol :soil.substrate/symbol
+                                 description :soil.substrate/description
+                                 fcs :soil.substrate/field-capacities}
+                                (cell= (->> selected-stt-substrate-group-keys
+                                            (select-keys s/substrate-groups,,,)
+                                            vals
+                                            (sort-by :soil.substrate/description,,,)))]
+                     (option :value key
+                             ;:selected (cell= (= key (:soil.stt/key stt)))
+                             (text "~{symbol} | ~{description}"))))))
+
+             (bs/form-group
+               :toggle edit? ;we don't have to show this for read-only mode
+               (bs/control-label :col [:sm (+ 1 label-cols)] :for fc-pwp-unit-id
+                                 (text "~(vocab :fc-pwp-unit-label s/lang)"))
+               (div
+                 :col [:xs 2]
+                 (select
+                   :disabled "disabled"
+                   :id fc-pwp-unit-id
+                   :class "form-control"
+                   :on-change #(fc-pwp-unit! (keyword (val-id fc-pwp-unit-id)))
+                   (option :value "soil-moisture.unit/pFK"
+                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/pFK))
+                           (text "~(vocab :pFK s/lang)"))
+                   (option :value "soil-moisture.unit/pNFK"
+                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/pNFK))
+                           (text "~(vocab :pNFK s/lang)"))
+                   (option :value "soil-moisture.unit/volP"
+                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/volP))
+                           (text "~(vocab :volP s/lang)"))
+                   (option :value "soil-moisture.unit/mm"
+                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/mm))
+                           (text "~(vocab :mm s/lang)")))))
+
+             (bs/form-group
+               (bs/control-label :col [:sm (+ 1 label-cols)] :for field-capacities-id
+                                 (text "~(vocab :field-capacities-label s/lang)"))
+               (let [depth* (cell nil)
+                     fc* (cell nil)
+                     fc-pwp-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
                  (div
-                   :col [:xs value-cols]
-                   (select
-                     :id substrate-groups-fc-id
-                     :class "form-control"
-                     :on-change #(reset! sg-key (js/parseInt (val-id substrate-groups-fc-id)))
-                     (option "" "")
-                     (loop-tpl
-                       :bindings [{key :soil.substrate/key
-                                   symbol :soil.substrate/symbol
-                                   description :soil.substrate/description
-                                   fcs :soil.substrate/field-capacities}
-                                  (cell= (->> selected-stt-substrate-group-keys
-                                              (select-keys s/substrate-groups,,,)
-                                              vals
-                                              (sort-by :soil.substrate/description,,,)))]
-                       (option :value key
-                               ;:selected (cell= (= key (:soil.stt/key stt)))
-                               (text "~{symbol} | ~{description}"))))))
+                   :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+                   #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
 
-               (bs/form-group
-                 :toggle edit? ;we don't have to show this for read-only mode
-                 (bs/control-label :col [:sm (+ 1 label-cols)] :for fc-unit-id
-                                   (text "~(vocab :fc-pwp-unit-label s/lang)"))
-                 (div
-                   :col [:xs 2]
-                   (select
-                     :id fc-unit-id
-                     :class "form-control"
-                     :on-change #(let [unit-kw (keyword (val-id fc-unit-id))]
-                                  (fc-unit! unit-kw)
-                                  (pwp-unit! unit-kw))
-                     (option :value "soil-moisture.unit/pFK"
-                             :selected (cell= (= fc-unit :soil-moisture.unit/pFK))
-                             (text "~(vocab :pFK s/lang)"))
-                     (option :value "soil-moisture.unit/pNFK"
-                             :selected (cell= (= fc-unit :soil-moisture.unit/pNFK))
-                             (text "~(vocab :pNFK s/lang)"))
-                     (option :value "soil-moisture.unit/volP"
-                             :selected (cell= (= fc-unit :soil-moisture.unit/volP))
-                             (text "~(vocab :volP s/lang)"))
-                     (option :value "soil-moisture.unit/mm"
-                             :selected (cell= (= fc-unit :soil-moisture.unit/mm))
-                             (text "~(vocab :mm s/lang)")))))
-
-               (bs/form-group
-                 (bs/control-label :col [:sm (+ 1 label-cols)] :for field-capacities-id
-                                   (text "~(vocab :field-capacities-label s/lang)"))
-                 (let [depth* (cell nil)
-                       fc* (cell nil)
-                       fc-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-unit)) s/lang))]
-                   (div
-                     :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-                     #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
-
-                     (loop-tpl
-                       :bindings [[row-no {db-id :db/id
-                                           fc :soil/field-capacity
-                                           depth :soil/upper-boundary-depth}]
-                                  (cell= (util/indexed (sort-by :soil/upper-boundary-depth field-capacities)))]
-                       (create-fc-pwp-inputs
-                         :fields {:row-no row-no
-                                  :row-action! #(s/delete-db-entity @db-id)
-                                  :fc-pwp-unit fc-unit*
-                                  :depth depth :depth! #()
-                                  :value fc :value! #()}))
+                   (loop-tpl
+                     :bindings [[row-no {db-id :db/id
+                                         fc :soil/field-capacity
+                                         depth :soil/upper-boundary-depth}]
+                                (cell= (util/indexed (sort-by :soil/upper-boundary-depth field-capacities)))]
                      (create-fc-pwp-inputs
-                       :fields {:row-action! #(when (and @depth* fc*)
-                                               (s/create-new-fc-pwp-layer @id @depth* :fc @fc*))
-                                :fc-pwp-unit fc-unit*
-                                :depth depth* :depth! #(reset! depth* %)
-                                :value fc* :value! #(reset! fc* %)})
-                     )))
-               )))
+                       :fields {:row-no row-no
+                                :row-action! #(s/delete-db-entity @db-id)
+                                :fc-pwp-unit fc-pwp-unit*
+                                :depth depth :depth! #()
+                                :value fc :value! #()}))
+                   (create-fc-pwp-inputs
+                     :fields {:row-action! #(when (and @depth* @fc*)
+                                             (s/create-new-fc-pwp-ka5-layer @id @depth* :fc @fc*)
+                                             (reset! depth* nil)
+                                             (reset! fc* nil))
+                              :fc-pwp-unit fc-pwp-unit*
+                              :depth depth* :depth! #(reset! depth* %)
+                              :value fc* :value! #(reset! fc* %)})
+                   )))
+
+             (bs/form-group
+               (bs/control-label :col [:sm (+ 1 label-cols)] :for permanent-wilting-points-id
+                                 (text "~(vocab :permanent-wilting-points-label s/lang)"))
+               (let [depth* (cell nil)
+                     pwp* (cell nil)
+                     fc-pwp-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
+                 (div
+                   :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+                   #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
+
+                   (loop-tpl
+                     :bindings [[row-no {db-id :db/id
+                                         pwp :soil/permanent-wilting-point
+                                         depth :soil/upper-boundary-depth}]
+                                (cell= (util/indexed (sort-by :soil/upper-boundary-depth permanent-wilting-points)))]
+                     (create-fc-pwp-inputs
+                       :fields {:row-no row-no
+                                :row-action! #(s/delete-db-entity @db-id)
+                                :fc-pwp-unit fc-pwp-unit*
+                                :depth depth :depth! #()
+                                :value pwp :value! #()}))
+                   (create-fc-pwp-inputs
+                     :fields {:row-action! #(when (and @depth* @pwp*)
+                                             (s/create-new-fc-pwp-ka5-layer @id @depth* :pwp @pwp*)
+                                             (reset! depth* nil)
+                                             (reset! pwp* nil))
+                              :fc-pwp-unit fc-pwp-unit*
+                              :depth depth* :depth! #(reset! depth* %)
+                              :value pwp* :value! #(reset! pwp* %)})
+                   )))
+             ))
 
          #_(fieldset
            (legend (text "~(vocab :address-fieldset-label s/lang)"))
