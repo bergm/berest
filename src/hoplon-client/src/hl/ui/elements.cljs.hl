@@ -6,6 +6,23 @@
             [de.zalf.berest.client.hoplon.util :as util]
             [de.zalf.berest.client.hoplon.state :as s]))
 
+
+(defn vocab
+  "translatable vocabulary for this page"
+  [element lang]
+  (get-in {:add-layer-label {:lang/de "Schicht hinzufügen"
+                             :lang/en "Add layer"}
+           :remove-layer-label {:lang/de "Schicht entfernen"
+                                :lang/en "Remove layer"}
+           :depth-placeholder {:lang/de "Tiefe [cm]"
+                               :lang/en "Depth [cm]"}
+           :value-placeholder {:lang/de "Wert"
+                               :lang/en "Value"}
+           }
+          [element (or lang :lang/de)] "UNKNOWN element"))
+
+
+
 (defmethod tailrecursion.hoplon/do! :selected
   [elem key value]
   (let [e (js/jQuery elem)
@@ -163,7 +180,111 @@
         :on-click #(add-or-remove-row! (some-> row-no deref))))))
 
 
+(defelem
+  create-ka5-inputs
+  [{{:keys [row-no row-action!
+            depth depth!
+            value value!]} :fields
+    opts :opts
+    :as attrs} kids]
 
+  (let [[depth-id value-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id depth-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :depth-placeholder s/lang))
+             :step 1
+             :min 0
+             :max 200
+             :value depth
+             :on-change #(depth! (js/parseInt (val-id depth-id))))
+           (span :class "input-group-addon" "cm")))
+
+       (div
+         :col [:xs 4]
+         (select
+           :id value-id
+           :class "form-control"
+           :on-change #(value! (val-id value-id))
+           (option "")
+           (for #_loop-tpl
+                #_:bindings [[name _] (sort-by #(-> first :soil.type.ka5/name) @s/ka5-soil-types)]
+             (option :value name
+                     :selected (cell= (= name value))
+                     (text "~{name}")))))
+
+       (div
+         :col [:xs 4]
+         (input
+           :class (cell= {:btn true
+                          :btn-danger (not (nil? row-no))
+                          :btn-warning (nil? row-no)})
+           :type "button"
+           :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+           :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
+
+
+(defelem
+  create-soil-data-inputs
+  [{{:keys [row-no row-action!
+            unit
+            depth depth!
+            value value!]} :fields
+    opts :opts
+    :as attrs} kids]
+
+  (let [[depth-id value-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id depth-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :depth-placeholder s/lang))
+             :step 1
+             :min 0
+             :max 200
+             :value depth
+             :on-change #(depth! (js/parseInt (val-id depth-id))))
+           (span :class "input-group-addon" "cm")))
+
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id value-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :value-placeholder s/lang))
+             :step 0.1
+             :min 0
+             :value value
+             :on-change #(value! (js/parseFloat (val-id value-id))))
+           (span :class "input-group-addon" (text "~{unit}"))))
+
+       (div
+         :col [:xs 4]
+         (input
+           :class (cell= {:btn true
+                          :btn-danger (not (nil? row-no))
+                          :btn-warning (nil? row-no)})
+           :type "button"
+           :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+           :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
 
 
 

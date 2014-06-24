@@ -73,7 +73,8 @@
 (def static-state-template
   {:stts nil
    :slopes nil
-   :substrate-groups nil})
+   :substrate-groups nil
+   :ka5-soil-types nil})
 
 
 ;;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -95,7 +96,7 @@
   (assoc static-state-template :stts (data/db->all-stts db)
                                :slopes (data/db->all-slopes db)
                                :substrate-groups (data/db->all-substrate-groups db)
-                               :ka5-soil-types (data/db->all-k5-soil-types db)))
+                               :ka5-soil-types (data/db->all-ka5-soil-types db)))
 
 (defrpc get-berest-state
   [& [user-id pwd]]
@@ -244,8 +245,8 @@
         (catch Exception e
           (throw (ex error "Couldn't create new farm address!")))))))
 
-(defrpc create-new-fc-pwp-ka5-layer
-  [plot-id depth type value & [user-id pwd]]
+(defrpc create-new-soil-data-layer
+  [id-attr id depth type value & [user-id pwd]]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -255,16 +256,17 @@
                (:user @*session*))]
     (when cred
       (try
-        (data/create-new-fc-pwp-ka5-layer (db/connection) (:user/id cred)
-                                          plot-id (int depth) type (case type
-                                                                     [:pwp :fc] (double value)
-                                                                     :ka5 value))
+        (data/create-new-soil-data-layer (db/connection) (:user/id cred)
+                                         id-attr id (int depth) type (case type
+                                                                       [:pwp :fc :sm] (double value)
+                                                                       :ka5 value))
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
           (throw (ex error "Couldn't create new fc, pwp or ka5 layer!")))))))
 
 (defrpc update-db-entity
-  [entity-id attr value & [user-id pwd]]
+  [entity-id attr value & {:keys [user-id pwd value-type]
+                           :or {value-type :identity}}]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -273,7 +275,12 @@
                (db/credentials* db user-id pwd)
                (:user @*session*))
 
-        tx-data [[:db/add entity-id (d/entid db attr) value]]]
+        value* (case value-type
+                 :double (double value)
+                 :int (int value)
+                 value)
+
+        tx-data [[:db/add entity-id (d/entid db attr) value*]]]
     (when cred
       (try
         (d/transact (db/connection) tx-data)

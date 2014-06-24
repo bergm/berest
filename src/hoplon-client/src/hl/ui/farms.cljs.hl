@@ -8,6 +8,7 @@
             [ui.elements :as uie]
             [ui.farm :as farm]
             [ui.plot :as plot]
+            [ui.plot-annual :as plot-annual]
             [bootstrap-util :as bs]
             #_[cljs-time.coerce :as cstcoe]))
 
@@ -36,6 +37,9 @@
            :no-plot-name-label {:lang/de "??? Schlag ohne Name ???"
                                 :lang/en "??? Plot without name ???"}
 
+           :annual-years-label {:lang/de "des Jahres"
+                                :lang/en "of year"}
+
            :name-label {:lang/de "Name"
                         :lang/en "Name"}
            :name-placeholder {:lang/de "Name der Fruchtart"
@@ -54,6 +58,9 @@
 
            :show-plot-details {:lang/de "Schlag-Details anzeigen"
                                :lang/en "Show detailed plot data"}
+
+           :show-plot-annual-details {:lang/de "Beregnungsberatungsdetails anzeigen"
+                                      :lang/en "Show irrigation management details"}
 
 
            :edit {:lang/de "Ändern"
@@ -253,8 +260,9 @@
                                  bwb :plot/bwb
                                  irrigation-well :plot/irrigation-well}]
                              (cell= (sort-by :plot/name (:plots farm)))]
-                  ;:bind-ids []
-                  (let [plot-details-visible? (cell false)]
+                  :bind-ids [annual-years-id]
+                  (let [plot-details-visible? (cell false)
+                        plot-annual-details-visible? (cell false)]
                     (div
                       (h4
                         (text "~(if name name (vocab :no-plot-name-label s/lang))"))
@@ -328,6 +336,95 @@
                                :label-cols 2
                                :value-cols 3})
 
+
+
+
+
+                      (let [annual-years (cell= (->> annuals
+                                                     (map :plot.annual/year ,,,)
+                                                     sort))
+
+                            current-year (.getFullYear (js/Date.))
+
+                            selected-annual-year* (cell nil)
+
+                            selected-annual-year (cell= (or selected-annual-year*
+                                                            ((into #{} annual-years) current-year)
+                                                            (last annual-years)))
+
+                            selected-annual (cell= (first (filter #(= selected-annual-year (:plot.annual/year %)) annuals)))]
+
+                        (div
+
+                          (div
+                            :class "row"
+
+                            (div
+                              :col [:xs 3]
+                              (span
+                                :class "glyphicon glyphicon-plus"
+                                :toggle (cell= (not plot-annual-details-visible?))
+                                :on-click #(reset! plot-annual-details-visible? true))
+                              (span
+                                :toggle plot-annual-details-visible?
+                                :class "glyphicon glyphicon-minus"
+                                :click #(reset! plot-annual-details-visible? false))
+                              (span (text " ~(vocab :show-plot-annual-details s/lang)")))
+
+                            (div
+                              :col [:xs 4]
+                              (bs/form
+                                :opts [:horizontal]
+
+                                (bs/control-label :col [:sm 4] :for annual-years-id (text "~(vocab :annual-years-label s/lang)"))
+                                (div
+                                  :col [:xs 8]
+                                  (select
+                                  :id annual-years-id
+                                  :class "form-control"
+                                  :on-change #(reset! selected-annual-year* (map js/parseInt (val-id annual-years-id)))
+                                  (loop-tpl
+                                    :bindings [year annual-years]
+                                    (option :value year
+                                            :selected (cell= (= year selected-annual-year))
+                                            (text "~{year}"))))))))
+
+                          (cell-let
+                            [{db-id :db/id
+                              year :plot.annual/year
+                              abs-day-of-initial-soil-moisture-measurement :plot.annual/abs-day-of-initial-soil-moisture-measurement
+                              initial-soil-moistures :plot.annual/initial-soil-moistures
+                              initial-sm-unit :plot.annual/initial-sm-unit
+                              technology :plot.annual/technology
+                              crop-instances :plot.annual/crop-instances
+                              donations :plot.annual/donations
+                              } selected-annual]
+
+                            (plot-annual/plot-annual
+                              :style "margin-top: 20px"
+                              :toggle plot-annual-details-visible?
+                              :fields {:db-id db-id
+
+                                       :year year :year! #(s/update-db-entity @db-id :plot.annual/year %)
+
+                                       :abs-day-of-initial-soil-moisture-measurement abs-day-of-initial-soil-moisture-measurement
+                                       :abs-day-of-initial-soil-moisture-measurement! #(s/update-db-entity @db-id :plot.annual/abs-day-of-initial-soil-moisture-measurement %)
+
+                                       :initial-soil-moistures initial-soil-moistures
+                                       ;:initial-soil-moistures! #()
+
+                                       :initial-sm-unit initial-sm-unit
+                                       :initial-sm-unit! #(s/update-db-entity @db-id :plot.annual/initial-sm-unit %)
+
+                                       :technology technology
+                                       ;:technology! #()
+
+                                       :crop-instances crop-instances
+
+                                       :donations donations}
+                              :opts {:edit? true
+                                     :label-cols 2
+                                     :value-cols 3}))))
 
                       (hr)))))
 

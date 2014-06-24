@@ -35,7 +35,7 @@
 
                  [simple-time "0.1.1"]
                  [clj-time "0.6.0"]
-                 #_[com.andrewmcveigh/cljs-time "0.1.4"]
+                 [com.andrewmcveigh/cljs-time "0.1.4"]
 
                  [clojure-csv "2.0.1"]
                  [org.clojure/algo.generic "0.1.1"]

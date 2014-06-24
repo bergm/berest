@@ -1,75 +1,35 @@
-(ns ui.plot
+(ns ui.plot-annual
   (:require [de.zalf.berest.client.hoplon.util :as util]
             [ui.elements :as uie]
             [ui.addresses :as addr]
             [bootstrap-util :as bs]
+            [cljs-time.core :as cstc]
+            [cljs-time.format :as cstf]
+            [cljs-time.coerce :as cstcoe]
             [de.zalf.berest.client.hoplon.state :as s]))
 
 
 (defn vocab
   "translatable vocabulary for this page"
   [element lang]
-  (get-in {:name-label {:lang/de "Name"
-                        :lang/en "Name"}
-           :name-placeholder {:lang/de "Name des Schlages"
-                              :lang/en "Name of plot"}
+  (get-in {:year-label {:lang/de "Jahr"
+                        :lang/en "Year"}
+           :year-placeholder {:lang/de "Jahr der Schlagnutzung"
+                              :lang/en "Year of plot use"}
 
-           :number-label {:lang/de "Nummer"
-                          :lang/en "Number"}
-           :number-placeholder {:lang/de "BEREST-Nummer des Schlages"
-                                :lang/en "BEREST-number of plot"}
+           :abs-day-of-initial-soil-moisture-measurement-label {:lang/de "Tag der Bodenfeuchtemessung"
+                                                                :lang/en "Day of soil moisture measurement"}
+           :abs-day-of-initial-soil-moisture-measurement-placeholder {:lang/de "Tag"
+                                                                      :lang/en "day"}
 
-           :description-label {:lang/de "Beschreibung"
-                               :lang/en "Description"}
-           :description-placeholder {:lang/de "Beschreibung des Schlages"
-                                     :lang/en "Description of plot"}
+           :initial-soil-moistures-label {:lang/de "Bodenfeuchten"
+                                 :lang/en "Soil moistures"}
 
-           :short-description-label {:lang/de "Kurz-Beschreibung"
-                                     :lang/en "Short-description"}
-           :short-description-placeholder {:lang/de "Kurzbeschreibung des Schlages"
-                                           :lang/en "Short description of plot"}
+           :soil-moisture-data-fieldset-label {:lang/de "Bodenfeuchtedaten"
+                                               :lang/en "Soil moisture data"}
 
-           :crop-area-label {:lang/de "Anbaufläche"
-                             :lang/en "Cropping area"}
-           :crop-area-placeholder {:lang/de "Fläche des Schlages"
-                                   :lang/en "Cropping area of plot"}
-
-           :groundwaterlevel-label {:lang/de "Grundwasserstand"
-                                    :lang/en "Groundwaterlevel"}
-           :groundwaterlevel-placeholder {:lang/de "Niveau des Grundwasserstandes"
-                                          :lang/en "Groundwaterlevel"}
-
-           :irrigation-area-label {:lang/de "Beregnete Fläche"
-                                   :lang/en "Irrigated area"}
-           :irrigation-area-placeholder {:lang/de "Fläche unter Beregnung"
-                                         :lang/en "Area under irrigation"}
-
-           :stt-label {:lang/de "Standorttyp (MMK STT)"
-                       :lang/en "MMK STT"}
-
-           :slope-label {:lang/de "Hangneigung (MMK NFT)"
-                         :lang/en "Slope (MMK NFT)"}
-
-           :field-capacities-label {:lang/de "Feldkapazitäten"
-                                    :lang/en "Field capacities"}
-
-           :permanent-wilting-points-label {:lang/de "Permanente Welkepunkte"
-                                            :lang/en "Permanent wilting points"}
-
-           :ka5-soil-types-label {:lang/de "KA5 Bodentypen"
-                                  :lang/en "KA5 soil types"}
-
-           :substrate-groups-label {:lang/de "Substratgruppen für"
-                                    :lang/en "Substrate groups for"}
-
-           :soil-data-fieldset-label {:lang/de "Bodendaten/Bodenschichtungsdaten"
-                                      :lang/en "Soil data/soil layer data"}
-
-           :fc-pwp-data-fieldset-label {:lang/de "Feldkapazitäten/Permanente Welkepunkte"
-                                      :lang/en "Field capacities/permenent wilting points"}
-
-           :fc-pwp-unit-label {:lang/de "FK/PWP Einheit"
-                               :lang/en "FC/PWP unit"}
+           :initial-sm-unit-label {:lang/de "Bodenfeuchte Einheit"
+                                       :lang/en "Soil moisture unit"}
 
            :pFK {:lang/de "% FK"
                  :lang/en "% FC"}
@@ -84,19 +44,6 @@
                 :lang/en "mm"}
 
 
-           :weather-data-fieldset-label {:lang/de "Wetterdaten"
-                                         :lang/en "Weather data"}
-
-           :weather-station-label {:lang/de "lokale Wetterstation"
-                                   :lang/en "Local weather station"}
-
-           :weather-data-label {:lang/de "Manuelle Wetterdaten"
-                                :lang/en "Manual weather data"}
-
-           :notes-label {:lang/de "Notizen"
-                         :lang/en "Notes"}
-           :notes-placeholder {:lang/de "Hier können Notizen zum Schlag gemacht werden ..."
-                               :lang/en "Here you can keep notes regarding the plot ..."}
 
            :show-data {:lang/de "Daten anzeigen"
                        :lang/en "Show data"}
@@ -136,74 +83,148 @@
            }
           [element (or lang :lang/de)] "UNKNOWN element"))
 
+(defelem
+  create-ka5-inputs
+  [{{:keys [row-no row-action!
+            depth depth!
+            value value!]} :fields
+    opts :opts
+    :as attrs} kids]
 
+  (let [[depth-id value-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       (div
+        :col [:xs 4]
+        (div
+          :class "input-group"
+          (input
+            :id depth-id
+            :class "form-control"
+            :type "number"
+            :placeholder (cell= (vocab :depth-placeholder s/lang))
+            :step 1
+            :min 0
+            :max 200
+            :value depth
+            :on-change #(depth! (js/parseInt (val-id depth-id))))
+          (span :class "input-group-addon" "cm")))
+
+       (div
+         :col [:xs 4]
+         (select
+           :id value-id
+           :class "form-control"
+           :on-change #(value! (val-id value-id))
+           (option "")
+           (for #_loop-tpl
+             #_:bindings [[name _] (sort-by #(-> first :soil.type.ka5/name) @s/ka5-soil-types)]
+             (option :value name
+                     :selected (cell= (= name value))
+                     (text "~{name}")))))
+
+       (div
+         :col [:xs 4]
+         (input
+          :class (cell= {:btn true
+                         :btn-danger (not (nil? row-no))
+                         :btn-warning (nil? row-no)})
+          :type "button"
+          :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+          :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
 
 (defelem
-  plot
-  [{{:keys [id
-            name name!
-            number number!
-            description description!
-            short-description short-description!
-            crop-area crop-area!
-            irrigation-area irrigation-area!
-            stt stt!
-            slope slope!
-            field-capacities field-capacities!
-            fc-pwp-unit fc-pwp-unit!
-            permanent-wilting-points permanent-wilting-points!
-            ka5-soil-types ka5-soil-types!
-            groundwaterlevel groundwaterlevel!
-            annuals
-            weather-station weather-station!
-            weather-data
-            location-coords location-coords!
-            notes notes!
-            az-glz az-glz!
-            nft nft!
-            bse bse!
-            sse sse!
-            bwb bwb!
-            irrigation-well irrigation-well!]} :fields
+  create-fc-pwp-inputs
+  [{{:keys [row-no row-action!
+            fc-pwp-unit
+            depth depth!
+            value value!]} :fields
+    opts :opts
+    :as attrs} kids]
+
+  (let [[depth-id value-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id depth-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :depth-placeholder s/lang))
+             :step 1
+             :min 0
+             :max 200
+             :value depth
+             :on-change #(depth! (js/parseInt (val-id depth-id))))
+           (span :class "input-group-addon" "cm")))
+
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id value-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :value-placeholder s/lang))
+             :step 0.1
+             :min 0
+             :value value
+             :on-change #(value! (js/parseFloat (val-id value-id))))
+           (span :class "input-group-addon" (text "~{fc-pwp-unit}"))))
+
+       (div
+         :col [:xs 4]
+         (input
+           :class (cell= {:btn true
+                          :btn-danger (not (nil? row-no))
+                          :btn-warning (nil? row-no)})
+           :type "button"
+           :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+           :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
+
+(defelem
+  plot-annual
+  [{{:keys [db-id
+
+            year
+            year!
+
+            abs-day-of-initial-soil-moisture-measurement
+            abs-day-of-initial-soil-moisture-measurement!
+
+            initial-soil-moistures
+
+            initial-sm-unit
+            initial-sm-unit!
+
+            technology
+
+            crop-instances
+
+            donations]} :fields
     {:keys [edit? label-cols value-cols]} :opts
     :as attrs}
    kids]
   (let [edit? (cell (if (cell? edit?) @edit? edit?))
         no-edit? (cell= (not edit?))
-        [plot-form-name
-         name-id
-         number-id
-         description-id
-         short-description-id
-         crop-area-id
-         irrigation-area-id
-         stt-id
-         slope-id
-         field-capacities-id
-         substrate-groups-fc-id
-         fc-pwp-unit-id
-         permanent-wilting-points-id
-         stt-pwp-id
-         ka5-soil-types-id
-         groundwaterlevel-id
-         annuals-id
-         weather-station-id
-         weather-data-id
-         location-coords-id
-         notes-id
-         az-glz-id
-         nft-id
-         bse-id
-         sse-id
-         bwb-id
-         irrigation-well-id] (repeatedly gensym)
-        selected-stt-substrate-group-keys (cell= (:soil.stt/substrate-groups stt))
-
-        ]
+        [plot-annual-form-name
+         year-id
+         abs-day-of-initial-soil-moisture-measurement-id
+         initial-soil-moistures-id
+         initial-sm-unit-id
+         technology-id
+         crop-instances-id
+         donations-id] (repeatedly gensym)]
     ((div
        (bs/form
          :opts [:horizontal]
-         :name plot-form-name
+         :name plot-annual-form-name
 
          (button
            :style "float:right"
@@ -211,8 +232,112 @@
            :click #(swap! edit? not)
            (text "~(vocab :edit-plot-button-label s/lang)"))
 
-
          (bs/form-group
+           (bs/control-label :col [:sm label-cols] :for year-id (text "~(vocab :year-label s/lang)"))
+           (div
+             :col [:xs value-cols]
+             (p :toggle no-edit? :class "form-control-static" (text "~{year}"))
+             (input
+               :id year-id
+               :toggle edit?
+               :class "form-control"
+               :type "number"
+               :step 1
+               :min 1961
+               :max 2100
+               :placeholder (cell= (vocab :year-placeholder s/lang))
+               :value year
+               :on-change #(year! (js/parseFloat (val-id year-id))))
+             ))
+
+         (fieldset
+           (legend (text "~(vocab :soil-moisture-data-fieldset-label s/lang)"))
+
+           (bs/form-group
+             (bs/control-label :col [:sm label-cols] :for abs-day-of-initial-soil-moisture-measurement-id
+                               (text "~(vocab :abs-day-of-initial-soil-moisture-measurement-label s/lang)"))
+             (div
+               :col [:xs value-cols]
+               (p :toggle no-edit? :class "form-control-static" (text "~{abs-day-of-initial-soil-moisture-measurement-id}"))
+               (input
+                 :id abs-day-of-initial-soil-moisture-measurement-id
+                 :toggle edit?
+                 :class "form-control"
+                 :type "date"
+                 :placeholder (cell= (vocab :abs-day-of-initial-soil-moisture-measurement-id-placeholder s/lang))
+                 :value (cell= (->> (util/doy->cljs-time-date abs-day-of-initial-soil-moisture-measurement year)
+                                    (cstf/unparse (cstf/formatters :date) ,,,)))
+                 :on-change #(abs-day-of-initial-soil-moisture-measurement!
+                              (util/cljs-time-date->doy (cstf/parse (cstf/formatters :date)
+                                                                    (val-id abs-day-of-initial-soil-moisture-measurement-id)))))))
+
+
+           (bs/form-group
+             :toggle edit? ;we don't have to show this for read-only mode
+             (bs/control-label :col [:sm (+ 1 label-cols)] :for initial-sm-unit-id
+                               (text "~(vocab :initial-sm-unit-label s/lang)"))
+             (div
+               :col [:xs 2]
+               (select
+                 :disabled "disabled"
+                 :id initial-sm-unit-id
+                 :class "form-control"
+                 :on-change #(initial-sm-unit! (keyword (val-id initial-sm-unit-id)))
+                 (option :value "soil-moisture.unit/pFK"
+                         :selected (cell= (= initial-sm-unit :soil-moisture.unit/pFK))
+                         (text "~(vocab :pFK s/lang)"))
+                 (option :value "soil-moisture.unit/pNFK"
+                         :selected (cell= (= initial-sm-unit :soil-moisture.unit/pNFK))
+                         (text "~(vocab :pNFK s/lang)"))
+                 (option :value "soil-moisture.unit/volP"
+                         :selected (cell= (= initial-sm-unit :soil-moisture.unit/volP))
+                         (text "~(vocab :volP s/lang)"))
+                 (option :value "soil-moisture.unit/mm"
+                         :selected (cell= (= initial-sm-unit :soil-moisture.unit/mm))
+                         (text "~(vocab :mm s/lang)")))))
+
+           (bs/form-group
+             (bs/control-label :col [:sm (+ 1 label-cols)] :for initial-soil-moistures-id
+                               (text "~(vocab :initial-soil-moistures-label s/lang)"))
+             (let [depth* (cell nil)
+                   sm* (cell nil)
+                   unit* (cell= (vocab (keyword ((fnil clojure.core/name "") initial-sm-unit)) s/lang))]
+               (div
+                 :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
+
+                 (loop-tpl
+                   :bindings [[row-no {db-id :db/id
+                                       sm :soil/soil-moisture
+                                       depth :soil/upper-boundary-depth}]
+                              (cell= (util/indexed (sort-by :soil/upper-boundary-depth initial-soil-moistures)))]
+                   (uie/create-soil-data-inputs
+                     :fields {:row-no row-no
+                              :row-action! #(s/delete-db-entity @db-id)
+                              :unit unit*
+                              :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
+                              :value sm :value! #(s/update-db-entity @db-id :soil/soil-moisture % :value-type :double)}))
+                 (uie/create-soil-data-inputs
+                   :fields {:row-action! #(when (and @depth* @sm*)
+                                           (s/create-new-soil-data-layer :db/id @db-id @depth* :sm @sm*)
+                                           (reset! depth* nil)
+                                           (reset! sm* nil))
+                            :unit unit*
+                            :depth depth* :depth! #(reset! depth* %)
+                            :value sm* :value! #(reset! sm* %)})
+                 )))
+
+
+
+
+           )
+
+
+
+
+
+
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for name-id (text "~(vocab :name-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -226,7 +351,7 @@
                :value name
                :on-change #(name! (val-id name-id)))))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for number-id (text "~(vocab :number-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -240,7 +365,7 @@
                :value number
                :on-change #(number! (val-id number-id)))))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for description-id (text "~(vocab :description-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -254,7 +379,7 @@
                :value description
                :on-change #(description! (val-id description-id)))))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for short-description-id (text "~(vocab :short-description-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -268,7 +393,7 @@
                :value short-description
                :on-change #(short-description! (val-id short-description-id)))))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for crop-area-id (text "~(vocab :crop-area-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -287,7 +412,7 @@
                  :on-change #(crop-area! (js/parseFloat (val-id crop-area-id))))
                (span :class "input-group-addon" "ha"))))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for irrigation-area-id (text "~(vocab :irrigation-area-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -306,7 +431,7 @@
                :on-change #(irrigation-area! (js/parseFloat (val-id irrigation-area-id))))
                (span :class "input-group-addon" "ha"))))
 
-         (fieldset
+         #_(fieldset
            (legend (text "~(vocab :soil-data-fieldset-label s/lang)"))
 
            (bs/form-group
@@ -362,14 +487,14 @@
                                        ka5 :soil/ka5-soil-type
                                        depth :soil/upper-boundary-depth}]
                               (cell= (util/indexed (sort-by :soil/upper-boundary-depth ka5-soil-types)))]
-                   (uie/create-ka5-inputs
+                   (create-ka5-inputs
                      :fields {:row-no row-no
                               :row-action! #(s/delete-db-entity @db-id)
                               :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
                               :value ka5 :value! #(s/update-db-entity @db-id :soil/ka5-soil-type %)}))
-                 (uie/create-ka5-inputs
+                 (create-ka5-inputs
                    :fields {:row-action! #(when (and @depth* @ka5*)
-                                           (s/create-new-soil-data-layer :plot/id @id @depth* :ka5 @ka5*)
+                                           (s/create-new-fc-pwp-ka5-layer @id @depth* :ka5 @ka5*)
                                            (reset! depth* nil)
                                            (reset! ka5* nil))
                             :depth depth* :depth! #(reset! depth* %)
@@ -434,7 +559,7 @@
                                  (text "~(vocab :field-capacities-label s/lang)"))
                (let [depth* (cell nil)
                      fc* (cell nil)
-                     unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
+                     fc-pwp-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
                  (div
                    :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
                    #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
@@ -444,18 +569,18 @@
                                          fc :soil/field-capacity
                                          depth :soil/upper-boundary-depth}]
                                 (cell= (util/indexed (sort-by :soil/upper-boundary-depth field-capacities)))]
-                     (uie/create-soil-data-inputs
+                     (create-fc-pwp-inputs
                        :fields {:row-no row-no
                                 :row-action! #(s/delete-db-entity @db-id)
-                                :unit unit*
+                                :fc-pwp-unit fc-pwp-unit*
                                 :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
                                 :value fc :value! #(s/update-db-entity @db-id :soil/field-capacity % :value-type :double)}))
-                   (uie/create-soil-data-inputs
+                   (create-fc-pwp-inputs
                      :fields {:row-action! #(when (and @depth* @fc*)
-                                             (s/create-new-soil-data-layer :plot/id @id @depth* :fc @fc*)
+                                             (s/create-new-fc-pwp-ka5-layer @id @depth* :fc @fc*)
                                              (reset! depth* nil)
                                              (reset! fc* nil))
-                              :unit unit*
+                              :fc-pwp-unit fc-pwp-unit*
                               :depth depth* :depth! #(reset! depth* %)
                               :value fc* :value! #(reset! fc* %)})
                    )))
@@ -465,7 +590,7 @@
                                  (text "~(vocab :permanent-wilting-points-label s/lang)"))
                (let [depth* (cell nil)
                      pwp* (cell nil)
-                     unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
+                     fc-pwp-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
                  (div
                    :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
                    #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
@@ -475,25 +600,25 @@
                                          pwp :soil/permanent-wilting-point
                                          depth :soil/upper-boundary-depth}]
                                 (cell= (util/indexed (sort-by :soil/upper-boundary-depth permanent-wilting-points)))]
-                     (uie/create-soil-data-inputs
+                     (create-fc-pwp-inputs
                        :fields {:row-no row-no
                                 :row-action! #(s/delete-db-entity @db-id)
-                                :unit unit*
+                                :fc-pwp-unit fc-pwp-unit*
                                 :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
                                 :value pwp :value! #(s/update-db-entity @db-id :soil/permanent-wilting-point %
                                                                         :value-type :double)}))
-                   (uie/create-soil-data-inputs
+                   (create-fc-pwp-inputs
                      :fields {:row-action! #(when (and @depth* @pwp*)
-                                             (s/create-new-soil-data-layer :plot/id @id @depth* :pwp @pwp*)
+                                             (s/create-new-fc-pwp-ka5-layer @id @depth* :pwp @pwp*)
                                              (reset! depth* nil)
                                              (reset! pwp* nil))
-                              :unit unit*
+                              :fc-pwp-unit fc-pwp-unit*
                               :depth depth* :depth! #(reset! depth* %)
                               :value pwp* :value! #(reset! pwp* %)})
                    )))
              ))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for groundwaterlevel-id (text "~(vocab :groundwaterlevel-label s/lang)"))
            (div
              :col [:xs value-cols]
@@ -570,7 +695,7 @@
                  ))
              ))
 
-         (bs/form-group
+         #_(bs/form-group
            (bs/control-label :col [:sm label-cols] :for notes-id (text "~(vocab :notes-label s/lang)"))
            (div
              :col [:xs 7]
@@ -584,7 +709,7 @@
                :value notes
                :on-change #(notes! (val-id notes-id)))))
 
-         (fieldset
+         #_(fieldset
            (legend (text "~(vocab :weather-data-fieldset-label s/lang)"))
 
            (bs/form-group

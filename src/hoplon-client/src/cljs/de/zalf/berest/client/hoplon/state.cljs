@@ -109,7 +109,7 @@
 
 (def create-new-farm-address (mkremote 'de.zalf.berest.web.castra.api/create-new-farm-address state error loading))
 
-(def create-new-fc-pwp-ka5-layer (mkremote 'de.zalf.berest.web.castra.api/create-new-fc-pwp-ka5-layer state error loading))
+(def create-new-soil-data-layer (mkremote 'de.zalf.berest.web.castra.api/create-new-soil-data-layer state error loading))
 (def set-substrate-group-fcs-and-pwps (mkremote 'de.zalf.berest.web.castra.api/set-substrate-group-fcs-and-pwps state error loading))
 
 (def update-db-entity (mkremote 'de.zalf.berest.web.castra.api/update-db-entity state error loading))
