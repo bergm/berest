@@ -39,7 +39,7 @@
           (text "~(or display-value value)")))
 
 (defn technology
-  [{:keys [cycle-days set-cycle-days-fn
+  [{:keys [cycle-dates set-cycle-days-fn
            technology-type set-technology-type-fn
            min set-min-fn
            max set-max-fn
@@ -287,7 +287,57 @@
      (dissoc attrs :fields :opts) kids)))
 
 
+(defelem
+  create-donation-inputs
+  [{{:keys [row-no row-action!
+            year
+            abs-day abs-day!
+            amount amount!]} :fields
+    opts :opts
+    :as attrs} kids]
 
+  (let [[abs-day-id amount-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id abs-day-id
+             :class "form-control"
+             :type "date"
+             :placeholder (cell= (vocab :abs-day-placeholder s/lang))
+             :value (cell= (->> (util/doy->cljs-time-date abs-day year)
+                                (cstf/unparse (cstf/formatters :date) ,,,)))
+             :on-change #(abs-day! (js/parseInt (val-id abs-day-id))))
+           (span :class "input-group-addon" "cm")))
+
+       (div
+         :col [:xs 4]
+         (div
+           :class "input-group"
+           (input
+             :id amount-id
+             :class "form-control"
+             :type "number"
+             :placeholder (cell= (vocab :amount-placeholder s/lang))
+             :step 0.1
+             :min 0
+             :value amount
+             :on-change #(amount! (js/parseFloat (val-id amount-id))))
+           (span :class "input-group-addon" "mm")))
+
+       (div
+         :col [:xs 4]
+         (input
+           :class (cell= {:btn true
+                          :btn-danger (not (nil? row-no))
+                          :btn-warning (nil? row-no)})
+           :type "button"
+           :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+           :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
 
 
 

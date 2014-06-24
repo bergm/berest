@@ -44,6 +44,12 @@
                 :lang/en "mm"}
 
 
+           :donations-fieldset-label {:lang/de "Bewässerungsdaten"
+                                      :lang/en "Irrigation data"}
+
+           :donations-label {:lang/de "Bewässerungsgaben"
+                             :lang/en "Irrigation donations"}
+
 
            :show-data {:lang/de "Daten anzeigen"
                        :lang/en "Show data"}
@@ -274,7 +280,7 @@
 
            (bs/form-group
              :toggle edit? ;we don't have to show this for read-only mode
-             (bs/control-label :col [:sm (+ 1 label-cols)] :for initial-sm-unit-id
+             (bs/control-label :col [:sm label-cols] :for initial-sm-unit-id
                                (text "~(vocab :initial-sm-unit-label s/lang)"))
              (div
                :col [:xs 2]
@@ -297,7 +303,7 @@
                          (text "~(vocab :mm s/lang)")))))
 
            (bs/form-group
-             (bs/control-label :col [:sm (+ 1 label-cols)] :for initial-soil-moistures-id
+             (bs/control-label :col [:sm label-cols] :for initial-soil-moistures-id
                                (text "~(vocab :initial-soil-moistures-label s/lang)"))
              (let [depth* (cell nil)
                    sm* (cell nil)
@@ -325,6 +331,43 @@
                             :unit unit*
                             :depth depth* :depth! #(reset! depth* %)
                             :value sm* :value! #(reset! sm* %)})
+                 )))
+
+
+
+
+           )
+
+         (fieldset
+           (legend (text "~(vocab :donations-fieldset-label s/lang)"))
+
+           (bs/form-group
+             (bs/control-label :col [:sm label-cols] :for donations-id (text "~(vocab :donations-label s/lang)"))
+             (let [abs-day* (cell nil)
+                   amount* (cell nil)]
+               (div
+                 :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
+
+                 (loop-tpl
+                   :bindings [[row-no {don-db-id :db/id
+                                       abs-day :donation/abs-day
+                                       amount :donation/amount}]
+                              (cell= (util/indexed (sort-by :donation/abs-day donations)))]
+                   (uie/create-donation-inputs
+                     :fields {:row-no row-no
+                              :row-action! #(s/delete-db-entity @don-db-id)
+                              :year year
+                              :abs-day abs-day :abs-day! #(s/update-db-entity @don-db-id :donation/abs-day %)
+                              :amount amount :amount! #(s/update-db-entity @don-db-id :donation/amount % :value-type :double)}))
+                 (uie/create-donation-inputs
+                   :fields {:row-action! #(when (and @depth* @sm*)
+                                           (s/create-new-donation :db/id @db-id @abs-day* @amount*)
+                                           (reset! abs-day* nil)
+                                           (reset! amount* nil))
+                            :year year
+                            :abs-day abs-day* :abs-day! #(reset! abs-day* %)
+                            :amount amount* :amount! #(reset! amount* %)})
                  )))
 
 
