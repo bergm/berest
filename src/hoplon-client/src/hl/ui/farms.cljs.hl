@@ -382,7 +382,7 @@
                                   (select
                                   :id annual-years-id
                                   :class "form-control"
-                                  :on-change #(reset! selected-annual-year* (map js/parseInt (val-id annual-years-id)))
+                                  :on-change #(reset! selected-annual-year* (js/parseInt (val-id annual-years-id)))
                                   (loop-tpl
                                     :bindings [year annual-years]
                                     (option :value year

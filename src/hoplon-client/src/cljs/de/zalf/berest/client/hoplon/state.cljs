@@ -112,6 +112,9 @@
 (def create-new-soil-data-layer (mkremote 'de.zalf.berest.web.castra.api/create-new-soil-data-layer state error loading))
 (def set-substrate-group-fcs-and-pwps (mkremote 'de.zalf.berest.web.castra.api/set-substrate-group-fcs-and-pwps state error loading))
 
+(def create-new-donation (mkremote 'de.zalf.berest.web.castra.api/create-new-donation state error loading))
+(def create-new-crop-instance (mkremote 'de.zalf.berest.web.castra.api/create-new-crop-instance state error loading))
+
 (def update-db-entity (mkremote 'de.zalf.berest.web.castra.api/update-db-entity state error loading))
 
 (def delete-db-entity (mkremote 'de.zalf.berest.web.castra.api/delete-db-entity state error loading))

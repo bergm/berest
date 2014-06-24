@@ -1,6 +1,7 @@
 (ns ui.plot-annual
   (:require [de.zalf.berest.client.hoplon.util :as util]
             [ui.elements :as uie]
+            [ui.technology :as technology]
             [ui.addresses :as addr]
             [bootstrap-util :as bs]
             [cljs-time.core :as cstc]
@@ -43,12 +44,33 @@
            :mm {:lang/de "mm"
                 :lang/en "mm"}
 
+           :technology-fieldset-label {:lang/de "Technologiedaten"
+                                       :lang/en "Technology data"}
+
+           :technology-select-label {:lang/de "Technologieauswahl"
+                                     :lang/en "Technology selection"}
+
+           :crop-instances-fieldset-label {:lang/de "Angebaute Fruchtarten"
+                                       :lang/en "Applied crops"}
+
+           :new-crop-instance-button-label {:lang/de "Neue Fruchtart"
+                                     :lang/en "New crop"}
+
+           :crop-instance-select-label {:lang/de "Fruchtartauswahl"
+                                     :lang/en "Crop selection"}
 
            :donations-fieldset-label {:lang/de "Bewässerungsdaten"
                                       :lang/en "Irrigation data"}
 
            :donations-label {:lang/de "Bewässerungsgaben"
                              :lang/en "Irrigation donations"}
+
+
+           :ci-name-label {:lang/de "Name"
+                             :lang/en "Name"}
+
+
+
 
 
            :show-data {:lang/de "Daten anzeigen"
@@ -225,6 +247,7 @@
          initial-soil-moistures-id
          initial-sm-unit-id
          technology-id
+         technology-select-id
          crop-instances-id
          donations-id] (repeatedly gensym)]
     ((div
@@ -331,22 +354,82 @@
                             :unit unit*
                             :depth depth* :depth! #(reset! depth* %)
                             :value sm* :value! #(reset! sm* %)})
-                 )))
-
-
-
-
-           )
+                 ))))
 
          (fieldset
-           (legend (text "~(vocab :donations-fieldset-label s/lang)"))
+           (legend (text "~(vocab :technology-fieldset-label s/lang)"))
 
            (bs/form-group
+             (bs/control-label :col [:sm label-cols] :for technology-select-id (text "~(vocab :technology-select-label s/lang)"))
+             (div
+               :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+               (p :toggle no-edit? :class "form-control-static" "???Schlauchtrommel???" #_(text "~{}"))
+               (select
+                 :toggle edit?
+                 :disabled "disabled"
+                 :id technology-select-id
+                 :class "form-control"
+                 :on-change #()
+                 (option "Schlauchtrommel")
+                 (option "Tropfenbewässerung")
+                 (option "Linearregner")
+                 #_(loop-tpl
+                   :bindings [{key :soil.stt/key
+                               symbol :soil.stt/symbol
+                               description :soil.stt/description
+                               subs-groups :soil.stt/substrate-groups}
+                              (cell= (sort-by :soil.stt/symbol s/stts))]
+                   (option :value key
+                           :selected (cell= (= key (:soil.stt/key stt)))
+                           (text "~{symbol} | ~{description}"))))))
+
+           (cell-let
+             [{tec-db-id :db/id
+               cycle-days :technology/cycle-days
+               outlet-height :technology/outlet-height
+               sprinkle-loss-factor :technology/sprinkle-loss-factor
+               type :technology/type
+               donation-min :donation/min
+               donation-max :donation/max
+               donation-opt :donation/opt
+               step-size :donation/step-size
+               } technology]
+
+             (div
+               :col [:xs 12]
+               (technology/technology
+                 :class "row"
+                 :style "margin-top: 20px"
+                 ;:toggle plot-annual-details-visible?
+                 :fields {:db-id tec-db-id
+
+                          :cycle-days cycle-days :cycle-days! #(s/update-db-entity @db-id :technology/cycle-days %)
+
+                          :outlet-height outlet-height
+                          :outlet-height! #(s/update-db-entity @db-id :technology/outlet-height %)
+
+                          :sprinkle-loss-factor sprinkle-loss-factor
+                          :sprinkle-loss-factor! #(s/update-db-entity @db-id :technology/sprinkle-loss-factor %)
+
+                          :type type :type! #(s/update-db-entity @db-id :technology/type %)
+
+                          :donation-min donation-min :donation-min! #(s/update-db-entity @db-id :donation/min %)
+
+                          :donation-max donation-max :donation-max! #(s/update-db-entity @db-id :donation/max %)
+
+                          :donation-opt donation-opt :donation-opt! #(s/update-db-entity @db-id :donation/opt %)
+
+                          :step-size step-size :step-size! #(s/update-db-entity @db-id :donation/step-size %)}
+                 :opts {:edit? true
+                        :label-cols 2
+                        :value-cols 3})))
+
+           #_(bs/form-group
              (bs/control-label :col [:sm label-cols] :for donations-id (text "~(vocab :donations-label s/lang)"))
              (let [abs-day* (cell nil)
                    amount* (cell nil)]
                (div
-                 :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+                 :col [:xs (min (+ value-cols 4) (- 12 label-cols))]
                  #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
 
                  (loop-tpl
@@ -361,19 +444,119 @@
                               :abs-day abs-day :abs-day! #(s/update-db-entity @don-db-id :donation/abs-day %)
                               :amount amount :amount! #(s/update-db-entity @don-db-id :donation/amount % :value-type :double)}))
                  (uie/create-donation-inputs
-                   :fields {:row-action! #(when (and @depth* @sm*)
-                                           (s/create-new-donation :db/id @db-id @abs-day* @amount*)
+                   :fields {:row-action! #(when (and @abs-day* @amount*)
+                                           (s/create-new-donation @db-id @abs-day* @amount*)
                                            (reset! abs-day* nil)
                                            (reset! amount* nil))
                             :year year
                             :abs-day abs-day* :abs-day! #(reset! abs-day* %)
                             :amount amount* :amount! #(reset! amount* %)})
-                 )))
+                 ))))
+
+         (fieldset
+           (legend (text "~(vocab :crop-instances-fieldset-label s/lang)"))
+
+           (button
+             ;:toggle no-edit?
+             ;:style "float:right"
+             :class "btn btn-warning"
+             :click #(s/create-new-crop-instance @db-id)
+             (text "~(vocab :new-crop-instance-button-label s/lang)"))
+
+           (hr)
+
+           (loop-tpl
+             :bindings [{ci-db-id :db/id
+                         assertions :crop.instance/dc-assertions
+                         template-id :crop.instance/template
+                         ci-name :crop.instance/name}
+                        (cell= (sort-by #(apply min (map :assertion/abs-assert-dc-day (:crop.instance/assertions %)))
+                                        crop-instances))]
+             :bind-ids [ci-name-id]
+             (fieldset
+               :style "font-size: 18px; margin-left: 5%; width:95%"
+               (legend (text "~{ci-name}"))
+
+               (bs/form-group
+                 (bs/control-label :col [:sm (+ 1 label-cols)] :for ci-name-id (text "~(vocab :ci-name-label s/lang)"))
+                 (div
+                   :col [:xs value-cols]
+                   (p :toggle no-edit? :class "form-control-static" (text "~{ci-name}"))
+                   (input
+                     :id ci-name-id
+                     :toggle edit?
+                     :class "form-control"
+                     :type "text"
+                     :placeholder (cell= (vocab :ci-name-placeholder s/lang))
+                     :value ci-name
+                     :on-change #(s/update-db-entity @ci-db-id :crop.instance/name (val-id ci-name-id)))))
 
 
+
+
+               )
+             )
+
+
+           #_(bs/form-group
+             (bs/control-label :col [:sm label-cols] :for technology-select-id (text "~(vocab :technology-select-label s/lang)"))
+             (div
+               :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
+               (p :toggle no-edit? :class "form-control-static" "???Schlauchtrommel???" #_(text "~{}"))
+               (select
+                 :toggle edit?
+                 :disabled "disabled"
+                 :id technology-select-id
+                 :class "form-control"
+                 :on-change #()
+                 (option "Schlauchtrommel")
+                 (option "Tropfenbewässerung")
+                 (option "Linearregner")
+                 #_(loop-tpl
+                   :bindings [{key :soil.stt/key
+                               symbol :soil.stt/symbol
+                               description :soil.stt/description
+                               subs-groups :soil.stt/substrate-groups}
+                              (cell= (sort-by :soil.stt/symbol s/stts))]
+                   (option :value key
+                           :selected (cell= (= key (:soil.stt/key stt)))
+                           (text "~{symbol} | ~{description}"))))))
 
 
            )
+
+
+         (fieldset
+           (legend (text "~(vocab :donations-fieldset-label s/lang)"))
+
+           (bs/form-group
+             (bs/control-label :col [:sm label-cols] :for donations-id (text "~(vocab :donations-label s/lang)"))
+             (let [abs-day* (cell nil)
+                   amount* (cell nil)]
+               (div
+                 :col [:xs (min (+ value-cols 4) (- 12 label-cols))]
+                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
+
+                 (loop-tpl
+                   :bindings [[row-no {don-db-id :db/id
+                                       abs-day :donation/abs-day
+                                       amount :donation/amount}]
+                              (cell= (util/indexed (sort-by :donation/abs-day donations)))]
+                   (uie/create-donation-inputs
+                     :fields {:row-no row-no
+                              :row-action! #(s/delete-db-entity @don-db-id)
+                              :year year
+                              :abs-day abs-day :abs-day! #(s/update-db-entity @don-db-id :donation/abs-day %)
+                              :amount amount :amount! #(s/update-db-entity @don-db-id :donation/amount % :value-type :double)}))
+                 (uie/create-donation-inputs
+                   :fields {:row-action! #(when (and @abs-day* @amount*)
+                                           (s/create-new-donation @db-id @abs-day* @amount*)
+                                           (reset! abs-day* nil)
+                                           (reset! amount* nil))
+                            :year year
+                            :abs-day abs-day* :abs-day! #(reset! abs-day* %)
+                            :amount amount* :amount! #(reset! amount* %)})
+                 ))))
 
 
 

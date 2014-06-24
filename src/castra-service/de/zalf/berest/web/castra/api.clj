@@ -264,6 +264,38 @@
         (catch Exception e
           (throw (ex error "Couldn't create new fc, pwp or ka5 layer!")))))))
 
+(defrpc create-new-donation
+  [annual-plot-entity-id abs-day amount & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/create-new-donation (db/connection) (:user/id cred) annual-plot-entity-id (int abs-day) (double amount))
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new donation!")))))))
+
+(defrpc create-new-crop-instance
+  [annual-plot-entity-id & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        #_(data/create-new-donation (db/connection) (:user/id cred) annual-plot-entity-id (int abs-day) (double amount))
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new crop intance!")))))))
+
 (defrpc update-db-entity
   [entity-id attr value & {:keys [user-id pwd value-type]
                            :or {value-type :identity}}]

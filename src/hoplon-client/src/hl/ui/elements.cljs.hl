@@ -1,8 +1,11 @@
 (ns ui.elements
-  (:require-macros [tailrecursion.javelin :refer :all]
+  #_(:require-macros [tailrecursion.javelin :refer :all]
                    [tailrecursion.hoplon :refer :all])
-  (:require [tailrecursion.javelin :refer :all]
-            [tailrecursion.hoplon :refer :all]
+  (:require #_[tailrecursion.javelin :refer :all]
+            #_[tailrecursion.hoplon :refer :all]
+            [cljs-time.core :as cstc]
+            [cljs-time.format :as cstf]
+            [cljs-time.coerce :as cstcoe]
             [de.zalf.berest.client.hoplon.util :as util]
             [de.zalf.berest.client.hoplon.state :as s]))
 
@@ -14,16 +17,34 @@
                              :lang/en "Add layer"}
            :remove-layer-label {:lang/de "Schicht entfernen"
                                 :lang/en "Remove layer"}
-           :depth-placeholder {:lang/de "Tiefe [cm]"
-                               :lang/en "Depth [cm]"}
+           :add-donation-label {:lang/de "Gabe hinzufügen"
+                             :lang/en "Add donation"}
+           :remove-donation-label {:lang/de "Gabe entfernen"
+                                :lang/en "Remove donation"}
+           :depth-placeholder {:lang/de "Tiefe"
+                               :lang/en "Depth"}
            :value-placeholder {:lang/de "Wert"
                                :lang/en "Value"}
+           :abs-day-placeholder {:lang/de "Datum der Wassergabe"
+                                 :lang/en "Date of donation"}
+           :amount-placeholder {:lang/de "Menge der Gabe"
+                               :lang/en "Amount of donation"}
+
            }
           [element (or lang :lang/de)] "UNKNOWN element"))
 
 
 
 (defmethod tailrecursion.hoplon/do! :selected
+  [elem key value]
+  (let [e (js/jQuery elem)
+        k (name key)]
+    (cond
+      (= false value) (.removeAttr e k)
+      (= true value) (.attr e k k)
+      :else (.attr e k (str value)))))
+
+(defmethod tailrecursion.hoplon/do! :disabled
   [elem key value]
   (let [e (js/jQuery elem)
         k (name key)]
@@ -39,7 +60,7 @@
           (text "~(or display-value value)")))
 
 (defn technology
-  [{:keys [cycle-dates set-cycle-days-fn
+  [{:keys [cycle-days set-cycle-days-fn
            technology-type set-technology-type-fn
            min set-min-fn
            max set-max-fn
@@ -126,16 +147,6 @@
 
         )))
 
-
-#_(defn remove-donation-row [row-no]
-  (swap! s/state assoc :donations
-         (->> @s/donations
-              (keep-indexed #(when-not (= %1 row-no) %2) ,,,)
-              (into [] ,,,))))
-
-#_(defn add-donation-row [_]
-  (swap! s/state update-in [:donations] conj @temp-donations)
-  (reset! temp-donations {:day nil :month nil :amount nil}))
 
 
 (defn create-irrigation-inputs
@@ -300,21 +311,21 @@
     ((div
        :class "row"
        (div
-         :col [:xs 4]
-         (div
-           :class "input-group"
-           (input
-             :id abs-day-id
-             :class "form-control"
-             :type "date"
-             :placeholder (cell= (vocab :abs-day-placeholder s/lang))
-             :value (cell= (->> (util/doy->cljs-time-date abs-day year)
-                                (cstf/unparse (cstf/formatters :date) ,,,)))
-             :on-change #(abs-day! (js/parseInt (val-id abs-day-id))))
-           (span :class "input-group-addon" "cm")))
+         :col [:xs 5]
+         (input
+           :id abs-day-id
+           :class "form-control"
+           :type "date"
+           ;:placeholder (cell= (vocab :abs-day-placeholder s/lang))
+           :value (cell= (if (and abs-day year)
+                           (->> (util/doy->cljs-time-date abs-day year)
+                                (cstf/unparse (cstf/formatters :date),,,))
+                           (str year "-01-01")))
+           :on-change #(abs-day! (util/cljs-time-date->doy (cstf/parse (cstf/formatters :date)
+                                                                       (val-id abs-day-id))))))
 
        (div
-         :col [:xs 4]
+         :col [:xs 3]
          (div
            :class "input-group"
            (input
@@ -335,7 +346,7 @@
                           :btn-danger (not (nil? row-no))
                           :btn-warning (nil? row-no)})
            :type "button"
-           :value (cell= (if row-no (vocab :remove-layer-label s/lang) (vocab :add-layer-label s/lang)))
+           :value (cell= (if row-no (vocab :remove-donation-label s/lang) (vocab :add-donation-label s/lang)))
            :on-click #(row-action! (some-> row-no deref)))))
      (dissoc attrs :fields :opts) kids)))
 
