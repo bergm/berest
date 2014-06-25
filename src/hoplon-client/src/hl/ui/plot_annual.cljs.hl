@@ -69,7 +69,8 @@
            :ci-name-label {:lang/de "Name"
                              :lang/en "Name"}
 
-
+           :dc-assertions-label {:lang/de "DC Stadien melden"
+                                 :lang/en "DC states"}
 
 
 
@@ -249,6 +250,7 @@
          technology-id
          technology-select-id
          crop-instances-id
+         new-crop-instance-id
          donations-id] (repeatedly gensym)]
     ((div
        (bs/form
@@ -423,56 +425,55 @@
                  :opts {:edit? true
                         :label-cols 2
                         :value-cols 3})))
-
-           #_(bs/form-group
-             (bs/control-label :col [:sm label-cols] :for donations-id (text "~(vocab :donations-label s/lang)"))
-             (let [abs-day* (cell nil)
-                   amount* (cell nil)]
-               (div
-                 :col [:xs (min (+ value-cols 4) (- 12 label-cols))]
-                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
-
-                 (loop-tpl
-                   :bindings [[row-no {don-db-id :db/id
-                                       abs-day :donation/abs-day
-                                       amount :donation/amount}]
-                              (cell= (util/indexed (sort-by :donation/abs-day donations)))]
-                   (uie/create-donation-inputs
-                     :fields {:row-no row-no
-                              :row-action! #(s/delete-db-entity @don-db-id)
-                              :year year
-                              :abs-day abs-day :abs-day! #(s/update-db-entity @don-db-id :donation/abs-day %)
-                              :amount amount :amount! #(s/update-db-entity @don-db-id :donation/amount % :value-type :double)}))
-                 (uie/create-donation-inputs
-                   :fields {:row-action! #(when (and @abs-day* @amount*)
-                                           (s/create-new-donation @db-id @abs-day* @amount*)
-                                           (reset! abs-day* nil)
-                                           (reset! amount* nil))
-                            :year year
-                            :abs-day abs-day* :abs-day! #(reset! abs-day* %)
-                            :amount amount* :amount! #(reset! amount* %)})
-                 ))))
+           )
 
          (fieldset
            (legend (text "~(vocab :crop-instances-fieldset-label s/lang)"))
 
-           (button
-             ;:toggle no-edit?
-             ;:style "float:right"
-             :class "btn btn-warning"
-             :click #(s/create-new-crop-instance @db-id)
-             (text "~(vocab :new-crop-instance-button-label s/lang)"))
+           (let [show-select (cell false)]
+
+             (div
+             :class "row"
+
+             (div
+               :col [:xs 2]
+               (button
+               ;:toggle no-edit?
+               ;:style "float:right"
+               :class "btn btn-warning"
+               :click #(reset! show-select true)
+               (text "~(vocab :new-crop-instance-button-label s/lang)")))
+
+             (div
+               :col [:xs 3]
+
+               (select
+                 :toggle show-select
+                 :id new-crop-instance-id
+                 :class "form-control"
+                 :on-change #(do
+                              (s/create-new-crop-instance @db-id (val-id new-crop-instance-id))
+                              (reset! show-select false))
+                 (option "")
+                 (loop-tpl
+                   :bindings [{id :crop/id
+                               name :crop/name
+                               symbol :crop/symbol}
+                              (cell= (sort-by :crop/name s/minimal-all-crops))]
+                   (option :value id
+                           (text "~{symbol} | ~{name}")))))
+             ))
 
            (hr)
 
            (loop-tpl
              :bindings [{ci-db-id :db/id
-                         assertions :crop.instance/dc-assertions
+                         dc-assertions :crop.instance/dc-assertions
                          template-id :crop.instance/template
                          ci-name :crop.instance/name}
                         (cell= (sort-by #(apply min (map :assertion/abs-assert-dc-day (:crop.instance/assertions %)))
                                         crop-instances))]
-             :bind-ids [ci-name-id]
+             :bind-ids [ci-name-id dc-assertions-id]
              (fieldset
                :style "font-size: 18px; margin-left: 5%; width:95%"
                (legend (text "~{ci-name}"))
@@ -491,40 +492,46 @@
                      :value ci-name
                      :on-change #(s/update-db-entity @ci-db-id :crop.instance/name (val-id ci-name-id)))))
 
+               (bs/form-group
+                 (bs/control-label :col [:sm (+ 1 label-cols)] :for dc-assertions-id
+                                   (text "~(vocab :dc-assertions-label s/lang)"))
+                 (let [abs-day* (cell nil)
+                       ;at-abs-day* (cell nil)
+                       dc* (cell nil)
+                       dc->names (cell= (get s/crop->dcs template-id))]
+                   (div
+                     :col [:xs (min (+ value-cols 4) (- 12 label-cols))]
+                     #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
 
-
-
-               )
-             )
-
-
-           #_(bs/form-group
-             (bs/control-label :col [:sm label-cols] :for technology-select-id (text "~(vocab :technology-select-label s/lang)"))
-             (div
-               :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-               (p :toggle no-edit? :class "form-control-static" "???Schlauchtrommel???" #_(text "~{}"))
-               (select
-                 :toggle edit?
-                 :disabled "disabled"
-                 :id technology-select-id
-                 :class "form-control"
-                 :on-change #()
-                 (option "Schlauchtrommel")
-                 (option "Tropfenbewässerung")
-                 (option "Linearregner")
-                 #_(loop-tpl
-                   :bindings [{key :soil.stt/key
-                               symbol :soil.stt/symbol
-                               description :soil.stt/description
-                               subs-groups :soil.stt/substrate-groups}
-                              (cell= (sort-by :soil.stt/symbol s/stts))]
-                   (option :value key
-                           :selected (cell= (= key (:soil.stt/key stt)))
-                           (text "~{symbol} | ~{description}"))))))
-
-
-           )
-
+                     (loop-tpl
+                       :bindings [[row-no {a-db-id :db/id
+                                           abs-day :assertion/abs-assert-dc-day
+                                           dc :assertion/assert-dc
+                                           #_at-abs-day #_:assertion/at-abs-day}]
+                                  (cell= (util/indexed (sort-by :assertion/abs-assert-dc-day dc-assertions)))]
+                       (uie/create-dc-assertion-inputs
+                         :fields {:row-no row-no
+                                  :row-action! #(s/delete-db-entity @a-db-id)
+                                  :dc->names dc->names
+                                  :year year
+                                  :abs-day abs-day :abs-day! #(s/update-db-entity @a-db-id :assertion/abs-assert-dc-day %)
+                                  ;:at-abs-day at-abs-day :at-abs-day! #(s/update-db-entity @a-db-id :assertion/at-abs-day %)
+                                  :dc dc :dc! #(s/update-db-entity @a-db-id :assertion/assert-dc %)}
+                         #_:opts #_{:link-abs-days false
+                                :hide-at-abs-day false}))
+                     (uie/create-dc-assertion-inputs
+                       :fields {:row-action! #(when (and @abs-day* @dc* #_@at-abs-day*)
+                                               (s/create-new-dc-assertion @ci-db-id @abs-day* @dc* #_@at-abs-day*)
+                                               (reset! abs-day* nil)
+                                               (reset! dc* nil))
+                                :dc->names dc->names
+                                :year year
+                                :abs-day abs-day* :abs-day! #(reset! abs-day* %)
+                                ;:at-abs-day at-abs-day* :at-abs-day! #(reset! at-abs-day* %)
+                                :dc dc* :dc! #(reset! dc* %)}
+                       #_:opts #_{:link-abs-days false
+                              :hide-at-abs-day false})
+                     ))))))
 
          (fieldset
            (legend (text "~(vocab :donations-fieldset-label s/lang)"))
@@ -557,410 +564,5 @@
                             :abs-day abs-day* :abs-day! #(reset! abs-day* %)
                             :amount amount* :amount! #(reset! amount* %)})
                  ))))
-
-
-
-
-
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for name-id (text "~(vocab :name-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{name}"))
-             (input
-               :id name-id
-               :toggle edit?
-               :class "form-control"
-               :type "text"
-               :placeholder (cell= (vocab :name-placeholder s/lang))
-               :value name
-               :on-change #(name! (val-id name-id)))))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for number-id (text "~(vocab :number-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{number}"))
-             (input
-               :id number-id
-               :toggle edit?
-               :class "form-control"
-               :type "text"
-               :placeholder (cell= (vocab :number-placeholder s/lang))
-               :value number
-               :on-change #(number! (val-id number-id)))))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for description-id (text "~(vocab :description-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{description}"))
-             (input
-               :id description-id
-               :toggle edit?
-               :class "form-control"
-               :type "text"
-               :placeholder (cell= (vocab :description-placeholder s/lang))
-               :value description
-               :on-change #(description! (val-id description-id)))))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for short-description-id (text "~(vocab :short-description-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{short-description}"))
-             (input
-               :id short-description-id
-               :toggle edit?
-               :class "form-control"
-               :type "text"
-               :placeholder (cell= (vocab :short-description-placeholder s/lang))
-               :value short-description
-               :on-change #(short-description! (val-id short-description-id)))))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for crop-area-id (text "~(vocab :crop-area-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{crop-area}"))
-             (div
-               :class "input-group"
-               (input
-                 :id crop-area-id
-                 :toggle edit?
-                 :class "form-control"
-                 :type "number"
-                 :step 0.1
-                 :min 0
-                 :placeholder (cell= (vocab :crop-area-placeholder s/lang))
-                 :value crop-area
-                 :on-change #(crop-area! (js/parseFloat (val-id crop-area-id))))
-               (span :class "input-group-addon" "ha"))))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for irrigation-area-id (text "~(vocab :irrigation-area-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
-             (div
-               :class "input-group"
-               (input
-               :id irrigation-area-id
-               :toggle edit?
-               :class "form-control"
-               :type "number"
-               :step 0.1
-               :min 0
-               :placeholder (cell= (vocab :irrigation-area-placeholder s/lang))
-               :value irrigation-area
-               :on-change #(irrigation-area! (js/parseFloat (val-id irrigation-area-id))))
-               (span :class "input-group-addon" "ha"))))
-
-         #_(fieldset
-           (legend (text "~(vocab :soil-data-fieldset-label s/lang)"))
-
-           (bs/form-group
-             (bs/control-label :col [:sm (+ 1 label-cols)] :for stt-id (text "~(vocab :stt-label s/lang)"))
-             (div
-               :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-               (p :toggle no-edit? :class "form-control-static" (text "~{stt}"))
-               (select
-                 :toggle edit?
-                 :id stt-id
-                 :class "form-control"
-                 :on-change #(stt! (js/parseInt (val-id stt-id)))
-                 (loop-tpl
-                   :bindings [{key :soil.stt/key
-                               symbol :soil.stt/symbol
-                               description :soil.stt/description
-                               subs-groups :soil.stt/substrate-groups}
-                              (cell= (sort-by :soil.stt/symbol s/stts))]
-                   (option :value key
-                           :selected (cell= (= key (:soil.stt/key stt)))
-                           (text "~{symbol} | ~{description}"))))))
-
-           (bs/form-group
-             (bs/control-label :col [:sm (+ 1 label-cols)] :for slope-id (text "~(vocab :slope-label s/lang)"))
-             (div
-               :col [:xs value-cols]
-               (p :toggle no-edit? :class "form-control-static" (text "~{slope}"))
-               (select
-                 :toggle edit?
-                 :id slope-id
-                 :class "form-control"
-                 :on-change #(slope! (js/parseInt (val-id slope-id)))
-                 (loop-tpl
-                   :bindings [{key :slope/key
-                               symbol :slope/symbol
-                               description :slope/description}
-                              (cell= (sort-by :slope/key s/slopes))]
-                   (option :value key
-                           :selected (cell= (= key (:slope/key slope)))
-                           (text "~{symbol} | ~{description}"))))))
-
-           (bs/form-group
-             (bs/control-label :col [:sm (+ 1 label-cols)] :for ka5-soil-types-id
-                               (text "~(vocab :ka5-soil-types-label s/lang)"))
-             (let [depth* (cell nil)
-                   ka5* (cell nil)]
-               (div
-                 :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-                 #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
-
-                 (loop-tpl
-                   :bindings [[row-no {db-id :db/id
-                                       ka5 :soil/ka5-soil-type
-                                       depth :soil/upper-boundary-depth}]
-                              (cell= (util/indexed (sort-by :soil/upper-boundary-depth ka5-soil-types)))]
-                   (create-ka5-inputs
-                     :fields {:row-no row-no
-                              :row-action! #(s/delete-db-entity @db-id)
-                              :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
-                              :value ka5 :value! #(s/update-db-entity @db-id :soil/ka5-soil-type %)}))
-                 (create-ka5-inputs
-                   :fields {:row-action! #(when (and @depth* @ka5*)
-                                           (s/create-new-fc-pwp-ka5-layer @id @depth* :ka5 @ka5*)
-                                           (reset! depth* nil)
-                                           (reset! ka5* nil))
-                            :depth depth* :depth! #(reset! depth* %)
-                            :value ka5* :value! #(reset! ka5* %)}))))
-
-
-           (fieldset
-             (legend
-               :style "font-size: 18px; margin-left: 5%; width:95%"
-               (text "~(vocab :fc-pwp-data-fieldset-label s/lang)"))
-
-             (bs/form-group
-               :toggle edit? ;we don't have to show this for read-only mode
-               (bs/control-label :col [:sm (+ 1 label-cols)] :for substrate-groups-fc-id
-                                 (text "~(vocab :substrate-groups-label s/lang) ~(:soil.stt/symbol stt)"))
-               (div
-                 :col [:xs value-cols]
-                 (select
-                   :id substrate-groups-fc-id
-                   :class "form-control"
-                   :on-change #(s/set-substrate-group-fcs-and-pwps @id (js/parseInt (val-id substrate-groups-fc-id)))
-                   (option "")
-                   (loop-tpl
-                     :bindings [{key :soil.substrate/key
-                                 symbol :soil.substrate/symbol
-                                 description :soil.substrate/description
-                                 fcs :soil.substrate/field-capacities}
-                                (cell= (->> selected-stt-substrate-group-keys
-                                            (select-keys s/substrate-groups,,,)
-                                            vals
-                                            (sort-by :soil.substrate/description,,,)))]
-                     (option :value key
-                             ;:selected (cell= (= key (:soil.stt/key stt)))
-                             (text "~{symbol} | ~{description}"))))))
-
-             (bs/form-group
-               :toggle edit? ;we don't have to show this for read-only mode
-               (bs/control-label :col [:sm (+ 1 label-cols)] :for fc-pwp-unit-id
-                                 (text "~(vocab :fc-pwp-unit-label s/lang)"))
-               (div
-                 :col [:xs 2]
-                 (select
-                   :disabled "disabled"
-                   :id fc-pwp-unit-id
-                   :class "form-control"
-                   :on-change #(fc-pwp-unit! (keyword (val-id fc-pwp-unit-id)))
-                   (option :value "soil-moisture.unit/pFK"
-                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/pFK))
-                           (text "~(vocab :pFK s/lang)"))
-                   (option :value "soil-moisture.unit/pNFK"
-                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/pNFK))
-                           (text "~(vocab :pNFK s/lang)"))
-                   (option :value "soil-moisture.unit/volP"
-                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/volP))
-                           (text "~(vocab :volP s/lang)"))
-                   (option :value "soil-moisture.unit/mm"
-                           :selected (cell= (= fc-pwp-unit :soil-moisture.unit/mm))
-                           (text "~(vocab :mm s/lang)")))))
-
-             (bs/form-group
-               (bs/control-label :col [:sm (+ 1 label-cols)] :for field-capacities-id
-                                 (text "~(vocab :field-capacities-label s/lang)"))
-               (let [depth* (cell nil)
-                     fc* (cell nil)
-                     fc-pwp-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
-                 (div
-                   :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-                   #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
-
-                   (loop-tpl
-                     :bindings [[row-no {db-id :db/id
-                                         fc :soil/field-capacity
-                                         depth :soil/upper-boundary-depth}]
-                                (cell= (util/indexed (sort-by :soil/upper-boundary-depth field-capacities)))]
-                     (create-fc-pwp-inputs
-                       :fields {:row-no row-no
-                                :row-action! #(s/delete-db-entity @db-id)
-                                :fc-pwp-unit fc-pwp-unit*
-                                :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
-                                :value fc :value! #(s/update-db-entity @db-id :soil/field-capacity % :value-type :double)}))
-                   (create-fc-pwp-inputs
-                     :fields {:row-action! #(when (and @depth* @fc*)
-                                             (s/create-new-fc-pwp-ka5-layer @id @depth* :fc @fc*)
-                                             (reset! depth* nil)
-                                             (reset! fc* nil))
-                              :fc-pwp-unit fc-pwp-unit*
-                              :depth depth* :depth! #(reset! depth* %)
-                              :value fc* :value! #(reset! fc* %)})
-                   )))
-
-             (bs/form-group
-               (bs/control-label :col [:sm (+ 1 label-cols)] :for permanent-wilting-points-id
-                                 (text "~(vocab :permanent-wilting-points-label s/lang)"))
-               (let [depth* (cell nil)
-                     pwp* (cell nil)
-                     fc-pwp-unit* (cell= (vocab (keyword ((fnil clojure.core/name "") fc-pwp-unit)) s/lang))]
-                 (div
-                   :col [:xs (min (+ value-cols 2) (- 12 label-cols))]
-                   #_(p :toggle no-edit? :class "form-control-static" (text "~{irrigation-area}"))
-
-                   (loop-tpl
-                     :bindings [[row-no {db-id :db/id
-                                         pwp :soil/permanent-wilting-point
-                                         depth :soil/upper-boundary-depth}]
-                                (cell= (util/indexed (sort-by :soil/upper-boundary-depth permanent-wilting-points)))]
-                     (create-fc-pwp-inputs
-                       :fields {:row-no row-no
-                                :row-action! #(s/delete-db-entity @db-id)
-                                :fc-pwp-unit fc-pwp-unit*
-                                :depth depth :depth! #(s/update-db-entity @db-id :soil/upper-boundary-depth %)
-                                :value pwp :value! #(s/update-db-entity @db-id :soil/permanent-wilting-point %
-                                                                        :value-type :double)}))
-                   (create-fc-pwp-inputs
-                     :fields {:row-action! #(when (and @depth* @pwp*)
-                                             (s/create-new-fc-pwp-ka5-layer @id @depth* :pwp @pwp*)
-                                             (reset! depth* nil)
-                                             (reset! pwp* nil))
-                              :fc-pwp-unit fc-pwp-unit*
-                              :depth depth* :depth! #(reset! depth* %)
-                              :value pwp* :value! #(reset! pwp* %)})
-                   )))
-             ))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for groundwaterlevel-id (text "~(vocab :groundwaterlevel-label s/lang)"))
-           (div
-             :col [:xs value-cols]
-             (p :toggle no-edit? :class "form-control-static" (text "~{groundwaterlevel}"))
-             (div
-               :class "input-group"
-               (input
-                 :id groundwaterlevel-id
-                 :toggle edit?
-                 :class "form-control"
-                 :type "number"
-                 :step 1
-                 :min 0
-                 :placeholder (cell= (vocab :groundwaterlevel-placeholder s/lang))
-                 :value groundwaterlevel
-                 :on-change #(groundwaterlevel! (js/parseFloat (val-id groundwaterlevel-id))))
-               (span :class "input-group-addon" "cm"))))
-
-         #_(fieldset
-           (legend (text "~(vocab :address-fieldset-label s/lang)"))
-
-           (div
-             :toggle edit?
-
-             (button
-               ;:style "float:right"
-               :class "btn btn-warning"
-               :click #(s/create-new-farm-address @id)
-               (text "~(vocab :new-address-button-label s/lang)"))
-
-             (hr))
-
-           (div
-             (loop-tpl
-               :bindings [{db-id :db/id
-                           street :address/street
-                           postal-code :address/postal-code
-                           city :address/city
-                           city-part :address/city-part
-                           municipality :address/municipality
-                           municipality-short :address/municipality-short
-                           state :address/state
-                           state-short :state-short
-                           country :address/country
-                           country-short :address/country-short
-                           :as address} addresses]
-               ;:bind-ids [farm-id]
-               (div
-
-                 (button
-                   :toggle edit?
-                   :style "float:right"
-                   :class "btn btn-danger"
-                   :click #(s/delete-db-entity @db-id)
-                   (text "~(vocab :delete-address-button-label s/lang)"))
-
-                 (addr/address
-                   :fields {:street street :street! #(s/update-db-entity @db-id :address/street %)
-                            :postal-code postal-code :postal-code! #(s/update-db-entity @db-id :address/postal-code %)
-                            :city city :city! #(s/update-db-entity @db-id :address/city %)
-                            :city-part city-part :city-part! #(s/update-db-entity @db-id :address/city-part %)
-                            :municipality municipality :municipality! #(s/update-db-entity @db-id :address/municipality %)
-                            :municipality-short municipality-short :municipality-short! #(s/update-db-entity @db-id :address/municipality-short %)
-                            :state state :state! #(s/update-db-entity @db-id :address/state %)
-                            :state-short state-short :state-short! #(s/update-db-entity @db-id :address/state-short %)
-                            :country country :country! #(s/update-db-entity @db-id :address/country %)
-                            :country-short country-short :country-short! #(s/update-db-entity @db-id :address/country-short %)}
-                   :opts {:edit? edit?
-                          :label-cols (+ label-cols 2)
-                          :value-cols value-cols})
-
-                 (hr)
-
-                 ))
-             ))
-
-         #_(bs/form-group
-           (bs/control-label :col [:sm label-cols] :for notes-id (text "~(vocab :notes-label s/lang)"))
-           (div
-             :col [:xs 7]
-             (p :toggle no-edit? :class "form-control-static" (text "~{notes}"))
-             (textarea
-               :id notes-id
-               :toggle edit?
-               :class "form-control"
-               :rows 5
-               :placeholder (cell= (vocab :notes-placeholder s/lang))
-               :value notes
-               :on-change #(notes! (val-id notes-id)))))
-
-         #_(fieldset
-           (legend (text "~(vocab :weather-data-fieldset-label s/lang)"))
-
-           (bs/form-group
-             (bs/control-label :col [:sm label-cols] :for weather-station-id
-                               (text "~(vocab :weather-station-label s/lang)"))
-             (div
-               :col [:xs value-cols]
-               (p :toggle no-edit? :class "form-control-static"
-                  (text "~(or (:weather-station/name weather-station)
-                  (:weather-station/id weather-station))"))
-               (select
-                 :toggle edit?
-                 :id weather-station-id
-                 :class "form-control"
-                 :on-change #(weather-station! (js/parseInt (val-id weather-station-id)))
-                 (option :value "" "")
-                 (loop-tpl
-                   :bindings [{ws-db-id :db/id
-                               ws-id :weather-station/id
-                               ws-name :weather-station/name}
-                              (cell= (sort-by #(if-let [name (:weather-station/name %)]
-                                                name
-                                                (:weather-station/id %)) s/user-weather-stations))]
-                   (option :value ws-db-id
-                           :selected (cell= (= ws-id (:weather-station/id weather-station)))
-                           (text "~{ws-name}")))))))
 
          )) (dissoc attrs :fields :opts) kids)))

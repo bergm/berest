@@ -29,6 +29,8 @@
                                  :lang/en "Date of donation"}
            :amount-placeholder {:lang/de "Menge der Gabe"
                                :lang/en "Amount of donation"}
+           :dc-placeholder {:lang/de "DC"
+                            :lang/en "DC"}
 
            }
           [element (or lang :lang/de)] "UNKNOWN element"))
@@ -58,94 +60,6 @@
   (option :value value
           :selected (cell= (= value selected-value))
           (text "~(or display-value value)")))
-
-(defn technology
-  [{:keys [cycle-days set-cycle-days-fn
-           technology-type set-technology-type-fn
-           min set-min-fn
-           max set-max-fn
-           opt set-opt-fn
-           step-size set-step-size-fn
-           sprinkle-loss-factor set-sprinkle-loss-factor-fn
-           outlet-height set-outlet-height-fn]}]
-    (let [[tt-id cd-id
-           min-id max-id opt-id
-           ss-id slf-id oh-id] (repeatedly gensym)]
-      (div
-        (div
-          :class "col-xs-3"
-          (select
-            :id tt-id
-            :class "form-control"
-            :on-change #(set-technology-type-fn (val-id tt-id))
-            (create-option :technology.type/drip @technology-type "Tropfenbewässerungsverfahren")
-            (create-option :technology.type/sprinkler @technology-type "Standardbewässerungsverfahren")))
-
-        (div
-          :class "col-xs-2"
-          (input
-            :id cd-id
-            :class "form-control"
-            :type "range"
-            :value cycle-days
-            :on-change #(set-cycle-days-fn (js/parseInt (val-id cd-id))))
-          (span (text "~{cycle-days}")))
-
-        (div
-          :class "col-xs-8"
-          (input
-            :id min-id
-            :class "form-control"
-            :type "number"
-            :placeholder "min"
-            :value min
-            :on-change #(set-min-fn (js/parseInt (val-id min-id))))
-
-          (input
-            :id opt-id
-            :class "form-control"
-            :type "number"
-            :placeholder "opt"
-            :value opt
-            :on-change #(set-opt-fn (js/parseInt (val-id opt-id))))
-
-          (input
-            :id max-id
-            :class "form-control"
-            :type "number"
-            :placeholder "max"
-            :value max
-            :on-change #(set-max-fn (js/parseInt (val-id max-id))))
-
-          (input
-            :id ss-id
-            :class "form-control"
-            :type "number"
-            :placeholder "+x"
-            :value step-size
-            :on-change #(set-step-size-fn (js/parseInt (val-id ss-id)))))
-
-        (div
-          :class "col-xs-2"
-          (input
-            :id slf-id
-            :class "form-control"
-            :type "number"
-            :placeholder "Sprühverluste"
-            :value sprinkle-loss-factor
-            :on-change #(set-sprinkle-loss-factor-fn (js/parseInt (val-id slf-id)))))
-
-        (div
-          :class "col-xs-2"
-          (input
-            :id oh-id
-            :class "form-control"
-            :type "number"
-            :placeholder "Ausbringhöhe"
-            :value outlet-height
-            :on-change #(set-outlet-height-fn (js/parseInt (val-id oh-id)))))
-
-        )))
 
 
 
@@ -351,7 +265,90 @@
      (dissoc attrs :fields :opts) kids)))
 
 
+(defelem
+  create-dc-assertion-inputs
+  [{{:keys [row-no row-action!
+            dc->names
+            year
+            abs-day abs-day!
+            ;at-abs-day at-abs-day!
+            dc dc!]} :fields
+    {:keys [#_link-abs-days
+            #_hide-at-abs-day]} :opts
+    :as attrs} kids]
 
+  (let [[#_at-abs-day-id abs-day-id dc-id dc-select-id] (repeatedly gensym)]
+    ((div
+       :class "row"
+       #_(div
+         :toggle (cell= (not hide-at-abs-day))
+         :col [:xs 3]
+         (let [at-abs-day-str (cell= (cstf/unparse (cstf/formatter "dd.MM.")
+                                                   (util/doy->cljs-time-date at-abs-day year))) ]
+           (p :toggle (cell= (not (nil? row-no))) :class "form-control-static" (text "~{at-abs-day-str}")))
+         (input
+           :id at-abs-day-id
+           :toggle (cell= (nil? row-no))
+           :class "form-control"
+           :type "date"
+           ;:placeholder (cell= (vocab :abs-day-placeholder s/lang))
+           :value (cell= (if (and at-abs-day year)
+                           (cstf/unparse (cstf/formatters :date) (util/doy->cljs-time-date at-abs-day year))
+                           (cstf/unparse (cstf/formatters :date) (cstc/now))))
+           :on-change #(at-abs-day! (util/cljs-time-date->doy (cstf/parse (cstf/formatters :date)
+                                                                          (val-id at-abs-day-id))))))
+
+       (div
+         :col [:xs 3]
+         (input
+           :id abs-day-id
+           :class "form-control"
+           :type "date"
+           ;:placeholder (cell= (vocab :abs-day-placeholder s/lang))
+           :value (cell= (if (and abs-day year)
+                           (->> (util/doy->cljs-time-date abs-day year)
+                                (cstf/unparse (cstf/formatters :date),,,))
+                           (str year "-01-01")))
+           :on-change #(abs-day! (util/cljs-time-date->doy (cstf/parse (cstf/formatters :date)
+                                                                       (val-id abs-day-id))))))
+
+       (div
+         :col [:xs 2]
+         (input
+           :id dc-id
+           :class "form-control"
+           :type "number"
+           :placeholder (cell= (vocab :dc-placeholder s/lang))
+           :step 1
+           :min 1
+           :max 100
+           :value dc
+           :on-change #(dc! (js/parseInt (val-id dc-id)))))
+
+       (div
+         :col [:xs 4]
+         (select
+           :id dc-select-id
+           :class "form-control"
+           :on-change #(dc! (js/parseInt (val-id dc-select-id)))
+           (option :selected (cell= (nil? row-no)) "")
+           (loop-tpl
+             :bindings [[dc* name] (cell= (sort-by first dc->names))]
+             (option :value dc*
+                     :data-dc dc
+                     :selected (cell= (= dc* dc))
+                     (text "~{dc*} | ~{name}")))))
+
+       (div
+         :col [:xs 3]
+         (input
+           :class (cell= {:btn true
+                          :btn-danger (not (nil? row-no))
+                          :btn-warning (nil? row-no)})
+           :type "button"
+           :value (cell= (if row-no (vocab :remove-donation-label s/lang) (vocab :add-donation-label s/lang)))
+           :on-click #(row-action! (some-> row-no deref)))))
+     (dissoc attrs :fields :opts) kids)))
 
 
 

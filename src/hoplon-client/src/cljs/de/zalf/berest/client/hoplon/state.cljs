@@ -14,7 +14,7 @@
 (cell= (println "state: \n" (pr-str state)))
 
 ;cell holding immutable minimal crops from server, these won't change and thus
-;don't constitute a real stem cell
+;doesn't constitute a real stem cell
 (defc minimal-all-crops nil)
 #_(cell= (println "minimal-all-crops:\n " (pr-str minimal-all-crops)))
 
@@ -26,6 +26,7 @@
 (defc= stts (:stts static-state))
 (defc= substrate-groups (into {} (map (juxt :soil.substrate/key identity) (:substrate-groups static-state))))
 (defc= ka5-soil-types (into {} (map (juxt :soil.type.ka5/name identity) (:ka5-soil-types static-state))))
+(defc= crop->dcs (:crop->dcs static-state))
 #_(defc= stt-descriptions (into {} (map (juxt :soil.stt/key :soil.stt/description) stts)))
 
 ;local state
@@ -114,6 +115,7 @@
 
 (def create-new-donation (mkremote 'de.zalf.berest.web.castra.api/create-new-donation state error loading))
 (def create-new-crop-instance (mkremote 'de.zalf.berest.web.castra.api/create-new-crop-instance state error loading))
+(def create-new-dc-assertion (mkremote 'de.zalf.berest.web.castra.api/create-new-dc-assertion state error loading))
 
 (def update-db-entity (mkremote 'de.zalf.berest.web.castra.api/update-db-entity state error loading))
 

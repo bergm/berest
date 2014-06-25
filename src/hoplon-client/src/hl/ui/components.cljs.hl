@@ -68,7 +68,19 @@
         (span :class "icon-bar")
         (span :class "icon-bar")
         (span :class "icon-bar"))
-      (a :class "navbar-brand" :href "/" (text "~{page-name-label}")))
+      #_(img
+        :class "navbar-brand"
+        :style "width:90px"
+        :src "irrigama-logo.png"
+        :alt "Irrigama-Logo")
+      (a
+        :class "navbar-brand"
+        :style "float: none"
+        :href "#"
+        (img
+          :style "clear: both; width:90px"
+          :src "irrigama-logo.png"
+          :alt "Irrigama-Logo") #_(text "~{page-name-label}")))
     (div
       :class "collapse navbar-collapse"
       (ul

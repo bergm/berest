@@ -74,7 +74,8 @@
   {:stts nil
    :slopes nil
    :substrate-groups nil
-   :ka5-soil-types nil})
+   :ka5-soil-types nil
+   :crop->dcs nil})
 
 
 ;;; public ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -96,7 +97,8 @@
   (assoc static-state-template :stts (data/db->all-stts db)
                                :slopes (data/db->all-slopes db)
                                :substrate-groups (data/db->all-substrate-groups db)
-                               :ka5-soil-types (data/db->all-ka5-soil-types db)))
+                               :ka5-soil-types (data/db->all-ka5-soil-types db)
+                               :crop->dcs (data/db->all-crop->dcs db)))
 
 (defrpc get-berest-state
   [& [user-id pwd]]
@@ -281,7 +283,7 @@
           (throw (ex error "Couldn't create new donation!")))))))
 
 (defrpc create-new-crop-instance
-  [annual-plot-entity-id & [user-id pwd]]
+  [annual-plot-entity-id crop-template-id & [user-id pwd]]
   {:rpc/pre [(nil? user-id)
              (rules/logged-in?)]}
   (let [db (db/current-db)
@@ -291,7 +293,24 @@
                (:user @*session*))]
     (when cred
       (try
-        #_(data/create-new-donation (db/connection) (:user/id cred) annual-plot-entity-id (int abs-day) (double amount))
+        (data/create-new-crop-instance (db/connection) (:user/id cred) annual-plot-entity-id crop-template-id)
+        (stem-cell-state (db/current-db) cred)
+        (catch Exception e
+          (throw (ex error "Couldn't create new crop instance!")))))))
+
+(defrpc create-new-dc-assertion
+  [crop-instance-entity-id abs-dc-day dc #_at-abs-day & [user-id pwd]]
+  {:rpc/pre [(nil? user-id)
+             (rules/logged-in?)]}
+  (let [db (db/current-db)
+
+        cred (if user-id
+               (db/credentials* db user-id pwd)
+               (:user @*session*))]
+    (when cred
+      (try
+        (data/create-new-dc-assertion (db/connection) (:user/id cred) crop-instance-entity-id
+                                      (int abs-dc-day) (int dc) #_(int at-abs-day))
         (stem-cell-state (db/current-db) cred)
         (catch Exception e
           (throw (ex error "Couldn't create new crop intance!")))))))
