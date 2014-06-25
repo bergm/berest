@@ -56,3 +56,4 @@
 (defn val-event [event]
   (-> event .-target .-value))
 
+(def sum (partial reduce + 0))

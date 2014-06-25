@@ -347,8 +347,13 @@
                           :btn-warning (nil? row-no)})
            :type "button"
            :value (cell= (if row-no (vocab :remove-donation-label s/lang) (vocab :add-donation-label s/lang)))
-           :on-click #(row-action! (some-> row-no deref)))))
-     (dissoc attrs :fields :opts) kids)))
+           :on-click #(row-action! (some-> row-no deref))))
+
+
+
+
+
+       ) (dissoc attrs :fields :opts) kids)))
 
 
 

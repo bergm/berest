@@ -403,7 +403,9 @@
                             (plot-annual/plot-annual
                               :style "margin-top: 20px"
                               :toggle plot-annual-details-visible?
-                              :fields {:db-id db-id
+                              :fields {:plot-id id
+
+                                       :db-id db-id
 
                                        :year year :year! #(s/update-db-entity @db-id :plot.annual/year %)
 

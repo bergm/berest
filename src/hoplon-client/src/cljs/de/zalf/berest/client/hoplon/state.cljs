@@ -89,6 +89,10 @@
 (def calculate-csv (mkremote 'de.zalf.berest.web.castra.api/calculate-csv csv-result calc-error calculating))
 (def simulate-csv (mkremote 'de.zalf.berest.web.castra.api/simulate-csv csv-result calc-error calculating))
 
+(defn calculate-from-db
+  [result-cell plot-id until-abs-day year]
+  ((mkremote 'de.zalf.berest.web.castra.api/calculate-from-db result-cell error loading) plot-id until-abs-day year))
+
 (defn load-weather-station-data
   [result-cell weather-station-id years]
   ((mkremote 'de.zalf.berest.web.castra.api/get-weather-station-data

@@ -201,14 +201,14 @@
 
            sms* (bc/calculate-soil-moistures-by-auto-donations*
                   inputs (:plot.annual/initial-soil-moistures plot)
-                  (:plot/slope plot)
+                  (-> plot :plot/slope :slope/key)
                   (:plot.annual/technology plot)
                   5)
 
            {soil-moistures :soil-moistures
             :as sms} (last sms*)
            #_(bc/calculate-soil-moistures-by-auto-donations* inputs (:plot.annual/initial-soil-moistures plot)
-                                                           (:plot/slope plot) (:plot.annual/technology plot) 5)
+                                                           (-> plot :plot/slope :slope/key) (:plot.annual/technology plot) 5)
            ]
       {:inputs inputs
        :soil-moistures sms*})

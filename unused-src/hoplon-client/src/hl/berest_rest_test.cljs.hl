@@ -78,11 +78,11 @@
        (mapv (fn [{:keys [abs-day soil-moistures
                           irrigation-amount] :as all}]
                {:abs-day    abs-day
-                :sm-0-10    (sum (subvec (vec soil-moistures) 0 2))
-                :sm-10-30   (sum (subvec (vec soil-moistures) 2 4))
-                :sm-30-60   (sum (subvec (vec soil-moistures) 4 7))
-                :sm-60-100  (sum (subvec (vec soil-moistures) 7 11))
-                :sm-100-150 (sum (subvec (vec soil-moistures) 11 16))
+                :sm-0-10    (util/sum (subvec (vec soil-moistures) 0 2))
+                :sm-10-30   (util/sum (subvec (vec soil-moistures) 2 4))
+                :sm-30-60   (util/sum (subvec (vec soil-moistures) 4 7))
+                :sm-60-100  (util/sum (subvec (vec soil-moistures) 7 11))
+                :sm-100-150 (util/sum (subvec (vec soil-moistures) 11 16))
                 ;:sm-0-30  (sum (subvec (vec soil-moistures) 0 4))
                 ;:sm-30-60 (sum (subvec (vec soil-moistures) 4 7))
                 ;:sm-60-90 (sum (subvec (vec soil-moistures) 7 10))}
