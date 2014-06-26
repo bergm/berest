@@ -337,9 +337,6 @@
                                :value-cols 3})
 
 
-
-
-
                       (let [annual-years (cell= (->> annuals
                                                      (map :plot.annual/year ,,,)
                                                      sort))

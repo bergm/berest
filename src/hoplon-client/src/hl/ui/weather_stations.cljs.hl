@@ -75,8 +75,15 @@
                                   :lat nil
                                   :long nil})
 
-              weather-data (cell nil)
-              ;_ (cell= (println "weather-data: " (pr-str weather-data)))
+              weather-station-data (cell nil)
+              weather-data (cell= (:data weather-station-data))
+              ;_ (cell= (println "weather-data: " (pr-str weather-station-data)))
+
+              loaded-data-ws-id (cell= (:weather-station-id weather-data))
+
+              _ (cell= (when (and weather-data loaded-data-ws-id (not= id loaded-data-ws-id))
+                         (reset! ~(cell data-visible?) false)
+                         (reset! ~(cell weather-data) nil)))
 
               chart-config {:chart {:renderTo chart-id
                                     ;:defaultSeriesType "spline"
@@ -122,8 +129,8 @@
               _ (with-timeout 0 (js/Highcharts.Chart. (clj->js chart-config)))
 
               measured-data (cell= (->> weather-data
-                                        (filter #(not (:weather-data/prognosis-data? (second %))) ,,,)
-                                        (map second ,,,)
+                                        (filter #(not (:weather-data/prognosis-data? (second %))),,,)
+                                        (map second,,,)
                                         flatten))
               ;_ (cell= (println "measured-data: " (pr-str measured-data)))
 
@@ -138,32 +145,20 @@
                                         js/jQuery
                                         .highcharts
                                         .-series
-                                        (#(nth % series-index) ,,,)
+                                        (#(nth % series-index),,,)
                                         (.setData (clj->js data))))
 
-              tavg (cell= (->> measured-data
-                               (mapv (fn [{date :weather-data/date
-                                           t :weather-data/average-temperature}]
-                                       [(.getTime date) t])
-                                 ,,,)
-                               (sort-by first ,,,)))
-              _ (cell= (set-series-data 0 tavg))
+              create-ordered-curve-data (fn [data key & {:keys [f] :or {f identity}}]
+                                          (->> data
+                                               (mapv (fn [{date :weather-data/date
+                                                           t key}]
+                                                       [(.getTime date) (f t #_(get d key))]),,,)
+                                               (sort-by first,,,)))
 
-              precip (cell= (->> measured-data
-                               (mapv (fn [{date :weather-data/date
-                                           t :weather-data/precipitation}]
-                                       [(.getTime date) t])
-                                 ,,,)
-                               (sort-by first ,,,)))
-              _ (cell= (set-series-data 1 precip))
-
-              evap (cell= (->> measured-data
-                               (mapv (fn [{date :weather-data/date
-                                           t :weather-data/evaporation}]
-                                       [(.getTime date) (- t)])
-                                 ,,,)
-                               (sort-by first ,,,)))
-              _ (cell= (set-series-data 2 evap))]
+              _ (cell= (set-series-data 0 (create-ordered-curve-data measured-data :weather-data/average-temperature)))
+              _ (cell= (set-series-data 1 (create-ordered-curve-data measured-data :weather-data/precipitation)))
+              _ (cell= (set-series-data 2 (create-ordered-curve-data measured-data :weather-data/evaporation :f -)))
+              ]
 
           (div
             #_(button
@@ -243,7 +238,7 @@
                       :id years-id
                       :class "form-control"
                       :multiple "multiple"
-                      :on-change #(s/load-weather-station-data weather-data @id (map js/parseInt (val-id years-id)))
+                      :on-change #(s/load-weather-station-data weather-station-data @id (map js/parseInt (val-id years-id)))
                       (loop-tpl
                         :bindings [year years]
                         (option :value year

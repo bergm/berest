@@ -11,7 +11,8 @@
             [clj-time.core :as ctc]
             [clj-time.format :as ctf]
             [clj-time.coerce :as ctcoe]
-            [clojure-csv.core :as csv]))
+            [clojure-csv.core :as csv]
+            [de.zalf.berest.core.core :as bc]))
 
 
 ;;; utility ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -184,7 +185,9 @@
                                                     :weather-data/prognosis-data?]) data)]
                     [year data*]))
              ,,,)
-           (into {})))))
+           (into {} ,,,)
+           (#(assoc {} :weather-station-id weather-station-id
+                       :data %) ,,,)))))
 
 (defrpc get-crop-data
   [crop-id & [user-id pwd]]
@@ -376,21 +379,6 @@
         (catch Exception e
           (throw (ex error "Couldn't set/copy substrate group's fcs/pws!")))))))
 
-#_(defrpc update-fc-pwp-unit
-  [plot-id new-fc-pwp-unit & [user-id pwd]]
-  {:rpc/pre [(nil? user-id)
-             (rules/logged-in?)]}
-  (let [db (db/current-db)
-
-        cred (if user-id
-               (db/credentials* db user-id pwd)
-               (:user @*session*))]
-    (when cred
-      (try
-        (data/set-substrate-group-fcs-and-pwps db (db/connection) (:user/id cred) plot-id substrate-group-key)
-        (stem-cell-state (db/current-db) cred)
-        (catch Exception e
-          (throw (ex error "Couldn't set/copy substrate group's fcs/pws!")))))))
 
 #_(defrpc update-weather-station
   [weather-station-id name lat lng & [user-id pwd]]
@@ -464,12 +452,28 @@
 
         donations (data/db->donations db plot-id year)
 
-        result (api/calculate-plot-from-db db plot-id until-abs-day year donations [])
+        {:keys [inputs inputs-7
+                soil-moistures soil-moistures-7
+                prognosis]} (api/calculate-plot-from-db db plot-id until-abs-day year donations [])
+
+        {slope :plot/slope
+         annuals :plot/annuals
+         :as plot} (data/db->plot db plot-id)
+        annual-for-year (first (filter #(= year (:plot.annual/year %)) annuals))
+        tech (:plot.annual/technology annual-for-year)
+
+        recommendation (bc/calc-recommendation 5
+                                               (:slope/key slope)
+                                               (:plot.annual/technology annual-for-year)
+                                               (take-last 5 inputs)
+                                               (:soil-moistures (last soil-moistures-7)))
+        recommendation* (merge recommendation (bc/recommendation-states (:state recommendation)))
         ]
     (when cred
-      {:soil-moistures (:soil-moistures result)
+      {:recommendation recommendation*
+       :soil-moistures soil-moistures
        :inputs (map #(select-keys % [:abs-day :precipitation :evaporation :donation :qu-target])
-                    (:inputs result))})))
+                    inputs)})))
 
 
 
