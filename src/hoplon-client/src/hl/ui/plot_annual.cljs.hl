@@ -140,6 +140,9 @@
            :lock-recommended-donation {:lang/de "Gabe sperren"
                                        :lang/en "Lock donation"}
 
+           :recommendation-label {:lang/de "Empfehlung"
+                                  :lang/en "Recommendation"}
+
            :cover-degree {:lang/de "Bedeckungsgrad"
                           :lang/en "Cover degree"}
 
@@ -205,16 +208,20 @@
         calc-until-abs-day* (cell= (if calc-until-abs-day
                                      calc-until-abs-day
                                      (util/dmy-date->doy 31 12 year)))
-        _ (cell= (println "calc-until-abs-day*: " (pr-str calc-until-abs-day*)))
+        ;_ (cell= (println "calc-until-abs-day*: " (pr-str calc-until-abs-day*)))
 
         calc-result (cell nil)
-        _ (cell= (println "calc-result: " (pr-str calc-result)))
+        ;_ (cell= (println "calc-result: " (pr-str calc-result)))
         recommendation (cell nil)
 
 
+        calc-fn (fn [plot-id until-abs-day year]
+                    (when (and plot-id until-abs-day year)
+                          (s/calculate-from-db calc-result plot-id until-abs-day year)))
+
         ;only calc plot if chart is visible
         _ (cell= (when toggle
-                       (s/calculate-from-db ~(cell calc-result) plot-id calc-until-abs-day* year)))
+                       (calc-fn plot-id calc-until-abs-day* year)))
 
         soil-moistures (cell= (mapv (fn [{:keys [abs-day soil-moistures
                                                  qu-target aet7pet aet pet] :as all}]
@@ -731,7 +738,7 @@
 
            (bs/control-label :col [:sm label-cols] :for donations-id (text "~(vocab :chart-until-abs-day-label s/lang)"))
            (div
-             :col [:xs 3]
+             :col [:xs 2]
              (input
                :id calc-until-id
                :class "form-control"
@@ -741,16 +748,14 @@
                                     (cstf/unparse (cstf/formatters :date) ,,,))
                                (str year "-12-31")))
                :on-change #(reset! calc-until-abs-day (util/cljs-time-date->doy (cstf/parse (cstf/formatters :date)
-                                                                                            (val-id calc-until-id))))))))
+                                                                                            (val-id calc-until-id))))))
 
-         #_(div
-           :col [:xs 2]
-           (button
-             :class "btn btn-warning"
-             :click #(s/calculate-from-db calc-result @plot-id (util/dmy-date->doy 31 8 @year) @year)
-             "calculate"
-             #_(text "~(vocab :new-crop-instance-button-label s/lang)"))
-           )
+           (bs/control-label
+             :col [:xs 2]
+             (span
+               :class "glyphicon glyphicon-refresh"
+               :on-click #(calc-fn @plot-id @calc-until-abs-day* @year)))))
+
 
          (div
            :id chart-id
@@ -760,35 +765,39 @@
                donation (cell= (:donation recommendation))
                action (cell= (:action recommendation))
                donation* (cell nil)]
-           (div
-             :class "row"
-             (div
-               :toggle (cell= (= action :irrigate))
-               :col [:xs 2]
-               (div
-                 :class "input-group"
-                 (input
-                   :id recommended-donation-id
-                   :class "form-control"
-                   :type "number"
-                   :step 0.1
-                   :min 1
-                   :max 100
-                   :value donation
-                   :on-change #(reset! donation* (js/parseFloat (val-id recommended-donation-id))))
-                 (span :class "input-group-addon" "mm")))
+              (bs/form-group
+                (bs/control-label :col [:sm label-cols] (text "~(vocab :recommendation-label s/lang)"))
 
-             (div
-               :toggle (cell= (= action :irrigate))
-               :col [:xs 2]
-               (button
-                 :class "btn btn-warning"
-                 :click #(s/create-new-donation @db-id @calc-until-abs-day* (or @donation* @donation))
-                 (text "~(vocab :lock-recommended-donation s/lang)")))
+                (div
+                  :toggle (cell= (= action :irrigate))
+                  :col [:xs 2]
+                  (div
+                    :class "input-group"
+                    (input
+                      :id recommended-donation-id
+                      :class "form-control"
+                      :type "number"
+                      :step 0.1
+                      :min 1
+                      :max 100
+                      :value donation
+                      :on-change #(reset! donation* (js/parseFloat (val-id recommended-donation-id))))
+                    (span :class "input-group-addon" "mm")))
 
-             (div
-               :col [:xs 7]
-               (p :class "form-control-static" (text "~(s/lang rec-text)")))))
+                (div
+                  :toggle (cell= (= action :irrigate))
+                  :col [:xs 2]
+                  (button
+                    :class "btn btn-warning"
+                    :click #(s/create-new-donation @db-id @calc-until-abs-day* (or @donation* @donation))
+                    (text "~(vocab :lock-recommended-donation s/lang)")))
+
+                (div
+                  :col [:xs 6]
+                  (p :class "form-control-static" (strong (text "~(s/lang rec-text)"))))
+                )
+
+           )
 
 
          )) (dissoc attrs :fields :opts) kids)))

@@ -19,10 +19,16 @@
   (get-in {:new-farm-filter-value {:lang/de "Neuer Betriebsname"
                                    :lang/en "New farm name"}
 
-           :new-farm {:lang/de "Neuer Betrieb ..."
-                      :lang/en "New farm ..."}
-           :new-plot {:lang/de "Neuer Schlag ..."
-                      :lang/en "New plot ..."}
+           :new-farm-button {:lang/de "Neuer Betrieb"
+                             :lang/en "New farm"}
+           :new-plot-button {:lang/de "Neuer Schlag"
+                             :lang/en "New plot"}
+
+           :delete-plot-button {:lang/de "Schlag löschen"
+                                :lang/en "Delete plot"}
+
+           :delete-farm-button {:lang/de "Betrieb löschen"
+                                :lang/en "Delete farm"}
 
            :new-farm-header {:lang/de "Neuen Betrieb anlegen"
                              :lang/en "Create new farm"}
@@ -168,7 +174,7 @@
                    (reset! filter-criterium {:attr :farm/name
                                              :value temp-farm-name})
                    #_(swap! edit-new-farm? not))
-          (text "~(vocab :new-farm s/lang)")))
+          (text "~(vocab :new-farm-button s/lang)")))
 
       (hr)
 
@@ -184,10 +190,30 @@
                          weather-data :farm/weather-data
                          :as farm}] (cell= (sort-by #(-> % second :farm/name) filtered-farms))]
           ;:bind-ids [farm-id]
-          (let [farm-details-visible? (cell false)]
+          (let [farm-details-visible? (cell false)
+                farm-hover? (cell false)]
             (div
+              :mouseenter #(reset! farm-hover? true)
+              :mouseleave #(reset! farm-hover? false)
+              ;:hover #(swap! farm-hover? not)
               (h3
-                (text "~(if farm-name farm-name (vocab :no-farm-name-label s/lang))"))
+                (text "~(if farm-name farm-name (vocab :no-farm-name-label s/lang))")
+                (div
+                  (button
+                    :toggle farm-hover?
+                    :style "float:right"
+                    :class "btn btn-danger"
+                    :click #(do (println "delete farm id: " @farm-id " name: " @farm-name)
+                                (s/delete-db-entity @farm-db-id))
+                    (text "~(vocab :delete-farm-button s/lang)"))
+
+                  (button
+                    :toggle farm-hover?
+                    :style "float:right"
+                    :class "btn btn-warning"
+                    :click #(s/create-new-plot @farm-id)
+                    (text "~(vocab :new-plot-button s/lang)"))
+                  ))
 
               (span
                 :class "glyphicon glyphicon-plus"
@@ -216,17 +242,6 @@
                 :opts {:edit? true
                        :label-cols 2
                        :value-cols 3})
-
-              (hr)
-
-              (div
-                :id new-plot-id
-                (button
-                  ;:toggle no-edit?
-                  ;:style "float:right"
-                  :class "btn btn-warning"
-                  :click #(s/create-new-plot @farm-id)
-                  (text "~(vocab :new-plot s/lang)")))
 
               (hr)
 
@@ -262,10 +277,18 @@
                              (cell= (sort-by :plot/name (:plots farm)))]
                   :bind-ids [annual-years-id]
                   (let [plot-details-visible? (cell false)
-                        plot-annual-details-visible? (cell false)]
+                        plot-annual-details-visible? (cell false)
+                        plot-hover? (cell false)]
                     (div
+                      :hover #(swap! plot-hover? not)
                       (h4
-                        (text "~(if name name (vocab :no-plot-name-label s/lang))"))
+                        (text "~(if name name (vocab :no-plot-name-label s/lang))")
+                        (button
+                          :toggle plot-hover?
+                          :style "float:right"
+                          :class "btn btn-danger"
+                          :click #(s/delete-db-entity @db-id)
+                          (text "~(vocab :delete-plot-button s/lang)")))
 
                       (span
                         :class "glyphicon glyphicon-plus"
@@ -410,13 +433,11 @@
                                        :abs-day-of-initial-soil-moisture-measurement! #(s/update-db-entity @db-id :plot.annual/abs-day-of-initial-soil-moisture-measurement %)
 
                                        :initial-soil-moistures initial-soil-moistures
-                                       ;:initial-soil-moistures! #()
 
                                        :initial-sm-unit initial-sm-unit
                                        :initial-sm-unit! #(s/update-db-entity @db-id :plot.annual/initial-sm-unit %)
 
                                        :technology technology
-                                       ;:technology! #()
 
                                        :crop-instances crop-instances
 
@@ -427,193 +448,8 @@
 
                       (hr)))))
 
-              #_(hr)))))
-
-      #_(hr)
-
-      #_(bs/form
-        :opts [:horizontal]
-        :name "crops-form"
-
-        (loop-tpl
-          :bindings [{id :crop/id
-                      name :crop/name
-                      symbol :crop/symbol}
-                     (cell= (sort-by :crop/name filtered-crops))]
-          :bind-ids [name-id symbol-id chart-id]
-
-          (let [data-visible? (cell false)
-                edit? (cell false)
-                no-edit? (cell= (not edit?))
-
-                form-data {:name nil
-                           :symbol nil}
-
-                crop-data (cell nil)
-                _ (cell= (when crop-data (println "crop-data: " (pr-str crop-data))))
-
-                ;keep crop data in sync with currently activated elements as these
-                ;are backed by stem cell state
-                _ (cell= (when (and crop-data (not= id (:crop/id crop-data)))
-                           (reset! ~(cell data-visible?) false)
-                           (reset! ~(cell crop-data) nil)))
-
-                chart-config {:chart {:renderTo chart-id
-                                      :defaultSeriesType "line"
-                                      :zoomType "x"
-                                      #_:spacingTop #_50}
-                              :title {:text "" #_(vocab :chart-header @s/lang)
-                                      :x 0 #_-20}
-                              :xAxis {:title {:text "relative DC Tage"}
-                                      ;:type "datetime"
-                                      #_:labels #_{:format "{value: %d.%m.%Y}"
-                                             :rotation 45
-                                             :align "left"}}
-                              :yAxis [{:title {:text (str (vocab :dc @s/lang) " []")}}
-                                      {:title {:text (str (vocab :cover-degree @s/lang) " [%]")}}
-                                      {:title {:text (str (vocab :extraction-depth @s/lang) " [dm]")}}
-                                      {:title {:text (str (vocab :aet-pet @s/lang) " [°C]")}
-                                       :opposite true}
-                                      {:title {:text (str (vocab :transpiration-factor @s/lang) " []")}
-                                       :opposite true}]
-                              :tooltip {:shared true
-                                        :crosshairs true}
-                              :legend {:layout "horizontal" #_"vertical"
-                                       :align "center" #_"right"
-                                       :verticalAlign "top" #_"middle"
-                                       :borderWidth 0}
-                              :series [{:name (vocab :dc @s/lang)
-                                        :yAxis 0
-                                        ;:tooltip {:valueSuffix " "}
-                                        ;:color "#FF6600"
-                                        :data []}
-                                        {:name (vocab :cover-degree @s/lang)
-                                        :yAxis 1
-                                        :tooltip {:valueSuffix " %"}
-                                        ;:color "#FF0000"
-                                        :data []}
-                                       {:name (vocab :extraction-depth @s/lang)
-                                        :yAxis 2
-                                        :tooltip {:valueSuffix " dm"}
-                                        ;:color "blue"
-                                        :data []}
-                                       {:name (vocab :aet-pet @s/lang)
-                                        :yAxis 3
-                                        ;:tooltip {:valueSuffix " mm"}
-                                        ;:color "#FF6600"
-                                        :data []}
-                                       {:name (vocab :transpiration-factor @s/lang)
-                                        :yAxis 4
-                                        ;:tooltip {:valueSuffix " "}
-                                        ;:color "#FF6600"
-                                        :data []}]}
-                _ (with-timeout 0 (js/Highcharts.Chart. (clj->js chart-config)))
-
-                set-series-data (fn [series-index data]
-                                  (some-> chart-id
-                                          by-id
-                                          js/jQuery
-                                          .highcharts
-                                          .-series
-                                          (#(nth % series-index),,,)
-                                          (.setData (clj->js data))))
-
-                dc (cell= (->> (:crop/dc-to-rel-dc-days crop-data)
-                               (mapv (fn [[k v]] {:name (str "<b>" (get (:crop/dc-to-developmental-state-names crop-data) k) "</b>")
-                                                  :x v :y k})
-                                 ,,,)
-                               (sort-by :x ,,,)))
-                _ (cell= (set-series-data 0 dc))
-
-                cover-degrees (cell= (->> (:crop/rel-dc-day-to-cover-degrees crop-data)
-                                          (into [],,,)
-                                          (sort-by first,,,)))
-                _ (cell= (set-series-data 1 cover-degrees))
-
-                extraction-depths (cell= (->> (:crop/rel-dc-day-to-extraction-depths crop-data)
-                                              (into [],,,)
-                                              (sort-by first,,,)))
-                _ (cell= (set-series-data 2 extraction-depths))
-
-                aet-pet (cell= (->> (:crop/rel-dc-day-to-quotient-aet-pets crop-data)
-                                    (into [],,,)
-                                    (sort-by first,,,)))
-                _ (cell= (set-series-data 3 aet-pet))
-
-                transpiration-factors (cell= (->> (:crop/rel-dc-day-to-transpiration-factors crop-data)
-                                                  (into [],,,)
-                                                  (sort-by first,,,)))
-                _ (cell= (set-series-data 4 transpiration-factors))
-
-                ]
+              ))))
 
 
 
-            (div
-              #_(button
-                ;:toggle no-edit?
-                :style "float:right"
-                :class "btn btn-primary"
-                :click #(swap! edit? not)
-                (text "~(vocab :edit s/lang)"))
-              #_(button
-                :toggle edit?
-                :style "float:right"
-                :class "btn btn-danger"
-                :click #()
-                (text "~(vocab :save-edit s/lang)"))
-
-              (bs/form-group
-                (bs/control-label :col [:sm 2] :for name-id (text "~(vocab :name-label s/lang)"))
-                (div
-                  :col [:xs 3]
-                  (p :toggle no-edit? :class "form-control-static" (text "~{name}"))
-                  (input
-                    :id name-id
-                    :toggle edit?
-                    :class "form-control"
-                    :type "text"
-                    :placeholder (cell= (vocab :name-placeholder s/lang))
-                    :value name
-                    :on-change #(swap! form-data assoc :name (val-id name-id)))))
-
-              (bs/form-group
-                (bs/control-label :col [:sm 2] :for symbol-id (text "~(vocab :symbol-label s/lang)"))
-                (div
-                  :col [:xs 3]
-                  (p :toggle no-edit? :class "form-control-static" (text "~{symbol}"))
-                  (input
-                    :id symbol-id
-                    :toggle edit?
-                    :class "form-control"
-                    :type "text"
-                    :placeholder (cell= (vocab :symbol-placeholder s/lang))
-                    :value long
-                    :on-change #(swap! form-data assoc :symbol (val-id symbol-id)))))
-
-              (div
-                (span
-                  :class "glyphicon glyphicon-plus"
-                  :toggle (cell= (not data-visible?))
-                  :on-click #(do
-                              (s/load-crop-data crop-data @id)
-                              (reset! data-visible? true)))
-                (span
-                  :toggle data-visible?
-                  :class "glyphicon glyphicon-minus"
-                  :click #(reset! data-visible? false))
-                (span (text " ~(vocab :show-data s/lang)"))
-
-                (div
-                  :toggle data-visible?
-
-                  (div
-                    :id chart-id
-                    :style "width:100%"
-                    :col [:xs 12])))
-
-              (hr)))
-
-          )
-        )
       )))
